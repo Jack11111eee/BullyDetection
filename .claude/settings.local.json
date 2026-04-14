@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/huaxinzhang/mnt-autodl/BullyDetection/work_dirs/ -name *.log* -o -name *.json)",
+      "Bash(ls:*)",
+      "Bash(python:*)",
+      "Bash(ffprobe -v quiet -print_format json -show_streams /Users/huaxinzhang/mnt/autodl/demo5.mp4)",
+      "Bash(python3 -c \"import sys,json; streams=json.load\\(sys.stdin\\)['streams']; [print\\(f\\\\\"{s['codec_type']}: {s['codec_name']} \\({s.get\\('codec_long_name',''\\)}\\)\\\\\" \\) for s in streams]\")",
+      "Bash(ffmpeg -encoders)",
+      "Bash(ffprobe -v quiet -print_format json -show_streams /Users/huaxinzhang/mnt/autodl/demo1.mp4)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(f\\\\\"{s['codec_type']}: {s['codec_name']}\\\\\"\\) for s in d.get\\('streams',[]\\)]\")",
+      "Bash(ffprobe -v error -show_entries stream=codec_name,codec_type /Users/huaxinzhang/mnt/autodl/demo1.mp4)",
+      "WebSearch",
+      "Bash(sed 's/_[^_]*$//')",
+      "Bash(awk '{if\\($1<0.4\\)a++;else if\\($1<0.6\\)b++;else if\\($1<0.8\\)c++;else d++}END{print \"  <0.4:\",a; print \"0.4-0.6:\",b; print \"0.6-0.8:\",c; print \"  >0.8:\",d}')"
+    ]
+  }
+}

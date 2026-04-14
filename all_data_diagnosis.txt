@@ -1,0 +1,246 @@
+======================================================================
+全数据 Pipeline 诊断报告
+======================================================================
+
+======================================================================
+文件: /home/hzcu/BullyDetection/data/campus/train.pkl
+描述: 原始训练集 (step4_build_pkl 输出)
+======================================================================
+
+  Data is a list (length: 57460)
+  First element keys: ['frame_dir', 'label', 'img_shape', 'original_shape', 'total_frames', 'keypoint', 'keypoint_score']
+  Annotations 总数: 57460
+
+  重复 frame_dir 的 annotation 数: 1587
+  其中 label 冲突的: 1033
+    rwf_val_A7FCl8G35Cs_1_clip_32: labels=['fighting', 'normal']
+    rwf_train_H_VQJU0Bqpc_2_clip_48: labels=['fighting', 'normal']
+    rwf_train_kLHNW0uRutY_0_clip_32: labels=['fighting', 'normal']
+    rwf_train_-1l5631l3fg_0_clip_80: labels=['fighting', 'normal']
+    rwf_train_H1AzC-GyKto_0_clip_0: labels=['fighting', 'normal']
+
+  类别分布:
+    0 normal        21911
+    1 fighting      14203
+    2 bullying       1381
+    3 falling       11710
+    4 climbing        557
+    5 vandalism      7698
+    总计: 57460
+
+  Keypoint 质量（全量 57460 个样本）:
+    全零 keypoint:      20851 (36.3%)
+    含 NaN:                 0 (0.0%)
+    无 keypoint_score:      0 (0.0%)
+    第2人全零:          14780 (25.7%)
+    仅1个有效人物:      19436 (33.8%)
+    有效帧<50%:          4670 (8.1%)
+    shapes: {(2, 48, 17, 2)}
+    score shapes: {(2, 48, 17)}
+
+  全零样本的类别分布:
+    0 normal         8192 (该类的 37.4%)
+    1 fighting       2476 (该类的 17.4%)
+    2 bullying        587 (该类的 42.5%)
+    3 falling        4223 (该类的 36.1%)
+    4 climbing         17 (该类的 3.1%)
+    5 vandalism      5356 (该类的 69.6%)
+
+======================================================================
+文件: /home/hzcu/BullyDetection/data/campus/val.pkl
+描述: 原始验证集 (step4_build_pkl 输出)
+======================================================================
+
+  Data is a list (length: 14365)
+  First element keys: ['frame_dir', 'label', 'img_shape', 'original_shape', 'total_frames', 'keypoint', 'keypoint_score']
+  Annotations 总数: 14365
+
+  重复 frame_dir 的 annotation 数: 113
+  其中 label 冲突的: 76
+    rwf_train_CqJB8ZWLZ-o_1_clip_64: labels=['fighting', 'normal']
+    rwf_train_b6XfVAZC9Zs_1_clip_48: labels=['fighting', 'normal']
+    rwf_train_1tU4kxa51vw_1_clip_16: labels=['normal', 'fighting']
+    rwf_train_dt8YUGoOSgQ_0_clip_80: labels=['normal', 'fighting']
+    rwf_train_fwEk96k8g_I_0_clip_48: labels=['fighting', 'normal']
+
+  类别分布:
+    0 normal         5414
+    1 fighting       3638
+    2 bullying        347
+    3 falling        2864
+    4 climbing        133
+    5 vandalism      1969
+    总计: 14365
+
+  Keypoint 质量（全量 14365 个样本）:
+    全零 keypoint:       5200 (36.2%)
+    含 NaN:                 0 (0.0%)
+    无 keypoint_score:      0 (0.0%)
+    第2人全零:           3665 (25.5%)
+    仅1个有效人物:       4806 (33.5%)
+    有效帧<50%:          1142 (7.9%)
+    shapes: {(2, 48, 17, 2)}
+    score shapes: {(2, 48, 17)}
+
+  全零样本的类别分布:
+    0 normal         2006 (该类的 37.1%)
+    1 fighting        665 (该类的 18.3%)
+    2 bullying        147 (该类的 42.4%)
+    3 falling        1000 (该类的 34.9%)
+    4 climbing          3 (该类的 2.3%)
+    5 vandalism      1379 (该类的 70.0%)
+
+======================================================================
+文件: /home/hzcu/BullyDetection/data/campus/campus.pkl
+描述: 合并数据集 (reformat_pkl 输出)
+======================================================================
+
+  Keys: ['split', 'annotations']
+  Annotations 总数: 71825
+  split['train']: 57460 (unique: 55873)
+  split['val']:   14365 (unique: 14252)
+  *** split 中重复: train=1587, val=113 ***
+
+  重复 frame_dir 的 annotation 数: 2488
+  其中 label 冲突的: 1624
+    rwf_val_A7FCl8G35Cs_1_clip_32: labels=['fighting', 'normal']
+    rwf_train_H_VQJU0Bqpc_2_clip_48: labels=['fighting', 'normal']
+    rwf_train_kLHNW0uRutY_0_clip_32: labels=['fighting', 'normal']
+    rwf_train_s-jW4cyavW0_1_clip_80: labels=['normal', 'fighting']
+    rwf_train_-1l5631l3fg_0_clip_80: labels=['fighting', 'normal']
+
+  类别分布:
+    0 normal        27325
+    1 fighting      17841
+    2 bullying       1728
+    3 falling       14574
+    4 climbing        690
+    5 vandalism      9667
+    总计: 71825
+
+  Keypoint 质量（全量 71825 个样本）:
+    全零 keypoint:      26051 (36.3%)
+    含 NaN:                 0 (0.0%)
+    无 keypoint_score:      0 (0.0%)
+    第2人全零:          18445 (25.7%)
+    仅1个有效人物:      24242 (33.8%)
+    有效帧<50%:          5812 (8.1%)
+    shapes: {(2, 48, 17, 2)}
+    score shapes: {(2, 48, 17)}
+
+  全零样本的类别分布:
+    0 normal        10198 (该类的 37.3%)
+    1 fighting       3141 (该类的 17.6%)
+    2 bullying        734 (该类的 42.5%)
+    3 falling        5223 (该类的 35.8%)
+    4 climbing         20 (该类的 2.9%)
+    5 vandalism      6735 (该类的 69.7%)
+
+  train split 质量:
+    总数: 55873, 匹配annotation: 55873
+    全零 keypoint: 20555 (36.8%)
+
+  val split 质量:
+    总数: 14252, 匹配annotation: 14252
+    全零 keypoint: 5174 (36.3%)
+
+======================================================================
+文件: /home/hzcu/BullyDetection/data/campus/campus_balanced_v5.pkl
+描述: 最终平衡数据集 (fix_and_balance 输出)
+======================================================================
+
+  Keys: ['split', 'annotations']
+  Annotations 总数: 37381
+  split['train']: 23916 (unique: 23033)
+  split['val']:   13465 (unique: 13020)
+  *** split 中重复: train=883, val=445 ***
+
+  重复 frame_dir 的 annotation 数: 1328
+  其中 label 冲突的: 464
+    rwf_train_JPIeYvRgo6I_1_clip_16: labels=['fighting', 'normal']
+    rwf_train_H1AzC-GyKto_0_clip_96: labels=['fighting', 'normal']
+    rwf_train_CqJB8ZWLZ-o_1_clip_64: labels=['normal', 'fighting']
+    rwf_train_oW8ySS0rN4Y_0_clip_48: labels=['fighting', 'normal']
+    rwf_train_0_DzLlklZa0_3_clip_80: labels=['fighting', 'normal']
+
+  类别分布:
+    0 normal        12328
+    1 fighting       9511
+    2 bullying       4608
+    3 falling        9180
+    4 climbing       1754
+    总计: 37381
+
+  Keypoint 质量（全量 37381 个样本）:
+    全零 keypoint:      11767 (31.5%)
+    含 NaN:                 0 (0.0%)
+    无 keypoint_score:      0 (0.0%)
+    第2人全零:          10810 (28.9%)
+    仅1个有效人物:      13968 (37.4%)
+    有效帧<50%:          3164 (8.5%)
+    shapes: {(2, 48, 17, 2)}
+    score shapes: {(2, 48, 17)}
+
+  全零样本的类别分布:
+    0 normal         4741 (该类的 38.5%)
+    1 fighting       1671 (该类的 17.6%)
+    2 bullying       2029 (该类的 44.0%)
+    3 falling        3278 (该类的 35.7%)
+    4 climbing         48 (该类的 2.7%)
+
+  train split 质量:
+    总数: 23033, 匹配annotation: 23033
+    全零 keypoint: 7068 (30.7%)
+
+  val split 质量:
+    总数: 13020, 匹配annotation: 13020
+    全零 keypoint: 4310 (33.1%)
+
+
+======================================================================
+跨文件对比总结
+======================================================================
+
+  文件                      总数     全零    全零%    重复fd
+  -----------------------------------------------------------------
+  train.pkl                     57460   20851  36.3%     1587
+  val.pkl                       14365    5200  36.2%      113
+  campus.pkl                    71825   26051  36.3%     2488
+  campus_balanced_v5.pkl        37381   11767  31.5%     1328
+
+
+======================================================================
+追踪全零样本来源
+======================================================================
+
+  train.pkl — 按数据源的全零比例:
+    数据源                      总数     全零      全零%
+    ---------------------------------------------
+    shanghaitech          14803   7857    53.1% ***
+    vandalism2             7160   5071    70.8% ***
+    chute                 10054   4197    41.7% ***
+    ucf                    2673   1619    60.6% ***
+    rlvs                   9998   1325    13.3%
+    rwf                    9818    725     7.4%
+    urfall                  552     20     3.6%
+    multicam               1346     18     1.3%
+    climbing                557     17     3.1%
+    fallfloor               117      2     1.7%
+    punch                   382      0     0.0%
+
+  val.pkl — 按数据源的全零比例:
+    数据源                      总数     全零      全零%
+    ---------------------------------------------
+    shanghaitech           3634   1920    52.8% ***
+    vandalism2             1823   1307    71.7% ***
+    chute                  2457    996    40.5% ***
+    ucf                     686    421    61.4% ***
+    rlvs                   2540    331    13.0%
+    rwf                    2495    208     8.3%
+    urfall                  133     11     8.3%
+    climbing                133      3     2.3%
+    multicam                344      2     0.6%
+    fallfloor                30      1     3.3%
+    punch                    90      0     0.0%
+
+

@@ -1,0 +1,11 @@
+data/
+pyskl/
+review_*/
+*.mp4
+*.csv
+*.png
+*.pkl
+video_annotator/
+*.zip
+*.pt
+*.pth

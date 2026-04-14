@@ -1,0 +1,2482 @@
+[F0] T1 SKIP: buffer不足 1/32
+[F0] T2 SKIP: buffer不足 1/32
+[F0] T3 SKIP: buffer不足 1/32
+[F1] T1 SKIP: buffer不足 2/32
+[F1] T2 SKIP: buffer不足 2/32
+[F1] T3 SKIP: buffer不足 2/32
+[F2] T1 SKIP: buffer不足 3/32
+[F2] T2 SKIP: buffer不足 3/32
+[F2] T3 SKIP: buffer不足 3/32
+[F3] T1 SKIP: buffer不足 4/32
+[F3] T2 SKIP: buffer不足 4/32
+[F3] T3 SKIP: buffer不足 4/32
+[F4] T1 SKIP: buffer不足 5/32
+[F4] T2 SKIP: buffer不足 5/32
+[F4] T3 SKIP: buffer不足 5/32
+[F5] T1 SKIP: buffer不足 6/32
+[F5] T2 SKIP: buffer不足 6/32
+[F5] T3 SKIP: buffer不足 6/32
+[F6] T1 SKIP: buffer不足 7/32
+[F6] T2 SKIP: buffer不足 7/32
+[F6] T3 SKIP: buffer不足 7/32
+[F7] T1 SKIP: buffer不足 8/32
+[F7] T2 SKIP: buffer不足 8/32
+[F7] T3 SKIP: buffer不足 8/32
+[F8] T1 SKIP: buffer不足 9/32
+[F8] T2 SKIP: buffer不足 9/32
+[F8] T3 SKIP: buffer不足 9/32
+[F9] T1 SKIP: buffer不足 10/32
+[F9] T2 SKIP: buffer不足 10/32
+[F9] T3 SKIP: buffer不足 10/32
+[F10] T1 SKIP: buffer不足 11/32
+[F10] T2 SKIP: buffer不足 11/32
+[F10] T3 SKIP: buffer不足 11/32
+[F11] T1 SKIP: buffer不足 12/32
+[F11] T2 SKIP: buffer不足 12/32
+[F11] T3 SKIP: buffer不足 12/32
+[F12] T1 SKIP: buffer不足 13/32
+[F12] T2 SKIP: buffer不足 13/32
+[F12] T3 SKIP: buffer不足 13/32
+[F13] T1 SKIP: buffer不足 14/32
+[F13] T2 SKIP: buffer不足 14/32
+[F13] T3 SKIP: buffer不足 14/32
+[F14] T1 SKIP: buffer不足 15/32
+[F14] T2 SKIP: buffer不足 15/32
+[F14] T3 SKIP: buffer不足 15/32
+[F15] T1 SKIP: buffer不足 16/32
+[F15] T2 SKIP: buffer不足 16/32
+[F15] T3 SKIP: buffer不足 16/32
+[F16] T1 SKIP: buffer不足 17/32
+[F16] T2 SKIP: buffer不足 17/32
+[F16] T3 SKIP: buffer不足 17/32
+[F17] T1 SKIP: buffer不足 18/32
+[F17] T2 SKIP: buffer不足 18/32
+[F17] T3 SKIP: buffer不足 18/32
+[F18] T1 SKIP: buffer不足 19/32
+[F18] T2 SKIP: buffer不足 19/32
+[F18] T3 SKIP: buffer不足 19/32
+[F19] T1 SKIP: buffer不足 20/32
+[F19] T2 SKIP: buffer不足 20/32
+[F19] T3 SKIP: buffer不足 20/32
+[F20] T1 SKIP: buffer不足 21/32
+[F20] T2 SKIP: buffer不足 21/32
+[F20] T3 SKIP: buffer不足 21/32
+[F21] T1 SKIP: buffer不足 22/32
+[F21] T2 SKIP: buffer不足 22/32
+[F21] T3 SKIP: buffer不足 22/32
+[F22] T1 SKIP: buffer不足 23/32
+[F22] T2 SKIP: buffer不足 23/32
+[F22] T3 SKIP: buffer不足 23/32
+[F23] T1 SKIP: buffer不足 24/32
+[F23] T2 SKIP: buffer不足 24/32
+[F23] T3 SKIP: buffer不足 24/32
+[F24] T1 SKIP: buffer不足 25/32
+[F24] T2 SKIP: buffer不足 25/32
+[F24] T3 SKIP: buffer不足 25/32
+[F25] T1 SKIP: buffer不足 26/32
+[F25] T2 SKIP: buffer不足 26/32
+[F25] T3 SKIP: buffer不足 26/32
+[F26] T1 SKIP: buffer不足 27/32
+[F26] T2 SKIP: buffer不足 27/32
+[F26] T3 SKIP: buffer不足 27/32
+[F27] T1 SKIP: buffer不足 28/32
+[F27] T2 SKIP: buffer不足 28/32
+[F27] T3 SKIP: buffer不足 28/32
+[F28] T1 SKIP: buffer不足 29/32
+[F28] T2 SKIP: buffer不足 29/32
+[F28] T3 SKIP: buffer不足 29/32
+[F29] T1 SKIP: buffer不足 30/32
+[F29] T2 SKIP: buffer不足 30/32
+[F29] T3 SKIP: buffer不足 30/32
+[F30] T1 SKIP: buffer不足 31/32
+[F30] T2 SKIP: buffer不足 31/32
+[F30] T3 SKIP: buffer不足 31/32
+[F31] T1 INFER: buf_total=32, sampled=32/64, pair=T2(P1:32/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.626) | normal=0.626 fighting=0.285 bullying=0.040 falling=0.031 climbing=0.018
+  [RAW] T1 → normal (conf=0.626 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal]
+[F31] T1 FINAL → normal (conf=0.626, src=posec3d, smooth=False)
+[F31] T2 INFER: buf_total=32, sampled=32/64, pair=T1(P1:32/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.626) | normal=0.626 fighting=0.285 bullying=0.040 falling=0.031 climbing=0.018
+  [RAW] T2 → normal (conf=0.626 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal]
+[F31] T2 FINAL → normal (conf=0.626, src=posec3d, smooth=False)
+[F31] T3 INFER: buf_total=32, sampled=32/64, pair=TNone(P1:0/64)
+  [RAW] T3 PoseC3D: argmax=normal(0.526) | normal=0.526 fighting=0.064 bullying=0.004 falling=0.394 climbing=0.012
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.729)
+  [VOTE] T3 current=falling → falling(1>=1) | history=[falling]
+[F31] T3 FINAL → falling (conf=0.729, src=rule_yolo_falling, smooth=False)
+[F47] T1 INFER: buf_total=48, sampled=48/64, pair=T2(P1:48/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.850) | normal=0.850 fighting=0.142 bullying=0.003 falling=0.001 climbing=0.003
+  [RAW] T1 → normal (conf=0.850 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal]
+[F47] T1 FINAL → normal (conf=0.850, src=posec3d, smooth=False)
+[F47] T2 INFER: buf_total=48, sampled=48/64, pair=T1(P1:48/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.850) | normal=0.850 fighting=0.142 bullying=0.003 falling=0.001 climbing=0.003
+  [RAW] T2 → normal (conf=0.850 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal]
+[F47] T2 FINAL → normal (conf=0.850, src=posec3d, smooth=False)
+[F47] T3 INFER: buf_total=48, sampled=48/64, pair=TNone(P1:0/64)
+  [RAW] T3 PoseC3D: argmax=normal(0.762) | normal=0.762 fighting=0.021 bullying=0.000 falling=0.212 climbing=0.004
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.658)
+  [VOTE] T3 current=falling → falling(2>=1) | history=[falling,falling]
+[F47] T3 FINAL → falling (conf=0.658, src=rule_yolo_falling, smooth=False)
+[F63] T1 INFER: buf_total=64, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.976) | normal=0.976 fighting=0.023 bullying=0.001 falling=0.000 climbing=0.001
+  [RAW] T1 → normal (conf=0.976 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F63] T1 FINAL → normal (conf=0.976, src=posec3d, smooth=False)
+[F63] T2 INFER: buf_total=64, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.976) | normal=0.976 fighting=0.023 bullying=0.001 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.976 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F63] T2 FINAL → normal (conf=0.976, src=posec3d, smooth=False)
+[F63] T3 INFER: buf_total=64, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T3 PoseC3D: argmax=normal(0.948) | normal=0.948 fighting=0.004 bullying=0.000 falling=0.044 climbing=0.002
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.640)
+  [VOTE] T3 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F63] T3 FINAL → falling (conf=0.640, src=rule_yolo_falling, smooth=False)
+[F79] T1 INFER: buf_total=80, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F79] T1 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F79] T2 INFER: buf_total=80, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.548) | normal=0.548 fighting=0.401 bullying=0.020 falling=0.008 climbing=0.024
+  [RAW] T2 → normal (conf=0.548 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F79] T2 FINAL → normal (conf=0.548, src=posec3d, smooth=False)
+[F79] T3 INFER: buf_total=80, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T3 PoseC3D: argmax=normal(0.986) | normal=0.986 fighting=0.006 bullying=0.000 falling=0.007 climbing=0.000
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.728)
+  [VOTE] T3 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F79] T3 FINAL → falling (conf=0.728, src=rule_yolo_falling, smooth=False)
+[F95] T1 INFER: buf_total=96, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F95] T1 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F95] T2 INFER: buf_total=96, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.473) | normal=0.473 fighting=0.433 bullying=0.015 falling=0.039 climbing=0.039
+  [RAW] T2 → normal (conf=0.473 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F95] T2 FINAL → normal (conf=0.473, src=posec3d, smooth=False)
+[F95] T3 INFER: buf_total=96, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T3 PoseC3D: argmax=normal(0.988) | normal=0.988 fighting=0.002 bullying=0.000 falling=0.010 climbing=0.000
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.620)
+  [VOTE] T3 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F95] T3 FINAL → falling (conf=0.620, src=rule_yolo_falling, smooth=False)
+[F111] T1 INFER: buf_total=112, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.990) | normal=0.990 fighting=0.010 bullying=0.001 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=0.990 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F111] T1 FINAL → normal (conf=0.990, src=posec3d, smooth=False)
+[F111] T2 INFER: buf_total=112, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.990) | normal=0.990 fighting=0.010 bullying=0.001 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.990 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F111] T2 FINAL → normal (conf=0.990, src=posec3d, smooth=False)
+[F111] T3 INFER: buf_total=112, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T3 PoseC3D: argmax=normal(0.977) | normal=0.977 fighting=0.001 bullying=0.000 falling=0.021 climbing=0.001
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.719)
+  [VOTE] T3 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F111] T3 FINAL → falling (conf=0.719, src=rule_yolo_falling, smooth=False)
+[F127] T1 INFER: buf_total=128, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F127] T1 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F127] T3 INFER: buf_total=128, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T3 PoseC3D: argmax=normal(0.978) | normal=0.978 fighting=0.001 bullying=0.000 falling=0.021 climbing=0.001
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.779)
+  [VOTE] T3 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F127] T3 FINAL → falling (conf=0.779, src=rule_yolo_falling, smooth=False)
+[F133] T2 INFER: buf_total=128, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.894) | normal=0.894 fighting=0.101 bullying=0.003 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.894 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F133] T2 FINAL → normal (conf=0.894, src=posec3d, smooth=False)
+[F143] T1 INFER: buf_total=144, sampled=64/64, pair=T3(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F143] T1 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F143] T3 INFER: buf_total=144, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T3 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.315)
+  [VOTE] T3 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F143] T3 FINAL → falling (conf=0.315, src=rule_yolo_falling, smooth=False)
+[F149] T2 INFER: buf_total=144, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.889) | normal=0.889 fighting=0.106 bullying=0.002 falling=0.002 climbing=0.001
+  [RAW] T2 → normal (conf=0.889 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F149] T2 FINAL → normal (conf=0.889, src=posec3d, smooth=False)
+[F159] T1 INFER: buf_total=160, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.953) | normal=0.953 fighting=0.037 bullying=0.007 falling=0.001 climbing=0.003
+  [RAW] T1 → normal (conf=0.953 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F159] T1 FINAL → normal (conf=0.953, src=posec3d, smooth=False)
+[F165] T2 INFER: buf_total=160, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.652) | normal=0.342 fighting=0.652 bullying=0.003 falling=0.002 climbing=0.001
+  [RAW] T2 → normal (fighting但无人在附近: nearest=570 > 270)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F165] T2 FINAL → normal (conf=0.348, src=rule_no_proximity, smooth=False)
+[F175] T1 INFER: buf_total=176, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.960) | normal=0.960 fighting=0.035 bullying=0.005 falling=0.000 climbing=0.001
+  [RAW] T1 → normal (conf=0.960 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F175] T1 FINAL → normal (conf=0.960, src=posec3d, smooth=False)
+[F181] T2 INFER: buf_total=176, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.515) | normal=0.482 fighting=0.515 bullying=0.001 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (fighting但无人在附近: nearest=631 > 270)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F181] T2 FINAL → normal (conf=0.485, src=rule_no_proximity, smooth=False)
+[F185] T4 SKIP: buffer不足 1/32
+[F186] T4 SKIP: buffer不足 2/32
+[F190] T4 SKIP: buffer不足 3/32
+[F191] T1 INFER: buf_total=192, sampled=64/64, pair=T4(P1:4/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.901) | normal=0.901 fighting=0.061 bullying=0.023 falling=0.011 climbing=0.003
+  [RAW] T1 → normal (conf=0.901 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F191] T1 FINAL → normal (conf=0.901, src=posec3d, smooth=False)
+[F191] T4 SKIP: buffer不足 4/32
+[F192] T4 SKIP: buffer不足 5/32
+[F193] T4 SKIP: buffer不足 6/32
+[F194] T4 SKIP: buffer不足 7/32
+[F195] T4 SKIP: buffer不足 8/32
+[F196] T4 SKIP: buffer不足 9/32
+[F197] T2 INFER: buf_total=192, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.531) | normal=0.466 fighting=0.531 bullying=0.001 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (fighting但无人在附近: nearest=667 > 270)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F197] T2 FINAL → normal (conf=0.469, src=rule_no_proximity, smooth=False)
+[F197] T4 SKIP: buffer不足 10/32
+[F198] T4 SKIP: buffer不足 11/32
+[F199] T4 SKIP: buffer不足 12/32
+[F200] T4 SKIP: buffer不足 13/32
+[F201] T4 SKIP: buffer不足 14/32
+[F202] T4 SKIP: buffer不足 15/32
+[F203] T4 SKIP: buffer不足 16/32
+[F204] T4 SKIP: buffer不足 17/32
+[F205] T4 SKIP: buffer不足 18/32
+[F206] T4 SKIP: buffer不足 19/32
+[F207] T1 INFER: buf_total=208, sampled=64/64, pair=T4(P1:20/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.726) | normal=0.726 fighting=0.216 bullying=0.033 falling=0.018 climbing=0.006
+  [RAW] T1 → normal (conf=0.726 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F207] T1 FINAL → normal (conf=0.726, src=posec3d, smooth=False)
+[F207] T4 SKIP: buffer不足 20/32
+[F208] T4 SKIP: buffer不足 21/32
+[F209] T4 SKIP: buffer不足 22/32
+[F210] T4 SKIP: buffer不足 23/32
+[F211] T4 SKIP: buffer不足 24/32
+[F212] T4 SKIP: buffer不足 25/32
+[F213] T2 INFER: buf_total=208, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.509) | normal=0.509 fighting=0.487 bullying=0.003 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.509 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F213] T2 FINAL → normal (conf=0.509, src=posec3d, smooth=False)
+[F213] T4 SKIP: buffer不足 26/32
+[F214] T4 SKIP: buffer不足 27/32
+[F215] T4 SKIP: buffer不足 28/32
+[F216] T4 SKIP: buffer不足 29/32
+[F217] T4 SKIP: buffer不足 30/32
+[F218] T4 SKIP: buffer不足 31/32
+[F219] T4 INFER: buf_total=32, sampled=32/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.576) | normal=0.401 fighting=0.576 bullying=0.010 falling=0.009 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.23, head_hip_norm=0.339 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → normal(bullying只有1次<2) | history=[bullying]
+[F219] T4 FINAL → normal (conf=0.519, src=rule_bullying, smooth=True)
+[F223] T1 INFER: buf_total=224, sampled=64/64, pair=T4(P1:36/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.494) | normal=0.494 fighting=0.484 bullying=0.012 falling=0.008 climbing=0.002
+  [RAW] T1 → normal (conf=0.494 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F223] T1 FINAL → normal (conf=0.494, src=posec3d, smooth=False)
+[F229] T2 INFER: buf_total=224, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.732) | normal=0.266 fighting=0.732 bullying=0.002 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (fighting但无人在附近: nearest=708 > 270)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F229] T2 FINAL → normal (conf=0.268, src=rule_no_proximity, smooth=False)
+[F235] T4 INFER: buf_total=48, sampled=48/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.532) | normal=0.455 fighting=0.532 bullying=0.007 falling=0.004 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.30, head_hip_norm=0.329 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(2>=2) | history=[bullying,bullying]
+[F235] T4 FINAL → bullying (conf=0.479, src=rule_bullying, smooth=False)
+[F239] T1 INFER: buf_total=240, sampled=64/64, pair=T4(P1:52/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.577) | normal=0.577 fighting=0.413 bullying=0.004 falling=0.004 climbing=0.002
+  [RAW] T1 → normal (conf=0.577 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F239] T1 FINAL → normal (conf=0.577, src=posec3d, smooth=False)
+[F245] T2 INFER: buf_total=240, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.582) | normal=0.582 fighting=0.416 bullying=0.002 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.582 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F245] T2 FINAL → normal (conf=0.582, src=posec3d, smooth=False)
+[F251] T4 INFER: buf_total=64, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.716) | normal=0.716 fighting=0.272 bullying=0.006 falling=0.005 climbing=0.002
+  [RAW] T4 → normal (conf=0.716 >= threshold=0.3)
+  [VOTE] T4 current=normal → bullying(2>=2) | history=[bullying,bullying,normal]
+[F251] T4 FINAL → bullying (conf=0.716, src=posec3d, smooth=True)
+[F255] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.852) | normal=0.852 fighting=0.137 bullying=0.006 falling=0.004 climbing=0.001
+  [RAW] T1 → normal (conf=0.852 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F255] T1 FINAL → normal (conf=0.852, src=posec3d, smooth=False)
+[F261] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.609) | normal=0.609 fighting=0.387 bullying=0.003 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.609 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F261] T2 FINAL → normal (conf=0.609, src=posec3d, smooth=False)
+[F267] T4 INFER: buf_total=80, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.756) | normal=0.756 fighting=0.227 bullying=0.010 falling=0.006 climbing=0.002
+  [RAW] T4 → normal (conf=0.756 >= threshold=0.3)
+  [VOTE] T4 current=normal → normal(bullying只有1次<2) | history=[bullying,normal,normal]
+[F267] T4 FINAL → normal (conf=0.756, src=posec3d, smooth=False)
+[F271] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.669) | normal=0.669 fighting=0.307 bullying=0.012 falling=0.010 climbing=0.003
+  [RAW] T1 → normal (conf=0.669 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F271] T1 FINAL → normal (conf=0.669, src=posec3d, smooth=False)
+[F277] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.647) | normal=0.647 fighting=0.349 bullying=0.003 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.647 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F277] T2 FINAL → normal (conf=0.647, src=posec3d, smooth=False)
+[F283] T4 INFER: buf_total=96, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.533) | normal=0.533 fighting=0.443 bullying=0.011 falling=0.010 climbing=0.003
+  [RAW] T4 → normal (conf=0.533 >= threshold=0.3)
+  [VOTE] T4 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F283] T4 FINAL → normal (conf=0.533, src=posec3d, smooth=False)
+[F287] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.532) | normal=0.435 fighting=0.532 bullying=0.016 falling=0.014 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.30, head_hip_norm=0.350 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → normal(bullying只有1次<2) | history=[normal,normal,bullying]
+[F287] T1 FINAL → normal (conf=0.479, src=rule_bullying, smooth=True)
+[F293] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.816) | normal=0.816 fighting=0.181 bullying=0.003 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.816 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F293] T2 FINAL → normal (conf=0.816, src=posec3d, smooth=False)
+[F299] T4 INFER: buf_total=112, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.550) | normal=0.409 fighting=0.550 bullying=0.013 falling=0.025 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.32, head_hip_norm=0.341 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → normal(bullying只有1次<2) | history=[normal,normal,bullying]
+[F299] T4 FINAL → normal (conf=0.495, src=rule_bullying, smooth=True)
+[F303] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.652) | normal=0.312 fighting=0.652 bullying=0.014 falling=0.018 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.30, head_hip_norm=0.339 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(2>=2) | history=[normal,bullying,bullying]
+[F303] T1 FINAL → bullying (conf=0.587, src=rule_bullying, smooth=False)
+[F309] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.932) | normal=0.932 fighting=0.065 bullying=0.002 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.932 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F309] T2 FINAL → normal (conf=0.932, src=posec3d, smooth=False)
+[F315] T4 INFER: buf_total=128, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.859) | normal=0.102 fighting=0.859 bullying=0.008 falling=0.029 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.20, head_hip_norm=0.298 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(2>=2) | history=[normal,bullying,bullying]
+[F315] T4 FINAL → bullying (conf=0.773, src=rule_bullying, smooth=False)
+[F319] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.929) | normal=0.046 fighting=0.929 bullying=0.005 falling=0.018 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.19, head_hip_norm=0.291 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F319] T1 FINAL → bullying (conf=0.836, src=rule_bullying, smooth=False)
+[F325] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.979) | normal=0.979 fighting=0.018 bullying=0.002 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.979 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F325] T2 FINAL → normal (conf=0.979, src=posec3d, smooth=False)
+[F331] T4 INFER: buf_total=144, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.927) | normal=0.037 fighting=0.927 bullying=0.005 falling=0.029 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.27, head_hip_norm=0.294 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F331] T4 FINAL → bullying (conf=0.834, src=rule_bullying, smooth=False)
+[F335] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.945) | normal=0.028 fighting=0.945 bullying=0.004 falling=0.021 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.20, head_hip_norm=0.299 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F335] T1 FINAL → bullying (conf=0.851, src=rule_bullying, smooth=False)
+[F341] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.962) | normal=0.962 fighting=0.036 bullying=0.001 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.962 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F341] T2 FINAL → normal (conf=0.962, src=posec3d, smooth=False)
+[F347] T4 INFER: buf_total=160, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.919) | normal=0.037 fighting=0.919 bullying=0.004 falling=0.039 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.19, head_hip_norm=0.302 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F347] T4 FINAL → bullying (conf=0.827, src=rule_bullying, smooth=False)
+[F351] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.938) | normal=0.037 fighting=0.938 bullying=0.003 falling=0.020 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.17, head_hip_norm=0.296 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F351] T1 FINAL → bullying (conf=0.845, src=rule_bullying, smooth=False)
+[F357] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.992) | normal=0.992 fighting=0.006 bullying=0.001 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.992 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F357] T2 FINAL → normal (conf=0.992, src=posec3d, smooth=False)
+[F363] T4 INFER: buf_total=176, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.817) | normal=0.100 fighting=0.817 bullying=0.005 falling=0.075 climbing=0.003
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=472)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F363] T4 FINAL → bullying (conf=0.500, src=rule_yolo_bullying, smooth=False)
+[F367] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.846) | normal=0.092 fighting=0.846 bullying=0.005 falling=0.054 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.30, head_hip_norm=0.276 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F367] T1 FINAL → bullying (conf=0.762, src=rule_bullying, smooth=False)
+[F373] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.998) | normal=0.998 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.998 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F373] T2 FINAL → normal (conf=0.998, src=posec3d, smooth=False)
+[F379] T4 INFER: buf_total=192, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.695) | normal=0.120 fighting=0.695 bullying=0.008 falling=0.172 climbing=0.005
+  [RULE] bullying不对称检测: height_ratio=-0.27, head_hip_norm=0.287 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F379] T4 FINAL → bullying (conf=0.626, src=rule_bullying, smooth=False)
+[F383] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.760) | normal=0.157 fighting=0.760 bullying=0.005 falling=0.075 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.23, head_hip_norm=0.295 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F383] T1 FINAL → bullying (conf=0.684, src=rule_bullying, smooth=False)
+[F389] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F389] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F395] T4 INFER: buf_total=208, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.624) | normal=0.624 fighting=0.227 bullying=0.004 falling=0.142 climbing=0.003
+  [RAW] T4 → normal (conf=0.624 >= threshold=0.3)
+  [VOTE] T4 current=normal → bullying(2>=2) | history=[bullying,bullying,normal]
+[F395] T4 FINAL → bullying (conf=0.624, src=posec3d, smooth=True)
+[F399] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.564) | normal=0.564 fighting=0.300 bullying=0.003 falling=0.131 climbing=0.003
+  [RAW] T1 → normal (conf=0.564 >= threshold=0.3)
+  [VOTE] T1 current=normal → bullying(2>=2) | history=[bullying,bullying,normal]
+[F399] T1 FINAL → bullying (conf=0.564, src=posec3d, smooth=True)
+[F405] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F405] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F411] T4 INFER: buf_total=224, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.729) | normal=0.729 fighting=0.166 bullying=0.002 falling=0.101 climbing=0.002
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'normal'], dist=454)
+  [VOTE] T4 current=bullying → bullying(2>=2) | history=[bullying,normal,bullying]
+[F411] T4 FINAL → bullying (conf=0.302, src=rule_yolo_bullying, smooth=False)
+[F415] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.428) | normal=0.428 fighting=0.368 bullying=0.003 falling=0.199 climbing=0.003
+  [RAW] T1 → normal (conf=0.428 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(bullying只有1次<2) | history=[bullying,normal,normal]
+[F415] T1 FINAL → normal (conf=0.428, src=posec3d, smooth=False)
+[F421] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F421] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F427] T4 INFER: buf_total=240, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.695) | normal=0.695 fighting=0.204 bullying=0.002 falling=0.097 climbing=0.002
+  [RAW] T4 → normal (conf=0.695 >= threshold=0.3)
+  [VOTE] T4 current=normal → normal(bullying只有1次<2) | history=[normal,bullying,normal]
+[F427] T4 FINAL → normal (conf=0.695, src=posec3d, smooth=False)
+[F431] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.590) | normal=0.590 fighting=0.191 bullying=0.003 falling=0.213 climbing=0.002
+  [RAW] T1 → normal (conf=0.590 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F431] T1 FINAL → normal (conf=0.590, src=posec3d, smooth=False)
+[F437] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F437] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F443] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.667) | normal=0.167 fighting=0.667 bullying=0.003 falling=0.159 climbing=0.003
+  [RAW] T4 → falling (YOLO辅助检测: conf=0.349)
+  [VOTE] T4 current=falling → normal(bullying只有1次<2) | history=[bullying,normal,falling]
+[F443] T4 FINAL → normal (conf=0.349, src=rule_yolo_falling, smooth=True)
+[F447] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.748) | normal=0.109 fighting=0.748 bullying=0.002 falling=0.139 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.24, head_hip_norm=0.302 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → normal(bullying只有1次<2) | history=[normal,normal,bullying]
+[F447] T1 FINAL → normal (conf=0.674, src=rule_bullying, smooth=True)
+[F453] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F453] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F459] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.812) | normal=0.087 fighting=0.812 bullying=0.001 falling=0.097 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.22, head_hip_norm=0.303 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → falling(1>=1) | history=[normal,falling,bullying]
+[F459] T4 FINAL → falling (conf=0.731, src=rule_bullying, smooth=True)
+[F463] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.811) | normal=0.091 fighting=0.811 bullying=0.001 falling=0.094 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.18, head_hip_norm=0.307 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(2>=2) | history=[normal,bullying,bullying]
+[F463] T1 FINAL → bullying (conf=0.730, src=rule_bullying, smooth=False)
+[F469] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F469] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F475] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.832) | normal=0.090 fighting=0.832 bullying=0.001 falling=0.075 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.33, head_hip_norm=0.312 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(2>=2) | history=[falling,bullying,bullying]
+[F475] T4 FINAL → bullying (conf=0.749, src=rule_bullying, smooth=False)
+[F479] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.749) | normal=0.152 fighting=0.749 bullying=0.001 falling=0.095 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.24, head_hip_norm=0.314 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F479] T1 FINAL → bullying (conf=0.674, src=rule_bullying, smooth=False)
+[F485] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F485] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F491] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.873) | normal=0.092 fighting=0.873 bullying=0.001 falling=0.033 climbing=0.001
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=496)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F491] T4 FINAL → bullying (conf=0.490, src=rule_yolo_bullying, smooth=False)
+[F495] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.727) | normal=0.226 fighting=0.727 bullying=0.001 falling=0.044 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.19, head_hip_norm=0.304 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F495] T1 FINAL → bullying (conf=0.654, src=rule_bullying, smooth=False)
+[F501] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F501] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F507] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.784) | normal=0.183 fighting=0.784 bullying=0.001 falling=0.031 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.21, head_hip_norm=0.320 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F507] T4 FINAL → bullying (conf=0.706, src=rule_bullying, smooth=False)
+[F511] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.489) | normal=0.489 fighting=0.480 bullying=0.001 falling=0.028 climbing=0.002
+  [RAW] T1 → normal (conf=0.489 >= threshold=0.3)
+  [VOTE] T1 current=normal → bullying(2>=2) | history=[bullying,bullying,normal]
+[F511] T1 FINAL → bullying (conf=0.489, src=posec3d, smooth=True)
+[F517] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.998) | normal=0.998 fighting=0.002 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.998 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F517] T2 FINAL → normal (conf=0.998, src=posec3d, smooth=False)
+[F523] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.613) | normal=0.358 fighting=0.613 bullying=0.001 falling=0.026 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.31, head_hip_norm=0.302 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F523] T4 FINAL → bullying (conf=0.552, src=rule_bullying, smooth=False)
+[F527] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.637) | normal=0.637 fighting=0.339 bullying=0.001 falling=0.021 climbing=0.002
+  [RAW] T1 → normal (conf=0.637 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(bullying只有1次<2) | history=[bullying,normal,normal]
+[F527] T1 FINAL → normal (conf=0.637, src=posec3d, smooth=False)
+[F533] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.998) | normal=0.998 fighting=0.002 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.998 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F533] T2 FINAL → normal (conf=0.998, src=posec3d, smooth=False)
+[F539] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.606) | normal=0.372 fighting=0.606 bullying=0.001 falling=0.020 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.20, head_hip_norm=0.309 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F539] T4 FINAL → bullying (conf=0.545, src=rule_bullying, smooth=False)
+[F543] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.561) | normal=0.561 fighting=0.418 bullying=0.001 falling=0.019 climbing=0.001
+  [RAW] T1 → normal (conf=0.561 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F543] T1 FINAL → normal (conf=0.561, src=posec3d, smooth=False)
+[F549] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.998) | normal=0.998 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.998 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F549] T2 FINAL → normal (conf=0.998, src=posec3d, smooth=False)
+[F555] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.681) | normal=0.305 fighting=0.681 bullying=0.001 falling=0.013 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.21, head_hip_norm=0.293 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F555] T4 FINAL → bullying (conf=0.613, src=rule_bullying, smooth=False)
+[F559] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.611) | normal=0.370 fighting=0.611 bullying=0.001 falling=0.018 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.24, head_hip_norm=0.300 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → normal(bullying只有1次<2) | history=[normal,normal,bullying]
+[F559] T1 FINAL → normal (conf=0.550, src=rule_bullying, smooth=True)
+[F565] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.997) | normal=0.997 fighting=0.003 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.997 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F565] T2 FINAL → normal (conf=0.997, src=posec3d, smooth=False)
+[F571] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.790) | normal=0.201 fighting=0.790 bullying=0.001 falling=0.008 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.33, head_hip_norm=0.325 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F571] T4 FINAL → bullying (conf=0.711, src=rule_bullying, smooth=False)
+[F575] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.754) | normal=0.232 fighting=0.754 bullying=0.001 falling=0.013 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.35, head_hip_norm=0.316 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(2>=2) | history=[normal,bullying,bullying]
+[F575] T1 FINAL → bullying (conf=0.678, src=rule_bullying, smooth=False)
+[F581] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.998) | normal=0.998 fighting=0.002 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.998 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F581] T2 FINAL → normal (conf=0.998, src=posec3d, smooth=False)
+[F587] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.829) | normal=0.162 fighting=0.829 bullying=0.001 falling=0.008 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.35, head_hip_norm=0.305 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F587] T4 FINAL → bullying (conf=0.746, src=rule_bullying, smooth=False)
+[F591] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.883) | normal=0.106 fighting=0.883 bullying=0.000 falling=0.010 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.22, head_hip_norm=0.289 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F591] T1 FINAL → bullying (conf=0.795, src=rule_bullying, smooth=False)
+[F597] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F597] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F603] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.912) | normal=0.078 fighting=0.912 bullying=0.000 falling=0.009 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.39, head_hip_norm=0.306 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F603] T4 FINAL → bullying (conf=0.821, src=rule_bullying, smooth=False)
+[F607] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.909) | normal=0.073 fighting=0.909 bullying=0.000 falling=0.017 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.44, head_hip_norm=0.308 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F607] T1 FINAL → bullying (conf=0.818, src=rule_bullying, smooth=False)
+[F613] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F613] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F619] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.905) | normal=0.071 fighting=0.905 bullying=0.001 falling=0.022 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.38, head_hip_norm=0.282 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F619] T4 FINAL → bullying (conf=0.815, src=rule_bullying, smooth=False)
+[F623] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.832) | normal=0.123 fighting=0.832 bullying=0.001 falling=0.043 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.22, head_hip_norm=0.264 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F623] T1 FINAL → bullying (conf=0.749, src=rule_bullying, smooth=False)
+[F629] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F629] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F635] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.878) | normal=0.100 fighting=0.878 bullying=0.001 falling=0.021 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.23, head_hip_norm=0.277 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F635] T4 FINAL → bullying (conf=0.790, src=rule_bullying, smooth=False)
+[F639] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.806) | normal=0.155 fighting=0.806 bullying=0.001 falling=0.038 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.23, head_hip_norm=0.292 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F639] T1 FINAL → bullying (conf=0.725, src=rule_bullying, smooth=False)
+[F645] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F645] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F651] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.826) | normal=0.147 fighting=0.826 bullying=0.001 falling=0.027 climbing=0.001
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=438)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F651] T4 FINAL → bullying (conf=0.348, src=rule_yolo_bullying, smooth=False)
+[F655] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.763) | normal=0.197 fighting=0.763 bullying=0.001 falling=0.038 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.37, head_hip_norm=0.306 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F655] T1 FINAL → bullying (conf=0.687, src=rule_bullying, smooth=False)
+[F661] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F661] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F667] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.894) | normal=0.082 fighting=0.894 bullying=0.000 falling=0.023 climbing=0.000
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=473)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F667] T4 FINAL → bullying (conf=0.347, src=rule_yolo_bullying, smooth=False)
+[F671] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.807) | normal=0.166 fighting=0.807 bullying=0.001 falling=0.026 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.17, head_hip_norm=0.290 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F671] T1 FINAL → bullying (conf=0.726, src=rule_bullying, smooth=False)
+[F677] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F677] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F683] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.800) | normal=0.162 fighting=0.800 bullying=0.001 falling=0.037 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.24, head_hip_norm=0.315 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F683] T4 FINAL → bullying (conf=0.720, src=rule_bullying, smooth=False)
+[F687] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.831) | normal=0.130 fighting=0.831 bullying=0.001 falling=0.038 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.33, head_hip_norm=0.315 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F687] T1 FINAL → bullying (conf=0.748, src=rule_bullying, smooth=False)
+[F693] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F693] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F699] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.770) | normal=0.160 fighting=0.770 bullying=0.001 falling=0.068 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.42, head_hip_norm=0.305 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F699] T4 FINAL → bullying (conf=0.693, src=rule_bullying, smooth=False)
+[F703] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.708) | normal=0.161 fighting=0.708 bullying=0.002 falling=0.128 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.22, head_hip_norm=0.267 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F703] T1 FINAL → bullying (conf=0.637, src=rule_bullying, smooth=False)
+[F709] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F709] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F715] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.809) | normal=0.155 fighting=0.809 bullying=0.001 falling=0.033 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.42, head_hip_norm=0.305 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F715] T4 FINAL → bullying (conf=0.729, src=rule_bullying, smooth=False)
+[F719] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.746) | normal=0.204 fighting=0.746 bullying=0.002 falling=0.047 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.41, head_hip_norm=0.302 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F719] T1 FINAL → bullying (conf=0.672, src=rule_bullying, smooth=False)
+[F725] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F725] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F731] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.630) | normal=0.353 fighting=0.630 bullying=0.001 falling=0.015 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.35, head_hip_norm=0.304 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F731] T4 FINAL → bullying (conf=0.567, src=rule_bullying, smooth=False)
+[F735] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.710) | normal=0.255 fighting=0.710 bullying=0.001 falling=0.033 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.22, head_hip_norm=0.261 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F735] T1 FINAL → bullying (conf=0.639, src=rule_bullying, smooth=False)
+[F741] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F741] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F747] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.733) | normal=0.257 fighting=0.733 bullying=0.000 falling=0.009 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.19, head_hip_norm=0.295 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F747] T4 FINAL → bullying (conf=0.660, src=rule_bullying, smooth=False)
+[F751] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.892) | normal=0.100 fighting=0.892 bullying=0.000 falling=0.007 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.16, head_hip_norm=0.273 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F751] T1 FINAL → bullying (conf=0.803, src=rule_bullying, smooth=False)
+[F757] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F757] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F763] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.853) | normal=0.143 fighting=0.853 bullying=0.000 falling=0.003 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.17, head_hip_norm=0.306 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F763] T4 FINAL → bullying (conf=0.768, src=rule_bullying, smooth=False)
+[F767] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.860) | normal=0.129 fighting=0.860 bullying=0.001 falling=0.010 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.16, head_hip_norm=0.313 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F767] T1 FINAL → bullying (conf=0.774, src=rule_bullying, smooth=False)
+[F773] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F773] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F779] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.924) | normal=0.073 fighting=0.924 bullying=0.000 falling=0.003 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.16, head_hip_norm=0.318 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F779] T4 FINAL → bullying (conf=0.832, src=rule_bullying, smooth=False)
+[F783] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.977) | normal=0.019 fighting=0.977 bullying=0.000 falling=0.004 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.15, head_hip_norm=0.322 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F783] T1 FINAL → bullying (conf=0.879, src=rule_bullying, smooth=False)
+[F789] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F789] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F795] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.915) | normal=0.080 fighting=0.915 bullying=0.000 falling=0.003 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.13, head_hip_norm=0.333 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F795] T4 FINAL → bullying (conf=0.824, src=rule_bullying, smooth=False)
+[F799] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.987) | normal=0.009 fighting=0.987 bullying=0.000 falling=0.004 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.13, head_hip_norm=0.334 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F799] T1 FINAL → bullying (conf=0.888, src=rule_bullying, smooth=False)
+[F805] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(1.000) | normal=1.000 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=1.000 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F805] T2 FINAL → normal (conf=1.000, src=posec3d, smooth=False)
+[F811] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.982) | normal=0.015 fighting=0.982 bullying=0.000 falling=0.002 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.13, head_hip_norm=0.332 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F811] T4 FINAL → bullying (conf=0.884, src=rule_bullying, smooth=False)
+[F815] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.995) | normal=0.003 fighting=0.995 bullying=0.000 falling=0.002 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.13, head_hip_norm=0.337 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F815] T1 FINAL → bullying (conf=0.895, src=rule_bullying, smooth=False)
+[F821] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.000 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F821] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F827] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.987) | normal=0.011 fighting=0.987 bullying=0.000 falling=0.002 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.15, head_hip_norm=0.320 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F827] T4 FINAL → bullying (conf=0.888, src=rule_bullying, smooth=False)
+[F831] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.997) | normal=0.002 fighting=0.997 bullying=0.000 falling=0.001 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.16, head_hip_norm=0.320 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F831] T1 FINAL → bullying (conf=0.897, src=rule_bullying, smooth=False)
+[F837] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F837] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F843] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.991) | normal=0.005 fighting=0.991 bullying=0.000 falling=0.003 climbing=0.000
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=432)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F843] T4 FINAL → bullying (conf=0.512, src=rule_yolo_bullying, smooth=False)
+[F847] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.996) | normal=0.001 fighting=0.996 bullying=0.000 falling=0.002 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.16, head_hip_norm=0.339 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F847] T1 FINAL → bullying (conf=0.897, src=rule_bullying, smooth=False)
+[F853] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F853] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F859] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.981) | normal=0.008 fighting=0.981 bullying=0.001 falling=0.011 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.15, head_hip_norm=0.357 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F859] T4 FINAL → bullying (conf=0.883, src=rule_bullying, smooth=False)
+[F863] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.989) | normal=0.003 fighting=0.989 bullying=0.001 falling=0.008 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.15, head_hip_norm=0.354 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F863] T1 FINAL → bullying (conf=0.890, src=rule_bullying, smooth=False)
+[F869] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F869] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F875] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.968) | normal=0.014 fighting=0.968 bullying=0.001 falling=0.017 climbing=0.000
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=431)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F875] T4 FINAL → bullying (conf=0.330, src=rule_yolo_bullying, smooth=False)
+[F879] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.983) | normal=0.006 fighting=0.983 bullying=0.001 falling=0.010 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.15, head_hip_norm=0.348 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F879] T1 FINAL → bullying (conf=0.885, src=rule_bullying, smooth=False)
+[F885] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F885] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F891] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.917) | normal=0.053 fighting=0.917 bullying=0.002 falling=0.027 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.15, head_hip_norm=0.342 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F891] T4 FINAL → bullying (conf=0.826, src=rule_bullying, smooth=False)
+[F895] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.940) | normal=0.027 fighting=0.940 bullying=0.002 falling=0.030 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.13, head_hip_norm=0.332 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F895] T1 FINAL → bullying (conf=0.846, src=rule_bullying, smooth=False)
+[F901] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.999) | normal=0.999 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.999 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F901] T2 FINAL → normal (conf=0.999, src=posec3d, smooth=False)
+[F907] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.873) | normal=0.056 fighting=0.873 bullying=0.004 falling=0.066 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.16, head_hip_norm=0.338 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F907] T4 FINAL → bullying (conf=0.785, src=rule_bullying, smooth=False)
+[F911] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.980) | normal=0.016 fighting=0.980 bullying=0.001 falling=0.002 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=0.75, head_hip_norm=0.115 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F911] T1 FINAL → bullying (conf=0.882, src=rule_bullying, smooth=False)
+[F917] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.998) | normal=0.998 fighting=0.002 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.998 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F917] T2 FINAL → normal (conf=0.998, src=posec3d, smooth=False)
+[F926] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.971) | normal=0.014 fighting=0.971 bullying=0.001 falling=0.013 climbing=0.000
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=434)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F926] T4 FINAL → bullying (conf=0.337, src=rule_yolo_bullying, smooth=False)
+[F927] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.949) | normal=0.022 fighting=0.949 bullying=0.001 falling=0.027 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.10, head_hip_norm=0.353 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F927] T1 FINAL → bullying (conf=0.854, src=rule_bullying, smooth=False)
+[F933] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.996) | normal=0.996 fighting=0.004 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.996 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F933] T2 FINAL → normal (conf=0.996, src=posec3d, smooth=False)
+[F942] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.927) | normal=0.036 fighting=0.927 bullying=0.002 falling=0.035 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.10, head_hip_norm=0.345 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F942] T4 FINAL → bullying (conf=0.834, src=rule_bullying, smooth=False)
+[F943] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.921) | normal=0.027 fighting=0.921 bullying=0.003 falling=0.048 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.10, head_hip_norm=0.345 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F943] T1 FINAL → bullying (conf=0.829, src=rule_bullying, smooth=False)
+[F949] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.007 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F949] T2 FINAL → normal (conf=0.993, src=posec3d, smooth=False)
+[F958] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.914) | normal=0.055 fighting=0.914 bullying=0.002 falling=0.028 climbing=0.001
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=422)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F958] T4 FINAL → bullying (conf=0.494, src=rule_yolo_bullying, smooth=False)
+[F959] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.893) | normal=0.053 fighting=0.893 bullying=0.003 falling=0.049 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.11, head_hip_norm=0.333 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F959] T1 FINAL → bullying (conf=0.804, src=rule_bullying, smooth=False)
+[F965] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.981) | normal=0.981 fighting=0.018 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.981 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F965] T2 FINAL → normal (conf=0.981, src=posec3d, smooth=False)
+[F974] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.592) | normal=0.315 fighting=0.592 bullying=0.005 falling=0.083 climbing=0.004
+  [RULE] bullying不对称检测: height_ratio=-0.15, head_hip_norm=0.333 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F974] T4 FINAL → bullying (conf=0.533, src=rule_bullying, smooth=False)
+[F975] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.808) | normal=0.128 fighting=0.808 bullying=0.005 falling=0.056 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.15, head_hip_norm=0.334 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F975] T1 FINAL → bullying (conf=0.727, src=rule_bullying, smooth=False)
+[F981] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.971) | normal=0.971 fighting=0.028 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.971 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F981] T2 FINAL → normal (conf=0.971, src=posec3d, smooth=False)
+[F990] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.474) | normal=0.474 fighting=0.416 bullying=0.007 falling=0.099 climbing=0.005
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=422)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F990] T4 FINAL → bullying (conf=0.470, src=rule_yolo_bullying, smooth=False)
+[F991] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.551) | normal=0.323 fighting=0.551 bullying=0.008 falling=0.113 climbing=0.005
+  [RULE] bullying不对称检测: height_ratio=-0.10, head_hip_norm=0.324 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F991] T1 FINAL → bullying (conf=0.496, src=rule_bullying, smooth=False)
+[F997] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.970) | normal=0.970 fighting=0.030 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.970 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F997] T2 FINAL → normal (conf=0.970, src=posec3d, smooth=False)
+[F1006] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.490) | normal=0.490 fighting=0.437 bullying=0.010 falling=0.058 climbing=0.005
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=418)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1006] T4 FINAL → bullying (conf=0.341, src=rule_yolo_bullying, smooth=False)
+[F1007] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.550) | normal=0.550 fighting=0.352 bullying=0.007 falling=0.087 climbing=0.004
+  [RAW] T1 → normal (conf=0.550 >= threshold=0.3)
+  [VOTE] T1 current=normal → bullying(2>=2) | history=[bullying,bullying,normal]
+[F1007] T1 FINAL → bullying (conf=0.550, src=posec3d, smooth=True)
+[F1013] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.933) | normal=0.933 fighting=0.066 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.933 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1013] T2 FINAL → normal (conf=0.933, src=posec3d, smooth=False)
+[F1022] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.526) | normal=0.526 fighting=0.392 bullying=0.009 falling=0.068 climbing=0.005
+  [RAW] T4 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'normal'], dist=416)
+  [VOTE] T4 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1022] T4 FINAL → bullying (conf=0.390, src=rule_yolo_bullying, smooth=False)
+[F1023] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.585) | normal=0.585 fighting=0.293 bullying=0.009 falling=0.109 climbing=0.005
+  [RAW] T1 → normal (conf=0.585 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(bullying只有1次<2) | history=[bullying,normal,normal]
+[F1023] T1 FINAL → normal (conf=0.585, src=posec3d, smooth=False)
+[F1029] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.909) | normal=0.909 fighting=0.090 bullying=0.000 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.909 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1029] T2 FINAL → normal (conf=0.909, src=posec3d, smooth=False)
+[F1038] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.590) | normal=0.590 fighting=0.352 bullying=0.009 falling=0.042 climbing=0.006
+  [RAW] T4 → normal (conf=0.590 >= threshold=0.3)
+  [VOTE] T4 current=normal → bullying(2>=2) | history=[bullying,bullying,normal]
+[F1038] T4 FINAL → bullying (conf=0.590, src=posec3d, smooth=True)
+[F1039] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.495) | normal=0.495 fighting=0.440 bullying=0.008 falling=0.053 climbing=0.004
+  [RAW] T1 → normal (conf=0.495 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1039] T1 FINAL → normal (conf=0.495, src=posec3d, smooth=False)
+[F1045] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.911) | normal=0.911 fighting=0.088 bullying=0.001 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.911 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1045] T2 FINAL → normal (conf=0.911, src=posec3d, smooth=False)
+[F1054] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.556) | normal=0.556 fighting=0.377 bullying=0.010 falling=0.051 climbing=0.006
+  [RAW] T4 → normal (conf=0.556 >= threshold=0.3)
+  [VOTE] T4 current=normal → normal(bullying只有1次<2) | history=[bullying,normal,normal]
+[F1054] T4 FINAL → normal (conf=0.556, src=posec3d, smooth=False)
+[F1055] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.577) | normal=0.577 fighting=0.381 bullying=0.008 falling=0.030 climbing=0.004
+  [RAW] T1 → normal (conf=0.577 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1055] T1 FINAL → normal (conf=0.577, src=posec3d, smooth=False)
+[F1061] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.872) | normal=0.872 fighting=0.125 bullying=0.001 falling=0.000 climbing=0.002
+  [RAW] T2 → normal (conf=0.872 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1061] T2 FINAL → normal (conf=0.872, src=posec3d, smooth=False)
+[F1070] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.663) | normal=0.663 fighting=0.248 bullying=0.017 falling=0.065 climbing=0.007
+  [RAW] T4 → normal (conf=0.663 >= threshold=0.3)
+  [VOTE] T4 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1070] T4 FINAL → normal (conf=0.663, src=posec3d, smooth=False)
+[F1071] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.668) | normal=0.668 fighting=0.268 bullying=0.010 falling=0.049 climbing=0.005
+  [RAW] T1 → normal (conf=0.668 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1071] T1 FINAL → normal (conf=0.668, src=posec3d, smooth=False)
+[F1077] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.905) | normal=0.905 fighting=0.090 bullying=0.001 falling=0.001 climbing=0.003
+  [RAW] T2 → normal (conf=0.905 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1077] T2 FINAL → normal (conf=0.905, src=posec3d, smooth=False)
+[F1086] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.632) | normal=0.632 fighting=0.232 bullying=0.020 falling=0.108 climbing=0.007
+  [RAW] T4 → falling (YOLO辅助检测: conf=0.433)
+  [VOTE] T4 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F1086] T4 FINAL → falling (conf=0.433, src=rule_yolo_falling, smooth=False)
+[F1087] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.758) | normal=0.758 fighting=0.166 bullying=0.011 falling=0.059 climbing=0.007
+  [RAW] T1 → normal (conf=0.758 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1087] T1 FINAL → normal (conf=0.758, src=posec3d, smooth=False)
+[F1093] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.891) | normal=0.891 fighting=0.102 bullying=0.002 falling=0.001 climbing=0.004
+  [RAW] T2 → normal (conf=0.891 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1093] T2 FINAL → normal (conf=0.891, src=posec3d, smooth=False)
+[F1102] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.629) | normal=0.629 fighting=0.282 bullying=0.016 falling=0.067 climbing=0.006
+  [RAW] T4 → normal (conf=0.629 >= threshold=0.3)
+  [VOTE] T4 current=normal → falling(1>=1) | history=[normal,falling,normal]
+[F1102] T4 FINAL → falling (conf=0.629, src=posec3d, smooth=True)
+[F1103] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.659) | normal=0.659 fighting=0.270 bullying=0.012 falling=0.052 climbing=0.007
+  [RAW] T1 → normal (conf=0.659 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1103] T1 FINAL → normal (conf=0.659, src=posec3d, smooth=False)
+[F1109] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.681) | normal=0.681 fighting=0.308 bullying=0.003 falling=0.001 climbing=0.007
+  [RAW] T2 → normal (conf=0.681 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1109] T2 FINAL → normal (conf=0.681, src=posec3d, smooth=False)
+[F1118] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.568) | normal=0.568 fighting=0.354 bullying=0.018 falling=0.053 climbing=0.007
+  [RAW] T4 → falling (YOLO辅助检测: conf=0.616)
+  [VOTE] T4 current=falling → falling(2>=1) | history=[falling,normal,falling]
+[F1118] T4 FINAL → falling (conf=0.616, src=rule_yolo_falling, smooth=False)
+[F1119] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.698) | normal=0.698 fighting=0.234 bullying=0.017 falling=0.043 climbing=0.007
+  [RAW] T1 → normal (conf=0.698 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1119] T1 FINAL → normal (conf=0.698, src=posec3d, smooth=False)
+[F1125] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.559) | normal=0.431 fighting=0.559 bullying=0.003 falling=0.001 climbing=0.007
+  [RAW] T2 → normal (fighting但无人在附近: nearest=689 > 270)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1125] T2 FINAL → normal (conf=0.441, src=rule_no_proximity, smooth=False)
+[F1134] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.640) | normal=0.640 fighting=0.282 bullying=0.018 falling=0.054 climbing=0.005
+  [RAW] T4 → normal (conf=0.640 >= threshold=0.3)
+  [VOTE] T4 current=normal → falling(1>=1) | history=[normal,falling,normal]
+[F1134] T4 FINAL → falling (conf=0.640, src=posec3d, smooth=True)
+[F1135] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.771) | normal=0.771 fighting=0.184 bullying=0.013 falling=0.028 climbing=0.004
+  [RAW] T1 → normal (conf=0.771 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1135] T1 FINAL → normal (conf=0.771, src=posec3d, smooth=False)
+[F1141] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.654) | normal=0.337 fighting=0.654 bullying=0.003 falling=0.001 climbing=0.005
+  [RAW] T2 → normal (fighting但无人在附近: nearest=706 > 270)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1141] T2 FINAL → normal (conf=0.346, src=rule_no_proximity, smooth=False)
+[F1150] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.749) | normal=0.749 fighting=0.203 bullying=0.014 falling=0.029 climbing=0.004
+  [RAW] T4 → normal (conf=0.749 >= threshold=0.3)
+  [VOTE] T4 current=normal → falling(1>=1) | history=[falling,normal,normal]
+[F1150] T4 FINAL → falling (conf=0.749, src=posec3d, smooth=True)
+[F1151] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.722) | normal=0.722 fighting=0.226 bullying=0.014 falling=0.033 climbing=0.005
+  [RAW] T1 → normal (conf=0.722 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1151] T1 FINAL → normal (conf=0.722, src=posec3d, smooth=False)
+[F1157] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.666) | normal=0.329 fighting=0.666 bullying=0.002 falling=0.001 climbing=0.002
+  [RAW] T2 → fighting (conf=0.666 >= threshold=0.3)
+  [VOTE] T2 current=fighting → normal(fighting只有1次<3) | history=[normal,normal,fighting]
+[F1157] T2 FINAL → normal (conf=0.666, src=posec3d, smooth=True)
+[F1166] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=normal(0.648) | normal=0.648 fighting=0.316 bullying=0.010 falling=0.023 climbing=0.004
+  [RAW] T4 → falling (YOLO辅助检测: conf=0.367)
+  [VOTE] T4 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F1166] T4 FINAL → falling (conf=0.367, src=rule_yolo_falling, smooth=False)
+[F1167] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.703) | normal=0.703 fighting=0.261 bullying=0.011 falling=0.021 climbing=0.004
+  [RAW] T1 → normal (conf=0.703 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1167] T1 FINAL → normal (conf=0.703, src=posec3d, smooth=False)
+[F1173] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.579) | normal=0.579 fighting=0.415 bullying=0.002 falling=0.001 climbing=0.002
+  [RAW] T2 → normal (conf=0.579 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(fighting只有1次<3) | history=[normal,fighting,normal]
+[F1173] T2 FINAL → normal (conf=0.579, src=posec3d, smooth=False)
+[F1182] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.628) | normal=0.329 fighting=0.628 bullying=0.011 falling=0.027 climbing=0.005
+  [RULE] bullying不对称检测: height_ratio=-0.12, head_hip_norm=0.362 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → falling(1>=1) | history=[normal,falling,bullying]
+[F1182] T4 FINAL → falling (conf=0.565, src=rule_bullying, smooth=True)
+[F1183] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.579) | normal=0.399 fighting=0.579 bullying=0.007 falling=0.012 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.14, head_hip_norm=0.377 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → normal(bullying只有1次<2) | history=[normal,normal,bullying]
+[F1183] T1 FINAL → normal (conf=0.521, src=rule_bullying, smooth=True)
+[F1189] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.876) | normal=0.876 fighting=0.120 bullying=0.002 falling=0.001 climbing=0.002
+  [VOTE] T2 current=smoking → normal(fighting只有1次<3) | history=[fighting,normal,smoking]
+[F1189] T2 FINAL → normal (conf=0.343, src=rule_smoking, smooth=True)
+[F1198] T4 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T4 PoseC3D: argmax=fighting(0.895) | normal=0.085 fighting=0.895 bullying=0.004 falling=0.015 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.09, head_hip_norm=0.399 → bullying
+  [RAW] T4 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T4 current=bullying → bullying(2>=2) | history=[falling,bullying,bullying]
+[F1198] T4 FINAL → bullying (conf=0.805, src=rule_bullying, smooth=False)
+[F1199] T1 INFER: buf_total=256, sampled=64/64, pair=T4(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.638) | normal=0.350 fighting=0.638 bullying=0.003 falling=0.006 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.14, head_hip_norm=0.408 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(2>=2) | history=[normal,bullying,bullying]
+[F1199] T1 FINAL → bullying (conf=0.574, src=rule_bullying, smooth=False)
+[F1205] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.915) | normal=0.915 fighting=0.081 bullying=0.002 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.915 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(smoking只有1次<2) | history=[normal,smoking,normal]
+[F1205] T2 FINAL → normal (conf=0.915, src=posec3d, smooth=False)
+[F1215] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.905) | normal=0.905 fighting=0.088 bullying=0.001 falling=0.002 climbing=0.004
+  [VOTE] T1 current=smoking → bullying(2>=2) | history=[bullying,bullying,smoking]
+[F1215] T1 FINAL → bullying (conf=0.392, src=rule_smoking, smooth=True)
+[F1221] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.926) | normal=0.926 fighting=0.071 bullying=0.001 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.926 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(smoking只有1次<2) | history=[smoking,normal,normal]
+[F1221] T2 FINAL → normal (conf=0.926, src=posec3d, smooth=False)
+[F1231] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.647) | normal=0.647 fighting=0.351 bullying=0.001 falling=0.000 climbing=0.001
+  [RAW] T1 → normal (conf=0.647 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(bullying只有1次<2) | history=[bullying,smoking,normal]
+[F1231] T1 FINAL → normal (conf=0.647, src=posec3d, smooth=False)
+[F1237] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.570) | normal=0.570 fighting=0.427 bullying=0.001 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.570 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1237] T2 FINAL → normal (conf=0.570, src=posec3d, smooth=False)
+[F1240] T5 SKIP: buffer不足 1/32
+[F1241] T5 SKIP: buffer不足 2/32
+[F1242] T5 SKIP: buffer不足 3/32
+[F1243] T5 SKIP: buffer不足 4/32
+[F1244] T5 SKIP: buffer不足 5/32
+[F1245] T5 SKIP: buffer不足 6/32
+[F1246] T5 SKIP: buffer不足 7/32
+[F1247] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.559) | normal=0.438 fighting=0.559 bullying=0.002 falling=0.000 climbing=0.002
+  [RAW] T1 → fighting (conf=0.559 >= threshold=0.3)
+  [VOTE] T1 current=fighting → normal(smoking只有1次<2) | history=[smoking,normal,fighting]
+[F1247] T1 FINAL → normal (conf=0.559, src=posec3d, smooth=True)
+[F1247] T5 SKIP: buffer不足 8/32
+[F1248] T5 SKIP: buffer不足 9/32
+[F1249] T5 SKIP: buffer不足 10/32
+[F1250] T5 SKIP: buffer不足 11/32
+[F1251] T5 SKIP: buffer不足 12/32
+[F1252] T5 SKIP: buffer不足 13/32
+[F1253] T5 SKIP: buffer不足 14/32
+[F1254] T5 SKIP: buffer不足 15/32
+[F1255] T5 SKIP: buffer不足 16/32
+[F1256] T5 SKIP: buffer不足 17/32
+[F1256] T6 SKIP: buffer不足 1/32
+[F1257] T5 SKIP: buffer不足 18/32
+[F1258] T5 SKIP: buffer不足 19/32
+[F1259] T5 SKIP: buffer不足 20/32
+[F1260] T5 SKIP: buffer不足 21/32
+[F1261] T5 SKIP: buffer不足 22/32
+[F1261] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.832) | normal=0.832 fighting=0.167 bullying=0.001 falling=0.000 climbing=0.000
+  [RAW] T2 → normal (conf=0.832 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1261] T2 FINAL → normal (conf=0.832, src=posec3d, smooth=False)
+[F1262] T5 SKIP: buffer不足 23/32
+[F1263] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.766) | normal=0.766 fighting=0.205 bullying=0.007 falling=0.011 climbing=0.011
+  [RAW] T1 → normal (conf=0.766 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(fighting只有1次<3) | history=[normal,fighting,normal]
+[F1263] T1 FINAL → normal (conf=0.766, src=posec3d, smooth=False)
+[F1263] T5 SKIP: buffer不足 24/32
+[F1264] T5 SKIP: buffer不足 25/32
+[F1265] T5 SKIP: buffer不足 26/32
+[F1266] T5 SKIP: buffer不足 27/32
+[F1267] T5 SKIP: buffer不足 28/32
+[F1268] T5 SKIP: buffer不足 29/32
+[F1269] T5 SKIP: buffer不足 30/32
+[F1270] T5 SKIP: buffer不足 31/32
+[F1271] T5 INFER: buf_total=32, sampled=32/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.783) | normal=0.783 fighting=0.079 bullying=0.007 falling=0.112 climbing=0.019
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.787)
+  [VOTE] T5 current=falling → falling(1>=1) | history=[falling]
+[F1271] T5 FINAL → falling (conf=0.787, src=rule_yolo_falling, smooth=False)
+[F1277] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.652) | normal=0.652 fighting=0.335 bullying=0.009 falling=0.001 climbing=0.003
+  [RAW] T2 → normal (conf=0.652 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1277] T2 FINAL → normal (conf=0.652, src=posec3d, smooth=False)
+[F1279] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.672) | normal=0.672 fighting=0.275 bullying=0.007 falling=0.037 climbing=0.008
+  [RAW] T1 → normal (conf=0.672 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(fighting只有1次<3) | history=[fighting,normal,normal]
+[F1279] T1 FINAL → normal (conf=0.672, src=posec3d, smooth=False)
+[F1287] T5 INFER: buf_total=48, sampled=48/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.915) | normal=0.915 fighting=0.011 bullying=0.001 falling=0.072 climbing=0.002
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.785)
+  [VOTE] T5 current=falling → falling(2>=1) | history=[falling,falling]
+[F1287] T5 FINAL → falling (conf=0.785, src=rule_yolo_falling, smooth=False)
+[F1293] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.580) | normal=0.407 fighting=0.580 bullying=0.010 falling=0.001 climbing=0.002
+  [RAW] T2 → normal (fighting但无人在附近: nearest=502 > 270)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1293] T2 FINAL → normal (conf=0.420, src=rule_no_proximity, smooth=False)
+[F1295] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.582) | normal=0.582 fighting=0.416 bullying=0.002 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=0.582 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1295] T1 FINAL → normal (conf=0.582, src=posec3d, smooth=False)
+[F1303] T5 INFER: buf_total=64, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.888) | normal=0.888 fighting=0.000 bullying=0.000 falling=0.111 climbing=0.000
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.783)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1303] T5 FINAL → falling (conf=0.783, src=rule_yolo_falling, smooth=False)
+[F1309] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.608) | normal=0.608 fighting=0.385 bullying=0.006 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.608 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1309] T2 FINAL → normal (conf=0.608, src=posec3d, smooth=False)
+[F1311] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.540) | normal=0.540 fighting=0.456 bullying=0.003 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=0.540 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1311] T1 FINAL → normal (conf=0.540, src=posec3d, smooth=False)
+[F1319] T5 INFER: buf_total=80, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.813) | normal=0.813 fighting=0.001 bullying=0.000 falling=0.186 climbing=0.000
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.809)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1319] T5 FINAL → falling (conf=0.809, src=rule_yolo_falling, smooth=False)
+[F1325] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.588) | normal=0.588 fighting=0.400 bullying=0.010 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.588 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1325] T2 FINAL → normal (conf=0.588, src=posec3d, smooth=False)
+[F1327] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.593) | normal=0.399 fighting=0.593 bullying=0.007 falling=0.000 climbing=0.000
+  [RAW] T1 → fighting (conf=0.593 >= threshold=0.3)
+  [VOTE] T1 current=fighting → normal(fighting只有1次<3) | history=[normal,normal,fighting]
+[F1327] T1 FINAL → normal (conf=0.593, src=posec3d, smooth=True)
+[F1335] T5 INFER: buf_total=96, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.908) | normal=0.908 fighting=0.001 bullying=0.000 falling=0.090 climbing=0.000
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.805)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1335] T5 FINAL → falling (conf=0.805, src=rule_yolo_falling, smooth=False)
+[F1341] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.611) | normal=0.611 fighting=0.372 bullying=0.015 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.611 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1341] T2 FINAL → normal (conf=0.611, src=posec3d, smooth=False)
+[F1343] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.634) | normal=0.634 fighting=0.354 bullying=0.011 falling=0.000 climbing=0.001
+  [RAW] T1 → normal (conf=0.634 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(fighting只有1次<3) | history=[normal,fighting,normal]
+[F1343] T1 FINAL → normal (conf=0.634, src=posec3d, smooth=False)
+[F1351] T5 INFER: buf_total=112, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.948) | normal=0.948 fighting=0.001 bullying=0.000 falling=0.051 climbing=0.000
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.804)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1351] T5 FINAL → falling (conf=0.804, src=rule_yolo_falling, smooth=False)
+[F1357] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.645) | normal=0.645 fighting=0.342 bullying=0.012 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.645 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1357] T2 FINAL → normal (conf=0.645, src=posec3d, smooth=False)
+[F1359] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.615) | normal=0.615 fighting=0.373 bullying=0.012 falling=0.000 climbing=0.001
+  [RAW] T1 → normal (conf=0.615 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(fighting只有1次<3) | history=[fighting,normal,normal]
+[F1359] T1 FINAL → normal (conf=0.615, src=posec3d, smooth=False)
+[F1367] T5 INFER: buf_total=128, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.914) | normal=0.914 fighting=0.001 bullying=0.000 falling=0.084 climbing=0.000
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.806)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1367] T5 FINAL → falling (conf=0.806, src=rule_yolo_falling, smooth=False)
+[F1373] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.616) | normal=0.616 fighting=0.364 bullying=0.017 falling=0.001 climbing=0.001
+  [RAW] T2 → normal (conf=0.616 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1373] T2 FINAL → normal (conf=0.616, src=posec3d, smooth=False)
+[F1375] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.661) | normal=0.661 fighting=0.322 bullying=0.015 falling=0.001 climbing=0.001
+  [RAW] T1 → normal (conf=0.661 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1375] T1 FINAL → normal (conf=0.661, src=posec3d, smooth=False)
+[F1383] T5 INFER: buf_total=144, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.950) | normal=0.950 fighting=0.000 bullying=0.000 falling=0.049 climbing=0.000
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.787)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1383] T5 FINAL → falling (conf=0.787, src=rule_yolo_falling, smooth=False)
+[F1389] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.640) | normal=0.640 fighting=0.333 bullying=0.024 falling=0.001 climbing=0.002
+  [RAW] T2 → normal (conf=0.640 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1389] T2 FINAL → normal (conf=0.640, src=posec3d, smooth=False)
+[F1391] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.691) | normal=0.691 fighting=0.283 bullying=0.023 falling=0.001 climbing=0.001
+  [RAW] T1 → normal (conf=0.691 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1391] T1 FINAL → normal (conf=0.691, src=posec3d, smooth=False)
+[F1399] T5 INFER: buf_total=160, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.699) | normal=0.699 fighting=0.001 bullying=0.000 falling=0.300 climbing=0.000
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.683)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1399] T5 FINAL → falling (conf=0.683, src=rule_yolo_falling, smooth=False)
+[F1405] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.590) | normal=0.590 fighting=0.378 bullying=0.028 falling=0.003 climbing=0.002
+  [RAW] T2 → normal (conf=0.590 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1405] T2 FINAL → normal (conf=0.590, src=posec3d, smooth=False)
+[F1407] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.750) | normal=0.750 fighting=0.227 bullying=0.020 falling=0.001 climbing=0.001
+  [RAW] T1 → normal (conf=0.750 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1407] T1 FINAL → normal (conf=0.750, src=posec3d, smooth=False)
+[F1415] T5 INFER: buf_total=176, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.811) | normal=0.811 fighting=0.001 bullying=0.000 falling=0.187 climbing=0.001
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.672)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1415] T5 FINAL → falling (conf=0.672, src=rule_yolo_falling, smooth=False)
+[F1421] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.825) | normal=0.825 fighting=0.152 bullying=0.020 falling=0.002 climbing=0.002
+  [RAW] T2 → normal (conf=0.825 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1421] T2 FINAL → normal (conf=0.825, src=posec3d, smooth=False)
+[F1423] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.833) | normal=0.833 fighting=0.148 bullying=0.017 falling=0.001 climbing=0.001
+  [RAW] T1 → normal (conf=0.833 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1423] T1 FINAL → normal (conf=0.833, src=posec3d, smooth=False)
+[F1431] T5 INFER: buf_total=192, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.640) | normal=0.640 fighting=0.002 bullying=0.000 falling=0.358 climbing=0.001
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.614)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1431] T5 FINAL → falling (conf=0.614, src=rule_yolo_falling, smooth=False)
+[F1437] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.827) | normal=0.827 fighting=0.151 bullying=0.018 falling=0.002 climbing=0.001
+  [RAW] T2 → normal (conf=0.827 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1437] T2 FINAL → normal (conf=0.827, src=posec3d, smooth=False)
+[F1439] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.819) | normal=0.819 fighting=0.165 bullying=0.014 falling=0.001 climbing=0.001
+  [RAW] T1 → normal (conf=0.819 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1439] T1 FINAL → normal (conf=0.819, src=posec3d, smooth=False)
+[F1447] T5 INFER: buf_total=208, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.717) | normal=0.717 fighting=0.006 bullying=0.000 falling=0.275 climbing=0.001
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.647)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1447] T5 FINAL → falling (conf=0.647, src=rule_yolo_falling, smooth=False)
+[F1453] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.927) | normal=0.927 fighting=0.059 bullying=0.011 falling=0.002 climbing=0.001
+  [RAW] T2 → normal (conf=0.927 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1453] T2 FINAL → normal (conf=0.927, src=posec3d, smooth=False)
+[F1455] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.913) | normal=0.913 fighting=0.072 bullying=0.012 falling=0.002 climbing=0.001
+  [RAW] T1 → normal (conf=0.913 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1455] T1 FINAL → normal (conf=0.913, src=posec3d, smooth=False)
+[F1463] T5 INFER: buf_total=224, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.757) | normal=0.757 fighting=0.004 bullying=0.000 falling=0.238 climbing=0.001
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.619)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1463] T5 FINAL → falling (conf=0.619, src=rule_yolo_falling, smooth=False)
+[F1469] T2 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.960) | normal=0.960 fighting=0.030 bullying=0.008 falling=0.002 climbing=0.001
+  [RAW] T2 → normal (conf=0.960 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1469] T2 FINAL → normal (conf=0.960, src=posec3d, smooth=False)
+[F1471] T1 INFER: buf_total=256, sampled=64/64, pair=T2(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.956) | normal=0.956 fighting=0.033 bullying=0.008 falling=0.002 climbing=0.001
+  [RAW] T1 → normal (conf=0.956 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1471] T1 FINAL → normal (conf=0.956, src=posec3d, smooth=False)
+[F1479] T5 INFER: buf_total=240, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.716) | normal=0.716 fighting=0.005 bullying=0.000 falling=0.277 climbing=0.001
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.633)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1479] T5 FINAL → falling (conf=0.633, src=rule_yolo_falling, smooth=False)
+[F1485] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.471) | normal=0.471 fighting=0.436 bullying=0.057 falling=0.007 climbing=0.029
+  [RAW] T2 → normal (conf=0.471 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1485] T2 FINAL → normal (conf=0.471, src=posec3d, smooth=False)
+[F1487] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.982) | normal=0.982 fighting=0.015 bullying=0.001 falling=0.001 climbing=0.001
+  [RAW] T1 → normal (conf=0.982 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1487] T1 FINAL → normal (conf=0.982, src=posec3d, smooth=False)
+[F1495] T5 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T5 PoseC3D: argmax=normal(0.985) | normal=0.985 fighting=0.006 bullying=0.001 falling=0.007 climbing=0.002
+  [RAW] T5 → falling (YOLO辅助检测: conf=0.618)
+  [VOTE] T5 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1495] T5 FINAL → falling (conf=0.618, src=rule_yolo_falling, smooth=False)
+[F1501] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.608) | normal=0.608 fighting=0.325 bullying=0.031 falling=0.005 climbing=0.031
+  [RAW] T2 → normal (conf=0.608 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1501] T2 FINAL → normal (conf=0.608, src=posec3d, smooth=False)
+[F1503] T1 INFER: buf_total=256, sampled=64/64, pair=T5(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.989) | normal=0.989 fighting=0.005 bullying=0.001 falling=0.004 climbing=0.001
+  [RAW] T1 → normal (conf=0.989 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1503] T1 FINAL → normal (conf=0.989, src=posec3d, smooth=False)
+[F1517] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.768) | normal=0.115 fighting=0.768 bullying=0.024 falling=0.016 climbing=0.078
+  [RAW] T2 → normal (fighting但无人在附近: nearest=965 > 270)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1517] T2 FINAL → normal (conf=0.232, src=rule_no_proximity, smooth=False)
+[F1519] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.979) | normal=0.979 fighting=0.020 bullying=0.001 falling=0.000 climbing=0.001
+  [RAW] T1 → normal (conf=0.979 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1519] T1 FINAL → normal (conf=0.979, src=posec3d, smooth=False)
+[F1533] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=fighting(0.461) | normal=0.282 fighting=0.461 bullying=0.024 falling=0.020 climbing=0.213
+  [RAW] T2 → normal (fighting置信度不足: 0.461 < 0.5)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1533] T2 FINAL → normal (conf=0.539, src=rule_fight_low_conf, smooth=False)
+[F1535] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.975) | normal=0.975 fighting=0.021 bullying=0.003 falling=0.000 climbing=0.001
+  [RAW] T1 → normal (conf=0.975 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1535] T1 FINAL → normal (conf=0.975, src=posec3d, smooth=False)
+[F1549] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.528) | normal=0.528 fighting=0.237 bullying=0.014 falling=0.010 climbing=0.211
+  [RAW] T2 → normal (conf=0.528 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1549] T2 FINAL → normal (conf=0.528, src=posec3d, smooth=False)
+[F1551] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.987) | normal=0.987 fighting=0.012 bullying=0.001 falling=0.000 climbing=0.000
+  [RAW] T1 → falling (YOLO辅助检测: conf=0.758)
+  [VOTE] T1 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F1551] T1 FINAL → falling (conf=0.758, src=rule_yolo_falling, smooth=False)
+[F1565] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=climbing(0.469) | normal=0.220 fighting=0.283 bullying=0.017 falling=0.011 climbing=0.469
+  [RAW] T2 → climbing (conf=0.469 >= threshold=0.3)
+  [VOTE] T2 current=climbing → climbing(1>=1) | history=[normal,normal,climbing]
+[F1565] T2 FINAL → climbing (conf=0.469, src=posec3d, smooth=False)
+[F1567] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.981) | normal=0.981 fighting=0.018 bullying=0.001 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=0.981 >= threshold=0.3)
+  [VOTE] T1 current=normal → falling(1>=1) | history=[normal,falling,normal]
+[F1567] T1 FINAL → falling (conf=0.981, src=posec3d, smooth=True)
+[F1571] T7 SKIP: buffer不足 1/32
+[F1572] T7 SKIP: buffer不足 2/32
+[F1573] T7 SKIP: buffer不足 3/32
+[F1574] T7 SKIP: buffer不足 4/32
+[F1581] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.758) | normal=0.758 fighting=0.176 bullying=0.008 falling=0.003 climbing=0.055
+  [RAW] T2 → normal (conf=0.758 >= threshold=0.3)
+  [VOTE] T2 current=normal → climbing(1>=1) | history=[normal,climbing,normal]
+[F1581] T2 FINAL → climbing (conf=0.758, src=posec3d, smooth=True)
+[F1583] T1 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.976) | normal=0.976 fighting=0.022 bullying=0.001 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=0.976 >= threshold=0.3)
+  [VOTE] T1 current=normal → falling(1>=1) | history=[falling,normal,normal]
+[F1583] T1 FINAL → falling (conf=0.976, src=posec3d, smooth=True)
+[F1585] T7 SKIP: buffer不足 5/32
+[F1586] T7 SKIP: buffer不足 6/32
+[F1587] T7 SKIP: buffer不足 7/32
+[F1588] T7 SKIP: buffer不足 8/32
+[F1589] T7 SKIP: buffer不足 9/32
+[F1590] T7 SKIP: buffer不足 10/32
+[F1591] T7 SKIP: buffer不足 11/32
+[F1592] T7 SKIP: buffer不足 12/32
+[F1593] T7 SKIP: buffer不足 13/32
+[F1594] T7 SKIP: buffer不足 14/32
+[F1595] T7 SKIP: buffer不足 15/32
+[F1596] T7 SKIP: buffer不足 16/32
+[F1597] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.916) | normal=0.916 fighting=0.053 bullying=0.003 falling=0.003 climbing=0.025
+  [RAW] T2 → normal (conf=0.916 >= threshold=0.3)
+  [VOTE] T2 current=normal → climbing(1>=1) | history=[climbing,normal,normal]
+[F1597] T2 FINAL → climbing (conf=0.916, src=posec3d, smooth=True)
+[F1597] T7 SKIP: buffer不足 17/32
+[F1598] T7 SKIP: buffer不足 18/32
+[F1599] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:19/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.982) | normal=0.982 fighting=0.018 bullying=0.000 falling=0.000 climbing=0.000
+  [RAW] T1 → normal (conf=0.982 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1599] T1 FINAL → normal (conf=0.982, src=posec3d, smooth=False)
+[F1599] T7 SKIP: buffer不足 19/32
+[F1600] T7 SKIP: buffer不足 20/32
+[F1601] T7 SKIP: buffer不足 21/32
+[F1602] T7 SKIP: buffer不足 22/32
+[F1603] T7 SKIP: buffer不足 23/32
+[F1604] T7 SKIP: buffer不足 24/32
+[F1605] T7 SKIP: buffer不足 25/32
+[F1606] T7 SKIP: buffer不足 26/32
+[F1607] T7 SKIP: buffer不足 27/32
+[F1608] T7 SKIP: buffer不足 28/32
+[F1609] T7 SKIP: buffer不足 29/32
+[F1610] T7 SKIP: buffer不足 30/32
+[F1611] T7 SKIP: buffer不足 31/32
+[F1612] T7 INFER: buf_total=32, sampled=32/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=normal(0.654) | normal=0.654 fighting=0.342 bullying=0.003 falling=0.000 climbing=0.001
+  [RAW] T7 → falling (YOLO辅助检测: conf=0.709)
+  [VOTE] T7 current=falling → falling(1>=1) | history=[falling]
+[F1612] T7 FINAL → falling (conf=0.709, src=rule_yolo_falling, smooth=False)
+[F1613] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.953) | normal=0.953 fighting=0.029 bullying=0.002 falling=0.002 climbing=0.014
+  [RAW] T2 → normal (conf=0.953 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1613] T2 FINAL → normal (conf=0.953, src=posec3d, smooth=False)
+[F1615] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:35/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.710) | normal=0.710 fighting=0.287 bullying=0.002 falling=0.000 climbing=0.001
+  [RAW] T1 → normal (conf=0.710 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1615] T1 FINAL → normal (conf=0.710, src=posec3d, smooth=False)
+[F1628] T7 INFER: buf_total=48, sampled=48/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.524) | normal=0.473 fighting=0.524 bullying=0.001 falling=0.000 climbing=0.001
+  [RAW] T7 → falling (YOLO辅助检测: conf=0.523)
+  [VOTE] T7 current=falling → falling(2>=1) | history=[falling,falling]
+[F1628] T7 FINAL → falling (conf=0.523, src=rule_yolo_falling, smooth=False)
+[F1629] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.952) | normal=0.952 fighting=0.023 bullying=0.002 falling=0.003 climbing=0.019
+  [RAW] T2 → normal (conf=0.952 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1629] T2 FINAL → normal (conf=0.952, src=posec3d, smooth=False)
+[F1631] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:51/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.657) | normal=0.657 fighting=0.340 bullying=0.001 falling=0.001 climbing=0.001
+  [RAW] T1 → normal (conf=0.657 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1631] T1 FINAL → normal (conf=0.657, src=posec3d, smooth=False)
+[F1644] T7 INFER: buf_total=64, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=normal(0.651) | normal=0.651 fighting=0.346 bullying=0.001 falling=0.001 climbing=0.001
+  [RAW] T7 → falling (YOLO辅助检测: conf=0.748)
+  [VOTE] T7 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1644] T7 FINAL → falling (conf=0.748, src=rule_yolo_falling, smooth=False)
+[F1645] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.963) | normal=0.963 fighting=0.013 bullying=0.002 falling=0.005 climbing=0.017
+  [RAW] T2 → normal (conf=0.963 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1645] T2 FINAL → normal (conf=0.963, src=posec3d, smooth=False)
+[F1647] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.812) | normal=0.812 fighting=0.183 bullying=0.002 falling=0.002 climbing=0.001
+  [RAW] T1 → normal (conf=0.812 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1647] T1 FINAL → normal (conf=0.812, src=posec3d, smooth=False)
+[F1660] T7 INFER: buf_total=80, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=normal(0.638) | normal=0.638 fighting=0.357 bullying=0.002 falling=0.002 climbing=0.001
+  [RAW] T7 → falling (YOLO辅助检测: conf=0.672)
+  [VOTE] T7 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1660] T7 FINAL → falling (conf=0.672, src=rule_yolo_falling, smooth=False)
+[F1661] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.970) | normal=0.970 fighting=0.008 bullying=0.002 falling=0.007 climbing=0.014
+  [RAW] T2 → normal (conf=0.970 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1661] T2 FINAL → normal (conf=0.970, src=posec3d, smooth=False)
+[F1663] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=normal(0.658) | normal=0.658 fighting=0.333 bullying=0.003 falling=0.004 climbing=0.001
+  [RAW] T1 → normal (conf=0.658 >= threshold=0.3)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1663] T1 FINAL → normal (conf=0.658, src=posec3d, smooth=False)
+[F1676] T7 INFER: buf_total=96, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=normal(0.586) | normal=0.586 fighting=0.398 bullying=0.003 falling=0.011 climbing=0.001
+  [RAW] T7 → falling (YOLO辅助检测: conf=0.727)
+  [VOTE] T7 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1676] T7 FINAL → falling (conf=0.727, src=rule_yolo_falling, smooth=False)
+[F1677] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.978) | normal=0.978 fighting=0.008 bullying=0.001 falling=0.004 climbing=0.008
+  [RAW] T2 → normal (conf=0.978 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1677] T2 FINAL → normal (conf=0.978, src=posec3d, smooth=False)
+[F1679] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.499) | normal=0.482 fighting=0.499 bullying=0.004 falling=0.014 climbing=0.002
+  [RAW] T1 → normal (fighting置信度不足: 0.499 < 0.5)
+  [VOTE] T1 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1679] T1 FINAL → normal (conf=0.501, src=rule_fight_low_conf, smooth=False)
+[F1692] T7 INFER: buf_total=112, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=normal(0.544) | normal=0.544 fighting=0.443 bullying=0.003 falling=0.008 climbing=0.001
+  [RAW] T7 → falling (YOLO辅助检测: conf=0.634)
+  [VOTE] T7 current=falling → falling(3>=1) | history=[falling,falling,falling]
+[F1692] T7 FINAL → falling (conf=0.634, src=rule_yolo_falling, smooth=False)
+[F1693] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.979) | normal=0.979 fighting=0.008 bullying=0.001 falling=0.004 climbing=0.009
+  [RAW] T2 → normal (conf=0.979 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1693] T2 FINAL → normal (conf=0.979, src=posec3d, smooth=False)
+[F1695] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.725) | normal=0.255 fighting=0.725 bullying=0.004 falling=0.014 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.30, head_hip_norm=0.277 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → normal(bullying只有1次<2) | history=[normal,normal,bullying]
+[F1695] T1 FINAL → normal (conf=0.653, src=rule_bullying, smooth=True)
+[F1708] T7 INFER: buf_total=128, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=normal(0.549) | normal=0.549 fighting=0.407 bullying=0.004 falling=0.038 climbing=0.002
+  [RAW] T7 → normal (conf=0.549 >= threshold=0.3)
+  [VOTE] T7 current=normal → falling(2>=1) | history=[falling,falling,normal]
+[F1708] T7 FINAL → falling (conf=0.549, src=posec3d, smooth=True)
+[F1709] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.975) | normal=0.975 fighting=0.008 bullying=0.001 falling=0.006 climbing=0.010
+  [RAW] T2 → normal (conf=0.975 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1709] T2 FINAL → normal (conf=0.975, src=posec3d, smooth=False)
+[F1711] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.805) | normal=0.173 fighting=0.805 bullying=0.004 falling=0.017 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.27, head_hip_norm=0.314 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(2>=2) | history=[normal,bullying,bullying]
+[F1711] T1 FINAL → bullying (conf=0.725, src=rule_bullying, smooth=False)
+[F1724] T7 INFER: buf_total=144, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.563) | normal=0.391 fighting=0.563 bullying=0.003 falling=0.040 climbing=0.002
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['normal', 'bullying', 'bullying'], dist=396)
+  [VOTE] T7 current=bullying → falling(1>=1) | history=[falling,normal,bullying]
+[F1724] T7 FINAL → falling (conf=0.645, src=rule_yolo_bullying, smooth=True)
+[F1725] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.981) | normal=0.981 fighting=0.006 bullying=0.001 falling=0.004 climbing=0.008
+  [RAW] T2 → falling (YOLO辅助检测: conf=0.306)
+  [VOTE] T2 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F1725] T2 FINAL → falling (conf=0.306, src=rule_yolo_falling, smooth=False)
+[F1727] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.660) | normal=0.272 fighting=0.660 bullying=0.005 falling=0.061 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.34, head_hip_norm=0.337 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1727] T1 FINAL → bullying (conf=0.594, src=rule_bullying, smooth=False)
+[F1740] T7 INFER: buf_total=160, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=normal(0.612) | normal=0.612 fighting=0.284 bullying=0.005 falling=0.098 climbing=0.002
+  [RAW] T7 → normal (conf=0.612 >= threshold=0.3)
+  [VOTE] T7 current=normal → normal(bullying只有1次<2) | history=[normal,bullying,normal]
+[F1740] T7 FINAL → normal (conf=0.612, src=posec3d, smooth=False)
+[F1741] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.975) | normal=0.975 fighting=0.005 bullying=0.002 falling=0.008 climbing=0.010
+  [RAW] T2 → normal (conf=0.975 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[normal,falling,normal]
+[F1741] T2 FINAL → falling (conf=0.975, src=posec3d, smooth=True)
+[F1743] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.646) | normal=0.293 fighting=0.646 bullying=0.004 falling=0.054 climbing=0.002
+  [RULE] bullying不对称检测: height_ratio=-0.36, head_hip_norm=0.309 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1743] T1 FINAL → bullying (conf=0.582, src=rule_bullying, smooth=False)
+[F1756] T7 INFER: buf_total=176, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=normal(0.584) | normal=0.584 fighting=0.329 bullying=0.002 falling=0.083 climbing=0.001
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=391)
+  [VOTE] T7 current=bullying → bullying(2>=2) | history=[bullying,normal,bullying]
+[F1756] T7 FINAL → bullying (conf=0.747, src=rule_yolo_bullying, smooth=False)
+[F1757] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.958) | normal=0.958 fighting=0.005 bullying=0.003 falling=0.015 climbing=0.018
+  [RAW] T2 → normal (conf=0.958 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[falling,normal,normal]
+[F1757] T2 FINAL → falling (conf=0.958, src=posec3d, smooth=True)
+[F1759] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.658) | normal=0.267 fighting=0.658 bullying=0.002 falling=0.072 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.29, head_hip_norm=0.252 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1759] T1 FINAL → bullying (conf=0.592, src=rule_bullying, smooth=False)
+[F1772] T7 INFER: buf_total=192, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=falling(0.410) | normal=0.180 fighting=0.404 bullying=0.004 falling=0.410 climbing=0.003
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=395)
+  [VOTE] T7 current=bullying → bullying(2>=2) | history=[normal,bullying,bullying]
+[F1772] T7 FINAL → bullying (conf=0.510, src=rule_yolo_bullying, smooth=False)
+[F1773] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.967) | normal=0.967 fighting=0.005 bullying=0.003 falling=0.008 climbing=0.016
+  [RAW] T2 → normal (conf=0.967 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1773] T2 FINAL → normal (conf=0.967, src=posec3d, smooth=False)
+[F1775] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.519) | normal=0.343 fighting=0.519 bullying=0.003 falling=0.132 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.27, head_hip_norm=0.296 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1775] T1 FINAL → bullying (conf=0.467, src=rule_bullying, smooth=False)
+[F1788] T7 INFER: buf_total=208, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.371) | normal=0.284 fighting=0.371 bullying=0.004 falling=0.338 climbing=0.003
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=404)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1788] T7 FINAL → bullying (conf=0.740, src=rule_yolo_bullying, smooth=False)
+[F1789] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.984) | normal=0.984 fighting=0.006 bullying=0.002 falling=0.002 climbing=0.007
+  [RAW] T2 → normal (conf=0.984 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1789] T2 FINAL → normal (conf=0.984, src=posec3d, smooth=False)
+[F1791] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.581) | normal=0.164 fighting=0.581 bullying=0.003 falling=0.249 climbing=0.003
+  [RULE] bullying不对称检测: height_ratio=-0.24, head_hip_norm=0.303 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1791] T1 FINAL → bullying (conf=0.523, src=rule_bullying, smooth=False)
+[F1804] T7 INFER: buf_total=224, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.469) | normal=0.231 fighting=0.469 bullying=0.002 falling=0.297 climbing=0.001
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=406)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1804] T7 FINAL → bullying (conf=0.725, src=rule_yolo_bullying, smooth=False)
+[F1805] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.985) | normal=0.985 fighting=0.006 bullying=0.001 falling=0.001 climbing=0.007
+  [RAW] T2 → falling (YOLO辅助检测: conf=0.406)
+  [VOTE] T2 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F1805] T2 FINAL → falling (conf=0.406, src=rule_yolo_falling, smooth=False)
+[F1807] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.593) | normal=0.050 fighting=0.593 bullying=0.002 falling=0.353 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.27, head_hip_norm=0.268 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1807] T1 FINAL → bullying (conf=0.534, src=rule_bullying, smooth=False)
+[F1820] T7 INFER: buf_total=240, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=falling(0.525) | normal=0.027 fighting=0.447 bullying=0.001 falling=0.525 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=417)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1820] T7 FINAL → bullying (conf=0.435, src=rule_yolo_bullying, smooth=False)
+[F1821] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.987) | normal=0.987 fighting=0.006 bullying=0.001 falling=0.001 climbing=0.005
+  [RAW] T2 → normal (conf=0.987 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[normal,falling,normal]
+[F1821] T2 FINAL → falling (conf=0.987, src=posec3d, smooth=True)
+[F1823] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.917) | normal=0.012 fighting=0.917 bullying=0.001 falling=0.071 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.28, head_hip_norm=0.275 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1823] T1 FINAL → bullying (conf=0.825, src=rule_bullying, smooth=False)
+[F1836] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.624) | normal=0.026 fighting=0.624 bullying=0.001 falling=0.348 climbing=0.001
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=414)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1836] T7 FINAL → bullying (conf=0.506, src=rule_yolo_bullying, smooth=False)
+[F1837] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.991) | normal=0.991 fighting=0.004 bullying=0.001 falling=0.001 climbing=0.003
+  [RAW] T2 → normal (conf=0.991 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[falling,normal,normal]
+[F1837] T2 FINAL → falling (conf=0.991, src=posec3d, smooth=True)
+[F1839] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.850) | normal=0.037 fighting=0.850 bullying=0.001 falling=0.112 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.25, head_hip_norm=0.300 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1839] T1 FINAL → bullying (conf=0.765, src=rule_bullying, smooth=False)
+[F1852] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.575) | normal=0.018 fighting=0.575 bullying=0.001 falling=0.405 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=397)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1852] T7 FINAL → bullying (conf=0.683, src=rule_yolo_bullying, smooth=False)
+[F1853] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.990) | normal=0.990 fighting=0.004 bullying=0.001 falling=0.001 climbing=0.004
+  [RAW] T2 → normal (conf=0.990 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1853] T2 FINAL → normal (conf=0.990, src=posec3d, smooth=False)
+[F1855] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.765) | normal=0.012 fighting=0.765 bullying=0.001 falling=0.222 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.25, head_hip_norm=0.306 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1855] T1 FINAL → bullying (conf=0.688, src=rule_bullying, smooth=False)
+[F1868] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.681) | normal=0.023 fighting=0.681 bullying=0.001 falling=0.295 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=393)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1868] T7 FINAL → bullying (conf=0.804, src=rule_yolo_bullying, smooth=False)
+[F1869] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.989) | normal=0.989 fighting=0.005 bullying=0.001 falling=0.001 climbing=0.005
+  [RAW] T2 → normal (conf=0.989 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1869] T2 FINAL → normal (conf=0.989, src=posec3d, smooth=False)
+[F1871] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.490) | normal=0.036 fighting=0.490 bullying=0.001 falling=0.472 climbing=0.001
+  [RAW] T1 → normal (fighting置信度不足: 0.490 < 0.5)
+  [VOTE] T1 current=normal → bullying(2>=2) | history=[bullying,bullying,normal]
+[F1871] T1 FINAL → bullying (conf=0.510, src=rule_fight_low_conf, smooth=True)
+[F1884] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.668) | normal=0.031 fighting=0.668 bullying=0.001 falling=0.300 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.23, head_hip_norm=0.296 → bullying
+  [RAW] T7 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1884] T7 FINAL → bullying (conf=0.601, src=rule_bullying, smooth=False)
+[F1885] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.982) | normal=0.982 fighting=0.010 bullying=0.001 falling=0.000 climbing=0.006
+  [RAW] T2 → normal (conf=0.982 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1885] T2 FINAL → normal (conf=0.982, src=posec3d, smooth=False)
+[F1887] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.546) | normal=0.016 fighting=0.546 bullying=0.001 falling=0.437 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.27, head_hip_norm=0.281 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(2>=2) | history=[bullying,normal,bullying]
+[F1887] T1 FINAL → bullying (conf=0.491, src=rule_bullying, smooth=False)
+[F1900] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.661) | normal=0.019 fighting=0.661 bullying=0.001 falling=0.318 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'normal', 'bullying'], dist=410)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1900] T7 FINAL → bullying (conf=0.772, src=rule_yolo_bullying, smooth=False)
+[F1901] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.980) | normal=0.980 fighting=0.010 bullying=0.001 falling=0.001 climbing=0.008
+  [RAW] T2 → falling (YOLO辅助检测: conf=0.304)
+  [VOTE] T2 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F1901] T2 FINAL → falling (conf=0.304, src=rule_yolo_falling, smooth=False)
+[F1903] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.543) | normal=0.024 fighting=0.543 bullying=0.001 falling=0.432 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.23, head_hip_norm=0.317 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(2>=2) | history=[normal,bullying,bullying]
+[F1903] T1 FINAL → bullying (conf=0.488, src=rule_bullying, smooth=False)
+[F1916] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.544) | normal=0.021 fighting=0.544 bullying=0.001 falling=0.433 climbing=0.001
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['normal', 'bullying', 'bullying'], dist=404)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1916] T7 FINAL → bullying (conf=0.559, src=rule_yolo_bullying, smooth=False)
+[F1917] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.985) | normal=0.985 fighting=0.007 bullying=0.001 falling=0.001 climbing=0.006
+  [RAW] T2 → normal (conf=0.985 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[normal,falling,normal]
+[F1917] T2 FINAL → falling (conf=0.985, src=posec3d, smooth=True)
+[F1919] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.647) | normal=0.034 fighting=0.647 bullying=0.002 falling=0.316 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.26, head_hip_norm=0.290 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1919] T1 FINAL → bullying (conf=0.583, src=rule_bullying, smooth=False)
+[F1932] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.598) | normal=0.014 fighting=0.598 bullying=0.002 falling=0.385 climbing=0.001
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=403)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1932] T7 FINAL → bullying (conf=0.428, src=rule_yolo_bullying, smooth=False)
+[F1933] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.986) | normal=0.986 fighting=0.006 bullying=0.001 falling=0.001 climbing=0.006
+  [RAW] T2 → normal (conf=0.986 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[falling,normal,normal]
+[F1933] T2 FINAL → falling (conf=0.986, src=posec3d, smooth=True)
+[F1935] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.518) | normal=0.015 fighting=0.518 bullying=0.002 falling=0.464 climbing=0.001
+  [RULE] bullying不对称检测: height_ratio=-0.25, head_hip_norm=0.313 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1935] T1 FINAL → bullying (conf=0.466, src=rule_bullying, smooth=False)
+[F1948] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.744) | normal=0.007 fighting=0.744 bullying=0.002 falling=0.246 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.27, head_hip_norm=0.306 → bullying
+  [RAW] T7 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1948] T7 FINAL → bullying (conf=0.670, src=rule_bullying, smooth=False)
+[F1949] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.987) | normal=0.987 fighting=0.007 bullying=0.001 falling=0.001 climbing=0.004
+  [RAW] T2 → normal (conf=0.987 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F1949] T2 FINAL → normal (conf=0.987, src=posec3d, smooth=False)
+[F1951] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.773) | normal=0.014 fighting=0.773 bullying=0.001 falling=0.211 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.30, head_hip_norm=0.328 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1951] T1 FINAL → bullying (conf=0.695, src=rule_bullying, smooth=False)
+[F1964] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.749) | normal=0.008 fighting=0.749 bullying=0.002 falling=0.241 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=386)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1964] T7 FINAL → bullying (conf=0.315, src=rule_yolo_bullying, smooth=False)
+[F1965] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.989) | normal=0.989 fighting=0.005 bullying=0.001 falling=0.001 climbing=0.005
+  [RAW] T2 → falling (YOLO辅助检测: conf=0.468)
+  [VOTE] T2 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F1965] T2 FINAL → falling (conf=0.468, src=rule_yolo_falling, smooth=False)
+[F1967] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.817) | normal=0.007 fighting=0.817 bullying=0.001 falling=0.174 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.33, head_hip_norm=0.324 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1967] T1 FINAL → bullying (conf=0.735, src=rule_bullying, smooth=False)
+[F1980] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.684) | normal=0.010 fighting=0.684 bullying=0.002 falling=0.304 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=382)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1980] T7 FINAL → bullying (conf=0.599, src=rule_yolo_bullying, smooth=False)
+[F1981] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.992) | normal=0.992 fighting=0.004 bullying=0.001 falling=0.000 climbing=0.003
+  [RAW] T2 → normal (conf=0.992 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[normal,falling,normal]
+[F1981] T2 FINAL → falling (conf=0.992, src=posec3d, smooth=True)
+[F1983] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.839) | normal=0.003 fighting=0.839 bullying=0.001 falling=0.157 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.35, head_hip_norm=0.321 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1983] T1 FINAL → bullying (conf=0.755, src=rule_bullying, smooth=False)
+[F1996] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.835) | normal=0.006 fighting=0.835 bullying=0.001 falling=0.158 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=389)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1996] T7 FINAL → bullying (conf=0.766, src=rule_yolo_bullying, smooth=False)
+[F1997] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.989) | normal=0.989 fighting=0.005 bullying=0.001 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.989 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[falling,normal,normal]
+[F1997] T2 FINAL → falling (conf=0.989, src=posec3d, smooth=True)
+[F1999] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.881) | normal=0.002 fighting=0.881 bullying=0.000 falling=0.117 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.32, head_hip_norm=0.300 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F1999] T1 FINAL → bullying (conf=0.793, src=rule_bullying, smooth=False)
+[F2012] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.876) | normal=0.003 fighting=0.876 bullying=0.000 falling=0.121 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=369)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2012] T7 FINAL → bullying (conf=0.831, src=rule_yolo_bullying, smooth=False)
+[F2013] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.990) | normal=0.990 fighting=0.005 bullying=0.001 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.990 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2013] T2 FINAL → normal (conf=0.990, src=posec3d, smooth=False)
+[F2015] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.917) | normal=0.002 fighting=0.917 bullying=0.000 falling=0.080 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.31, head_hip_norm=0.322 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2015] T1 FINAL → bullying (conf=0.825, src=rule_bullying, smooth=False)
+[F2028] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.905) | normal=0.003 fighting=0.905 bullying=0.001 falling=0.090 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=388)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2028] T7 FINAL → bullying (conf=0.648, src=rule_yolo_bullying, smooth=False)
+[F2029] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.992) | normal=0.992 fighting=0.003 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.992 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2029] T2 FINAL → normal (conf=0.992, src=posec3d, smooth=False)
+[F2031] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.952) | normal=0.003 fighting=0.952 bullying=0.001 falling=0.045 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.28, head_hip_norm=0.318 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2031] T1 FINAL → bullying (conf=0.856, src=rule_bullying, smooth=False)
+[F2044] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.861) | normal=0.005 fighting=0.861 bullying=0.002 falling=0.131 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=407)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2044] T7 FINAL → bullying (conf=0.800, src=rule_yolo_bullying, smooth=False)
+[F2045] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.991) | normal=0.991 fighting=0.004 bullying=0.001 falling=0.000 climbing=0.005
+  [RAW] T2 → normal (conf=0.991 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2045] T2 FINAL → normal (conf=0.991, src=posec3d, smooth=False)
+[F2047] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.971) | normal=0.001 fighting=0.971 bullying=0.001 falling=0.027 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.29, head_hip_norm=0.315 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2047] T1 FINAL → bullying (conf=0.874, src=rule_bullying, smooth=False)
+[F2060] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.899) | normal=0.002 fighting=0.899 bullying=0.002 falling=0.096 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=395)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2060] T7 FINAL → bullying (conf=0.673, src=rule_yolo_bullying, smooth=False)
+[F2061] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.002 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2061] T2 FINAL → normal (conf=0.993, src=posec3d, smooth=False)
+[F2063] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.975) | normal=0.000 fighting=0.975 bullying=0.001 falling=0.023 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.33, head_hip_norm=0.324 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2063] T1 FINAL → bullying (conf=0.878, src=rule_bullying, smooth=False)
+[F2076] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.953) | normal=0.001 fighting=0.953 bullying=0.001 falling=0.045 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=392)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2076] T7 FINAL → bullying (conf=0.603, src=rule_yolo_bullying, smooth=False)
+[F2077] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.994) | normal=0.994 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → falling (YOLO辅助检测: conf=0.403)
+  [VOTE] T2 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F2077] T2 FINAL → falling (conf=0.403, src=rule_yolo_falling, smooth=False)
+[F2079] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.984) | normal=0.000 fighting=0.984 bullying=0.001 falling=0.015 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.32, head_hip_norm=0.347 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2079] T1 FINAL → bullying (conf=0.886, src=rule_bullying, smooth=False)
+[F2092] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.972) | normal=0.001 fighting=0.972 bullying=0.001 falling=0.026 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=402)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2092] T7 FINAL → bullying (conf=0.782, src=rule_yolo_bullying, smooth=False)
+[F2093] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.994) | normal=0.994 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.994 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[normal,falling,normal]
+[F2093] T2 FINAL → falling (conf=0.994, src=posec3d, smooth=True)
+[F2095] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.993) | normal=0.000 fighting=0.993 bullying=0.000 falling=0.007 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.27, head_hip_norm=0.312 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2095] T1 FINAL → bullying (conf=0.894, src=rule_bullying, smooth=False)
+[F2108] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.956) | normal=0.002 fighting=0.956 bullying=0.001 falling=0.040 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=376)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2108] T7 FINAL → bullying (conf=0.529, src=rule_yolo_bullying, smooth=False)
+[F2109] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.001 bullying=0.001 falling=0.000 climbing=0.005
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → falling(1>=1) | history=[falling,normal,normal]
+[F2109] T2 FINAL → falling (conf=0.993, src=posec3d, smooth=True)
+[F2111] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.981) | normal=0.001 fighting=0.981 bullying=0.000 falling=0.018 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.36, head_hip_norm=0.287 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2111] T1 FINAL → bullying (conf=0.883, src=rule_bullying, smooth=False)
+[F2124] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.963) | normal=0.003 fighting=0.963 bullying=0.001 falling=0.034 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=384)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2124] T7 FINAL → bullying (conf=0.356, src=rule_yolo_bullying, smooth=False)
+[F2125] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.001 bullying=0.001 falling=0.001 climbing=0.005
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2125] T2 FINAL → normal (conf=0.993, src=posec3d, smooth=False)
+[F2127] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.964) | normal=0.002 fighting=0.964 bullying=0.000 falling=0.033 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.37, head_hip_norm=0.291 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2127] T1 FINAL → bullying (conf=0.868, src=rule_bullying, smooth=False)
+[F2140] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.967) | normal=0.003 fighting=0.967 bullying=0.001 falling=0.029 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.36, head_hip_norm=0.298 → bullying
+  [RAW] T7 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2140] T7 FINAL → bullying (conf=0.870, src=rule_bullying, smooth=False)
+[F2141] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.005
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2141] T2 FINAL → normal (conf=0.993, src=posec3d, smooth=False)
+[F2143] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.984) | normal=0.001 fighting=0.984 bullying=0.000 falling=0.015 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.36, head_hip_norm=0.304 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2143] T1 FINAL → bullying (conf=0.886, src=rule_bullying, smooth=False)
+[F2156] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.960) | normal=0.003 fighting=0.960 bullying=0.000 falling=0.037 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=404)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2156] T7 FINAL → bullying (conf=0.688, src=rule_yolo_bullying, smooth=False)
+[F2157] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.994) | normal=0.994 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.994 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2157] T2 FINAL → normal (conf=0.994, src=posec3d, smooth=False)
+[F2159] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.983) | normal=0.001 fighting=0.983 bullying=0.000 falling=0.016 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.36, head_hip_norm=0.298 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2159] T1 FINAL → bullying (conf=0.885, src=rule_bullying, smooth=False)
+[F2172] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.978) | normal=0.002 fighting=0.978 bullying=0.000 falling=0.020 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.38, head_hip_norm=0.279 → bullying
+  [RAW] T7 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2172] T7 FINAL → bullying (conf=0.881, src=rule_bullying, smooth=False)
+[F2173] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.006
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2173] T2 FINAL → normal (conf=0.993, src=posec3d, smooth=False)
+[F2175] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.994) | normal=0.000 fighting=0.994 bullying=0.000 falling=0.006 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.40, head_hip_norm=0.287 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2175] T1 FINAL → bullying (conf=0.894, src=rule_bullying, smooth=False)
+[F2188] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.985) | normal=0.001 fighting=0.985 bullying=0.000 falling=0.014 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.37, head_hip_norm=0.281 → bullying
+  [RAW] T7 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2188] T7 FINAL → bullying (conf=0.886, src=rule_bullying, smooth=False)
+[F2189] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.006
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2189] T2 FINAL → normal (conf=0.993, src=posec3d, smooth=False)
+[F2191] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.996) | normal=0.000 fighting=0.996 bullying=0.000 falling=0.004 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.35, head_hip_norm=0.303 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2191] T1 FINAL → bullying (conf=0.896, src=rule_bullying, smooth=False)
+[F2204] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.964) | normal=0.005 fighting=0.964 bullying=0.000 falling=0.030 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.33, head_hip_norm=0.313 → bullying
+  [RAW] T7 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2204] T7 FINAL → bullying (conf=0.868, src=rule_bullying, smooth=False)
+[F2205] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.005
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2205] T2 FINAL → normal (conf=0.993, src=posec3d, smooth=False)
+[F2207] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.998) | normal=0.000 fighting=0.998 bullying=0.000 falling=0.002 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.33, head_hip_norm=0.316 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2207] T1 FINAL → bullying (conf=0.898, src=rule_bullying, smooth=False)
+[F2220] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.982) | normal=0.001 fighting=0.982 bullying=0.000 falling=0.017 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=403)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2220] T7 FINAL → bullying (conf=0.476, src=rule_yolo_bullying, smooth=False)
+[F2221] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.993) | normal=0.993 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.005
+  [RAW] T2 → normal (conf=0.993 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2221] T2 FINAL → normal (conf=0.993, src=posec3d, smooth=False)
+[F2223] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.997) | normal=0.000 fighting=0.997 bullying=0.000 falling=0.003 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.33, head_hip_norm=0.294 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2223] T1 FINAL → bullying (conf=0.897, src=rule_bullying, smooth=False)
+[F2236] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.984) | normal=0.001 fighting=0.984 bullying=0.000 falling=0.015 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.38, head_hip_norm=0.284 → bullying
+  [RAW] T7 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2236] T7 FINAL → bullying (conf=0.886, src=rule_bullying, smooth=False)
+[F2237] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.994) | normal=0.994 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.994 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2237] T2 FINAL → normal (conf=0.994, src=posec3d, smooth=False)
+[F2239] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.992) | normal=0.000 fighting=0.992 bullying=0.000 falling=0.008 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.38, head_hip_norm=0.285 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2239] T1 FINAL → bullying (conf=0.892, src=rule_bullying, smooth=False)
+[F2252] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.991) | normal=0.001 fighting=0.991 bullying=0.000 falling=0.008 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=428)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2252] T7 FINAL → bullying (conf=0.674, src=rule_yolo_bullying, smooth=False)
+[F2253] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.995) | normal=0.995 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.995 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2253] T2 FINAL → normal (conf=0.995, src=posec3d, smooth=False)
+[F2255] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.990) | normal=0.001 fighting=0.990 bullying=0.000 falling=0.009 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.24, head_hip_norm=0.297 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2255] T1 FINAL → bullying (conf=0.891, src=rule_bullying, smooth=False)
+[F2268] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.983) | normal=0.001 fighting=0.983 bullying=0.000 falling=0.015 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=436)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2268] T7 FINAL → bullying (conf=0.750, src=rule_yolo_bullying, smooth=False)
+[F2269] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.994) | normal=0.994 fighting=0.002 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.994 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2269] T2 FINAL → normal (conf=0.994, src=posec3d, smooth=False)
+[F2271] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.997) | normal=0.000 fighting=0.997 bullying=0.000 falling=0.002 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.20, head_hip_norm=0.292 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2271] T1 FINAL → bullying (conf=0.898, src=rule_bullying, smooth=False)
+[F2284] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.976) | normal=0.005 fighting=0.976 bullying=0.000 falling=0.019 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=462)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2284] T7 FINAL → bullying (conf=0.678, src=rule_yolo_bullying, smooth=False)
+[F2285] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.994) | normal=0.994 fighting=0.002 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.994 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2285] T2 FINAL → normal (conf=0.994, src=posec3d, smooth=False)
+[F2287] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.998) | normal=0.000 fighting=0.998 bullying=0.000 falling=0.002 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.24, head_hip_norm=0.274 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2287] T1 FINAL → bullying (conf=0.898, src=rule_bullying, smooth=False)
+[F2300] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.981) | normal=0.002 fighting=0.981 bullying=0.000 falling=0.017 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=455)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2300] T7 FINAL → bullying (conf=0.736, src=rule_yolo_bullying, smooth=False)
+[F2301] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.994) | normal=0.994 fighting=0.002 bullying=0.000 falling=0.000 climbing=0.004
+  [RAW] T2 → normal (conf=0.994 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2301] T2 FINAL → normal (conf=0.994, src=posec3d, smooth=False)
+[F2303] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.995) | normal=0.001 fighting=0.995 bullying=0.000 falling=0.004 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.24, head_hip_norm=0.276 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2303] T1 FINAL → bullying (conf=0.896, src=rule_bullying, smooth=False)
+[F2316] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.984) | normal=0.005 fighting=0.984 bullying=0.000 falling=0.011 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=443)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2316] T7 FINAL → bullying (conf=0.792, src=rule_yolo_bullying, smooth=False)
+[F2317] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.996) | normal=0.996 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.002
+  [RAW] T2 → normal (conf=0.996 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2317] T2 FINAL → normal (conf=0.996, src=posec3d, smooth=False)
+[F2319] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.995) | normal=0.001 fighting=0.995 bullying=0.000 falling=0.003 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.21, head_hip_norm=0.309 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2319] T1 FINAL → bullying (conf=0.896, src=rule_bullying, smooth=False)
+[F2332] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.988) | normal=0.004 fighting=0.988 bullying=0.000 falling=0.008 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=447)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2332] T7 FINAL → bullying (conf=0.787, src=rule_yolo_bullying, smooth=False)
+[F2333] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.997) | normal=0.997 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.002
+  [RAW] T2 → normal (conf=0.997 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2333] T2 FINAL → normal (conf=0.997, src=posec3d, smooth=False)
+[F2335] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.991) | normal=0.004 fighting=0.991 bullying=0.000 falling=0.004 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.19, head_hip_norm=0.311 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2335] T1 FINAL → bullying (conf=0.892, src=rule_bullying, smooth=False)
+[F2348] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.986) | normal=0.007 fighting=0.986 bullying=0.000 falling=0.007 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=399)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2348] T7 FINAL → bullying (conf=0.739, src=rule_yolo_bullying, smooth=False)
+[F2349] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.997) | normal=0.997 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.002
+  [RAW] T2 → normal (conf=0.997 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2349] T2 FINAL → normal (conf=0.997, src=posec3d, smooth=False)
+[F2351] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.979) | normal=0.014 fighting=0.979 bullying=0.000 falling=0.007 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.37, head_hip_norm=0.307 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2351] T1 FINAL → bullying (conf=0.881, src=rule_bullying, smooth=False)
+[F2364] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.987) | normal=0.005 fighting=0.987 bullying=0.000 falling=0.008 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=389)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2364] T7 FINAL → bullying (conf=0.556, src=rule_yolo_bullying, smooth=False)
+[F2365] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.997) | normal=0.997 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.997 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2365] T2 FINAL → normal (conf=0.997, src=posec3d, smooth=False)
+[F2367] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.979) | normal=0.015 fighting=0.979 bullying=0.000 falling=0.006 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.34, head_hip_norm=0.322 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2367] T1 FINAL → bullying (conf=0.881, src=rule_bullying, smooth=False)
+[F2380] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.970) | normal=0.015 fighting=0.970 bullying=0.000 falling=0.014 climbing=0.000
+  [RAW] T7 → bullying (YOLO躺地 + T1有攻击历史: ['bullying', 'bullying', 'bullying'], dist=403)
+  [VOTE] T7 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2380] T7 FINAL → bullying (conf=0.734, src=rule_yolo_bullying, smooth=False)
+[F2381] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.997) | normal=0.997 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.997 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2381] T2 FINAL → normal (conf=0.997, src=posec3d, smooth=False)
+[F2383] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.944) | normal=0.037 fighting=0.944 bullying=0.000 falling=0.019 climbing=0.000
+  [RULE] bullying不对称检测: height_ratio=-0.36, head_hip_norm=0.306 → bullying
+  [RAW] T1 → bullying (fighting改判: 姿态不对称)
+  [VOTE] T1 current=bullying → bullying(3>=2) | history=[bullying,bullying,bullying]
+[F2383] T1 FINAL → bullying (conf=0.849, src=rule_bullying, smooth=False)
+[F2396] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.945) | normal=0.021 fighting=0.945 bullying=0.000 falling=0.033 climbing=0.000
+  [RAW] T7 → falling (YOLO辅助检测: conf=0.653)
+  [VOTE] T7 current=falling → bullying(2>=2) | history=[bullying,bullying,falling]
+[F2396] T7 FINAL → bullying (conf=0.653, src=rule_yolo_falling, smooth=True)
+[F2397] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.997) | normal=0.997 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.001
+  [RAW] T2 → normal (conf=0.997 >= threshold=0.3)
+  [VOTE] T2 current=normal → normal(窗口全normal) | history=[normal,normal,normal]
+[F2397] T2 FINAL → normal (conf=0.997, src=posec3d, smooth=False)
+[F2399] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)
+  [RAW] T1 PoseC3D: argmax=fighting(0.798) | normal=0.160 fighting=0.798 bullying=0.000 falling=0.041 climbing=0.000
+  [RAW] T1 → normal (fighting但无人在附近: nearest=327 > 270)
+  [VOTE] T1 current=normal → bullying(2>=2) | history=[bullying,bullying,normal]
+[F2399] T1 FINAL → bullying (conf=0.202, src=rule_no_proximity, smooth=True)
+[F2412] T7 INFER: buf_total=256, sampled=64/64, pair=T1(P1:64/64)
+  [RAW] T7 PoseC3D: argmax=fighting(0.761) | normal=0.170 fighting=0.761 bullying=0.001 falling=0.067 climbing=0.001
+  [RAW] T7 → falling (YOLO辅助检测: conf=0.705)
+  [VOTE] T7 current=falling → falling(2>=1) | history=[bullying,falling,falling]
+[F2412] T7 FINAL → falling (conf=0.705, src=rule_yolo_falling, smooth=False)
+[F2413] T2 INFER: buf_total=256, sampled=64/64, pair=TNone(P1:0/64)
+  [RAW] T2 PoseC3D: argmax=normal(0.996) | normal=0.996 fighting=0.001 bullying=0.000 falling=0.000 climbing=0.001
+  [RAW] T2 → falling (YOLO辅助检测: conf=0.344)
+  [VOTE] T2 current=falling → falling(1>=1) | history=[normal,normal,falling]
+[F2413] T2 FINAL → falling (conf=0.344, src=rule_yolo_falling, smooth=False)
+[F2415] T1 INFER: buf_total=256, sampled=64/64, pair=T7(P1:64/64)

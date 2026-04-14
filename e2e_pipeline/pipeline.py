@@ -1,0 +1,547 @@
+"""
+pipeline.py — 校园安防视频行为感知系统 核心推理循环
+
+Pipeline:
+  InputSource → YOLO11m-Pose + ByteTrack → SkeletonBuffer → PoseC3D → RuleEngine → 可视化/告警
+
+重构自 main_inference.py，改进：
+  1. clip_len 从 PoseC3D config 自动读取（不再硬编码48）
+  2. 使用 InputSource 统一视频/摄像头/帧文件夹输入
+  3. 支持保存 JSON 检测日志
+  4. 结构化 BehaviorResult 输出
+"""
+
+import json
+import logging
+import sys
+import time
+from collections import defaultdict
+
+import cv2
+import numpy as np
+import torch
+
+logger = logging.getLogger('e2e_debug')
+
+sys.path.insert(0, '/home/hzcu/BullyDetection/pyskl')
+
+import mmcv
+from pyskl.apis import init_recognizer
+from pyskl.datasets.pipelines import Compose
+from mmcv.parallel import collate, scatter
+from ultralytics import YOLO
+
+from input_source import InputSource
+from rule_engine import RuleEngine, BehaviorResult, POSE_CLASSES, FINAL_CLASSES
+
+
+# ============================================================
+# COCO 17 骨骼连线（可视化用）
+# ============================================================
+SKELETON_EDGES = [
+    (0, 1), (0, 2), (1, 3), (2, 4),
+    (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),
+    (5, 11), (6, 12), (11, 12),
+    (11, 13), (13, 15), (12, 14), (14, 16),
+]
+
+LABEL_COLORS = {
+    'normal':     (0, 200, 0),
+    'fighting':   (0, 0, 255),
+    'bullying':   (0, 0, 200),
+    'falling':    (0, 140, 255),
+    'climbing':   (0, 255, 255),
+    'vandalism':  (255, 0, 255),
+    'smoking':    (255, 100, 0),
+    'phone_call': (255, 200, 0),
+    'loitering':  (200, 200, 0),
+}
+
+
+# ============================================================
+# 骨骼缓冲区
+# ============================================================
+class SkeletonBuffer:
+    """按 track_id 缓存骨骼帧，推理时均匀采样模拟训练时 UniformSampleFrames"""
+
+    def __init__(self, clip_len, stride=16, max_person=2, buf_max_factor=4, grace_frames=90):
+        self.clip_len = clip_len
+        self.stride = stride
+        self.max_person = max_person
+        self.buf_max = clip_len * buf_max_factor  # 保留更长历史用于均匀采样
+        self.grace_frames = grace_frames           # 遮挡宽限期（帧数）
+        self.tracks = defaultdict(lambda: {
+            'kps': [], 'scores': [], 'new_frames': 0,
+        })
+        self._missing_count = {}  # {track_id: 连续消失帧数}
+
+    def update(self, track_id, keypoints_17x2, scores_17):
+        buf = self.tracks[track_id]
+        buf['kps'].append(keypoints_17x2.copy())
+        buf['scores'].append(scores_17.copy())
+        buf['new_frames'] += 1
+        if len(buf['kps']) > self.buf_max:
+            buf['kps'] = buf['kps'][-self.buf_max:]
+            buf['scores'] = buf['scores'][-self.buf_max:]
+
+    def should_infer(self, track_id):
+        buf = self.tracks[track_id]
+        min_frames = max(16, self.clip_len // 2)  # 最少32帧就开始推理，减少track碎片化影响
+        return buf['new_frames'] >= self.stride and len(buf['kps']) >= min_frames
+
+    def _uniform_sample(self, kps_list, scores_list):
+        """模拟训练时 UniformSampleFrames：从全部缓存帧中均匀采样 clip_len 帧"""
+        n = len(kps_list)
+        if n >= self.clip_len:
+            indices = np.linspace(0, n - 1, self.clip_len, dtype=int)
+        else:
+            indices = np.arange(n)
+
+        sampled_kps = [kps_list[i] for i in indices]
+        sampled_scores = [scores_list[i] for i in indices]
+        return sampled_kps, sampled_scores
+
+    def get_clip(self, track_id, secondary_tid=None):
+        """
+        Returns: keypoint (2, T, 17, 2), keypoint_score (2, T, 17)
+        Person 0 = primary track, Person 1 = secondary track (or zeros if None)
+        均匀采样以匹配训练时 UniformSampleFrames 的时序分布
+        """
+        buf = self.tracks[track_id]
+        buf['new_frames'] = 0
+
+        keypoint = np.zeros((self.max_person, self.clip_len, 17, 2), dtype=np.float32)
+        keypoint_score = np.zeros((self.max_person, self.clip_len, 17), dtype=np.float32)
+
+        # Person 0: primary track — 均匀采样
+        sampled_kps, sampled_scores = self._uniform_sample(buf['kps'], buf['scores'])
+        n = len(sampled_kps)
+        offset = self.clip_len - n
+        for i in range(n):
+            keypoint[0, offset + i] = sampled_kps[i]
+            keypoint_score[0, offset + i] = sampled_scores[i]
+
+        # Person 1: secondary track (nearest neighbor) — 均匀采样
+        if secondary_tid is not None and secondary_tid in self.tracks:
+            buf2 = self.tracks[secondary_tid]
+            sampled_kps2, sampled_scores2 = self._uniform_sample(buf2['kps'], buf2['scores'])
+            n2 = len(sampled_kps2)
+            offset2 = self.clip_len - n2
+            for i in range(n2):
+                keypoint[1, offset2 + i] = sampled_kps2[i]
+                keypoint_score[1, offset2 + i] = sampled_scores2[i]
+
+        return keypoint, keypoint_score
+
+    def remove_stale(self, active_ids):
+        """遮挡宽限：track 消失后保留 grace_frames 帧，恢复时继承旧 buffer"""
+        for tid in list(self.tracks.keys()):
+            if tid in active_ids:
+                self._missing_count.pop(tid, None)
+            else:
+                self._missing_count[tid] = self._missing_count.get(tid, 0) + 1
+        stale = [tid for tid, cnt in self._missing_count.items()
+                 if cnt > self.grace_frames]
+        for tid in stale:
+            self.tracks.pop(tid, None)
+            del self._missing_count[tid]
+
+
+# ============================================================
+# PoseC3D 推理封装
+# ============================================================
+class PoseC3DInferencer:
+    """封装 PoseC3D 模型加载和推理，自动从 config 读取 clip_len"""
+
+    def __init__(self, config_path, checkpoint_path, device='cuda:0'):
+        config = mmcv.Config.fromfile(config_path)
+
+        # 从 config 自动读取 clip_len
+        test_pipeline_cfg = config.data.test.pipeline
+        self.clip_len = 48  # fallback
+        for step in test_pipeline_cfg:
+            if step['type'] == 'UniformSampleFrames':
+                self.clip_len = step['clip_len']
+                break
+
+        # 检测 with_kp / with_limb 设置
+        self.with_kp = True
+        self.with_limb = False
+        for step in test_pipeline_cfg:
+            if step['type'] == 'GeneratePoseTarget':
+                self.with_kp = step.get('with_kp', True)
+                self.with_limb = step.get('with_limb', False)
+                break
+
+        # 移除 DecompressPose（实时推理不需要）
+        config.data.test.pipeline = [
+            x for x in test_pipeline_cfg
+            if x['type'] != 'DecompressPose'
+        ]
+
+        self.model = init_recognizer(config, checkpoint_path, device=device)
+        self.model.eval()
+        self.device = next(self.model.parameters()).device
+        self.pipeline = Compose(config.data.test.pipeline)
+        self.num_classes = config.model.cls_head.num_classes
+
+    @torch.no_grad()
+    def infer(self, keypoint, keypoint_score, img_shape):
+        """
+        Args:
+            keypoint: (M, T, 17, 2)
+            keypoint_score: (M, T, 17)
+            img_shape: (H, W)
+        Returns:
+            probs: np.array (num_classes,)
+        """
+        M, T = keypoint.shape[:2]
+
+        fake_anno = dict(
+            frame_dir='',
+            label=-1,
+            img_shape=img_shape,
+            original_shape=img_shape,
+            start_index=0,
+            modality='Pose',
+            total_frames=T,
+            keypoint=keypoint.astype(np.float32),
+            keypoint_score=keypoint_score.astype(np.float32),
+        )
+
+        data = self.pipeline(fake_anno)
+        data = collate([data], samples_per_gpu=1)
+        data = scatter(data, [self.device])[0]
+
+        probs = self.model(return_loss=False, **data)[0]
+        return probs
+
+
+# ============================================================
+# YOLO 小物体检测封装
+# ============================================================
+class SmallObjectDetector:
+
+    def __init__(self, model_path, class_map=None, conf=0.3, imgsz=1280):
+        self.model = YOLO(model_path)
+        self.conf = conf
+        self.imgsz = imgsz
+        # 自动从模型读取类名，不再硬编码
+        if class_map is not None:
+            self.class_map = class_map
+        else:
+            self.class_map = dict(self.model.names)
+
+    def detect(self, frame):
+        results = self.model(frame, conf=self.conf, imgsz=self.imgsz, verbose=False)
+        detections = []
+        for box in results[0].boxes:
+            cls_id = int(box.cls.item())
+            cls_name = self.class_map.get(cls_id)
+            if cls_name is None:
+                continue
+            detections.append({
+                'class': cls_name,
+                'bbox': box.xyxy[0].tolist(),
+                'conf': float(box.conf.item()),
+            })
+        return detections
+
+
+# ============================================================
+# 可视化
+# ============================================================
+def draw_skeleton(frame, kps, scores, color=(0, 255, 0), threshold=0.3):
+    for i, (x, y) in enumerate(kps):
+        if scores[i] < threshold:
+            continue
+        cv2.circle(frame, (int(x), int(y)), 3, color, -1)
+    for (i, j) in SKELETON_EDGES:
+        if scores[i] < threshold or scores[j] < threshold:
+            continue
+        pt1 = (int(kps[i][0]), int(kps[i][1]))
+        pt2 = (int(kps[j][0]), int(kps[j][1]))
+        cv2.line(frame, pt1, pt2, color, 2)
+
+
+def draw_label(frame, bbox, label, confidence, color):
+    x1, y1, x2, y2 = [int(v) for v in bbox]
+    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+    text = f'{label} {confidence:.0%}'
+    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+    cv2.rectangle(frame, (x1, y1 - th - 8), (x1 + tw + 4, y1), color, -1)
+    cv2.putText(frame, text, (x1 + 2, y1 - 4),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
+
+def draw_info(frame, fps, frame_idx, total_frames=-1):
+    if total_frames > 0:
+        text = f'Frame: {frame_idx}/{total_frames}  FPS: {fps:.1f}'
+    else:
+        text = f'Frame: {frame_idx}  FPS: {fps:.1f}'
+    cv2.putText(frame, text, (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+
+
+# ============================================================
+# 主推理引擎
+# ============================================================
+class InferencePipeline:
+    """端到端推理 Pipeline"""
+
+    def __init__(self, yolo_pose_model, posec3d_config, posec3d_checkpoint,
+                 small_obj_model=None, device='cuda:0', yolo_conf=0.3,
+                 stride=16, vote_window=5, vote_ratio=0.6,
+                 loiter_time=60.0, loiter_radius=100.0):
+
+        print('[1/3] Loading YOLO Pose model...')
+        self.yolo_pose = YOLO(yolo_pose_model)
+
+        print('[2/3] Loading PoseC3D model...')
+        self.posec3d = PoseC3DInferencer(posec3d_config, posec3d_checkpoint, device=device)
+
+        self.small_obj_detector = None
+        if small_obj_model:
+            print('[2.5/3] Loading small object model...')
+            self.small_obj_detector = SmallObjectDetector(small_obj_model)
+
+        print('[3/3] Initializing pipeline...')
+        clip_len = self.posec3d.clip_len
+        self.skeleton_buf = SkeletonBuffer(clip_len=clip_len, stride=stride)
+        self.rule_engine = RuleEngine(
+            pose_threshold=0.3,
+            vote_window=vote_window,
+            vote_ratio=vote_ratio,
+            loiter_time=loiter_time,
+            loiter_radius=loiter_radius,
+        )
+
+        self.yolo_conf = yolo_conf
+        self.track_labels = {}
+        self._label_missing_count = {}  # 遮挡宽限：标签保留
+        self.event_log = []
+
+        print(f'  clip_len={clip_len} (auto-detected from config)')
+        print(f'  stride={stride}, with_kp={self.posec3d.with_kp}, with_limb={self.posec3d.with_limb}')
+
+    def run(self, source, show=False, output_video=None, output_json=None):
+        """
+        运行推理。
+
+        Args:
+            source: InputSource 或 str（自动创建）
+            show: 是否实时显示
+            output_video: 输出标注视频路径（None 则不保存）
+            output_json: 输出检测日志路径（None 则不保存）
+        """
+        if isinstance(source, str):
+            source = InputSource.create(source)
+
+        w, h = source.get_frame_size()
+        fps_video = source.get_fps()
+        total_frames = source.get_total_frames()
+        img_shape = (h, w)
+
+        writer = None
+        if output_video:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            writer = cv2.VideoWriter(output_video, fourcc, fps_video, (w, h))
+
+        print(f'\nRunning inference ({w}x{h} @ {fps_video:.0f}fps)')
+        if total_frames > 0:
+            print(f'Total frames: {total_frames}')
+        print(f'PoseC3D: {self.posec3d.num_classes} classes')
+        print('Press Q to quit.\n')
+
+        frame_idx = 0
+        t_start = time.time()
+
+        while True:
+            ret, frame = source.read()
+            if not ret:
+                break
+
+            self._process_frame(frame, frame_idx, img_shape)
+
+            # FPS overlay
+            elapsed = time.time() - t_start
+            current_fps = (frame_idx + 1) / elapsed if elapsed > 0 else 0
+            draw_info(frame, current_fps, frame_idx, total_frames)
+
+            if writer:
+                writer.write(frame)
+            if show:
+                cv2.imshow('Campus Safety', frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+            frame_idx += 1
+
+        # 清理
+        source.release()
+        if writer:
+            writer.release()
+        if show:
+            cv2.destroyAllWindows()
+
+        total_time = time.time() - t_start
+        avg_fps = frame_idx / total_time if total_time > 0 else 0
+        print(f'\nDone. {frame_idx} frames in {total_time:.1f}s ({avg_fps:.1f} fps)')
+
+        if output_json and self.event_log:
+            with open(output_json, 'w', encoding='utf-8') as f:
+                json.dump(self.event_log, f, ensure_ascii=False, indent=2)
+            print(f'Event log saved: {output_json} ({len(self.event_log)} events)')
+
+    @staticmethod
+    def _person_center(kps_xy, kps_sc, threshold=0.3):
+        """计算人物中心（有效关键点的均值）"""
+        valid = kps_sc > threshold
+        if valid.sum() == 0:
+            return None
+        return kps_xy[valid].mean(axis=0)
+
+    def _find_nearest_track(self, track_id, track_positions, max_dist=500):
+        """找空间上最近的另一个 track，返回 track_id 或 None"""
+        if track_id not in track_positions or len(track_positions) < 2:
+            return None
+        pos = track_positions[track_id]
+        best_tid, best_dist = None, max_dist
+        for tid, tpos in track_positions.items():
+            if tid == track_id:
+                continue
+            d = np.linalg.norm(pos - tpos)
+            if d < best_dist:
+                best_dist = d
+                best_tid = tid
+        return best_tid
+
+    def _process_frame(self, frame, frame_idx, img_shape):
+        """处理单帧"""
+
+        # Step 1: YOLO Pose + ByteTrack
+        results = self.yolo_pose.track(
+            source=frame,
+            persist=True,
+            tracker='bytetrack.yaml',
+            conf=self.yolo_conf,
+            iou=0.5,
+            verbose=False,
+        )
+
+        result = results[0]
+        current_track_ids = set()
+        frame_persons_kps = []
+        track_positions = {}  # {tid: np.array([cx, cy])}
+        track_kps = {}        # {tid: (kps_xy, kps_sc)}
+        track_bboxes = {}     # {tid: [x1, y1, x2, y2]}
+
+        if result.boxes is not None and result.keypoints is not None:
+            # 第一遍: 收集所有 track 位置
+            for i, box in enumerate(result.boxes):
+                if box.id is None:
+                    continue
+                track_id = int(box.id.item())
+                current_track_ids.add(track_id)
+
+                kps_data = result.keypoints.data[i].cpu().numpy()
+                kps_xy = kps_data[:, :2]
+                kps_sc = kps_data[:, 2]
+
+                frame_persons_kps.append(kps_xy)
+                track_kps[track_id] = (kps_xy, kps_sc)
+                track_bboxes[track_id] = box.xyxy[0].tolist()
+
+
+                center = self._person_center(kps_xy, kps_sc)
+                if center is not None:
+                    track_positions[track_id] = center
+
+                self.skeleton_buf.update(track_id, kps_xy, kps_sc)
+                self.rule_engine.update_track_position(track_id, kps_xy, kps_sc)
+
+            # 第二遍: 推理 + 可视化
+            for track_id, (kps_xy, kps_sc) in track_kps.items():
+                # 画骨骼
+                label_info = self.track_labels.get(track_id)
+                color = LABEL_COLORS.get(
+                    label_info.label if label_info else 'normal', (200, 200, 200))
+                draw_skeleton(frame, kps_xy, kps_sc, color=color)
+
+                # Step 2: PoseC3D 推理（双人配对）
+                buf = self.skeleton_buf.tracks[track_id]
+                buf_len = len(buf['kps'])
+                new_frames = buf['new_frames']
+
+                if self.skeleton_buf.should_infer(track_id):
+                    nearest_tid = self._find_nearest_track(track_id, track_positions)
+                    keypoint, keypoint_score = self.skeleton_buf.get_clip(track_id, nearest_tid)
+
+                    # Debug: 检查输入数据质量
+                    kp_nonzero = np.any(keypoint[0] != 0, axis=(1, 2))  # (T,) 每帧是否有数据
+                    n_valid_frames = int(kp_nonzero.sum())
+                    kp2_nonzero = np.any(keypoint[1] != 0, axis=(1, 2))
+                    n_valid_p2 = int(kp2_nonzero.sum())
+                    logger.debug(f'[F{frame_idx}] T{track_id} INFER: buf_total={buf_len}, '
+                                 f'sampled={n_valid_frames}/64, pair=T{nearest_tid}(P1:{n_valid_p2}/64)')
+
+                    pose_probs = self.posec3d.infer(keypoint, keypoint_score, img_shape)
+
+                    # Step 3: 小物体检测
+                    small_objs = []
+                    if self.small_obj_detector is not None:
+                        small_objs = self.small_obj_detector.detect(frame)
+
+                    # Step 4: 规则引擎
+                    all_kps_scores = [(kps, sc) for kps, sc in track_kps.values()]
+                    judgment = self.rule_engine.judge(
+                        track_id=track_id,
+                        pose_probs=pose_probs,
+                        person_kps=kps_xy,
+                        person_scores=kps_sc,
+                        all_person_kps=frame_persons_kps,
+                        small_obj_detections=small_objs,
+                        img_shape=img_shape,
+                        all_person_kps_scores=all_kps_scores,
+                        track_kps_dict=track_kps,
+                    )
+                    self.track_labels[track_id] = judgment
+
+                    logger.debug(f'[F{frame_idx}] T{track_id} FINAL → {judgment.label} '
+                                 f'(conf={judgment.confidence:.3f}, src={judgment.source}, smooth={judgment.smoothed})')
+
+                    # 记录非 normal 事件
+                    if judgment.label != 'normal':
+                        self.event_log.append({
+                            'frame': frame_idx,
+                            **judgment.to_dict(),
+                        })
+                else:
+                    min_frames = max(16, self.skeleton_buf.clip_len // 2)
+                    if buf_len < min_frames:
+                        logger.debug(f'[F{frame_idx}] T{track_id} SKIP: buffer不足 {buf_len}/{min_frames}')
+
+                # Step 5: 可视化标签（始终显示 bbox + 标签）
+                bbox = track_bboxes.get(track_id)
+                if bbox:
+                    if track_id in self.track_labels:
+                        info = self.track_labels[track_id]
+                        color = LABEL_COLORS.get(info.label, (200, 200, 200))
+                        draw_label(frame, bbox, info.label, info.confidence, color)
+                    else:
+                        # 尚未推理，显示 normal
+                        draw_label(frame, bbox, 'normal', 1.0, LABEL_COLORS['normal'])
+
+        # 清理消失的 track（带遮挡宽限期）
+        self.skeleton_buf.remove_stale(current_track_ids)
+        self.rule_engine.clear_stale_tracks(current_track_ids)
+        grace = self.skeleton_buf.grace_frames
+        for tid in list(self.track_labels.keys()):
+            if tid in current_track_ids:
+                self._label_missing_count.pop(tid, None)
+            else:
+                self._label_missing_count[tid] = self._label_missing_count.get(tid, 0) + 1
+        stale = [tid for tid, cnt in self._label_missing_count.items() if cnt > grace]
+        for tid in stale:
+            self.track_labels.pop(tid, None)
+            del self._label_missing_count[tid]

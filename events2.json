@@ -1,0 +1,2162 @@
+[
+  {
+    "frame": 31,
+    "label": "falling",
+    "confidence": 0.728815495967865,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 3,
+    "timestamp": 1776156882.1242278
+  },
+  {
+    "frame": 47,
+    "label": "falling",
+    "confidence": 0.6578764915466309,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 3,
+    "timestamp": 1776156883.5803642
+  },
+  {
+    "frame": 63,
+    "label": "falling",
+    "confidence": 0.639894962310791,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 3,
+    "timestamp": 1776156884.4255655
+  },
+  {
+    "frame": 79,
+    "label": "falling",
+    "confidence": 0.7281336188316345,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 3,
+    "timestamp": 1776156885.152068
+  },
+  {
+    "frame": 95,
+    "label": "falling",
+    "confidence": 0.6195304989814758,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 3,
+    "timestamp": 1776156885.821233
+  },
+  {
+    "frame": 111,
+    "label": "falling",
+    "confidence": 0.7189859747886658,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 3,
+    "timestamp": 1776156886.5334644
+  },
+  {
+    "frame": 127,
+    "label": "falling",
+    "confidence": 0.778924286365509,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 3,
+    "timestamp": 1776156887.1367023
+  },
+  {
+    "frame": 143,
+    "label": "falling",
+    "confidence": 0.3153516352176666,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 3,
+    "timestamp": 1776156887.7868273
+  },
+  {
+    "frame": 301,
+    "label": "bullying",
+    "confidence": 0.7602537453174592,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156894.1370249
+  },
+  {
+    "frame": 303,
+    "label": "bullying",
+    "confidence": 0.5749934613704681,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156894.2770443
+  },
+  {
+    "frame": 317,
+    "label": "bullying",
+    "confidence": 0.8313758432865143,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156894.823406
+  },
+  {
+    "frame": 319,
+    "label": "bullying",
+    "confidence": 0.8403440237045289,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156894.9662538
+  },
+  {
+    "frame": 333,
+    "label": "bullying",
+    "confidence": 0.8478582859039306,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156895.5222723
+  },
+  {
+    "frame": 335,
+    "label": "bullying",
+    "confidence": 0.8543851733207702,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156895.665717
+  },
+  {
+    "frame": 349,
+    "label": "bullying",
+    "confidence": 0.8381784081459046,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156896.251631
+  },
+  {
+    "frame": 351,
+    "label": "bullying",
+    "confidence": 0.8323093056678772,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156896.3959568
+  },
+  {
+    "frame": 365,
+    "label": "bullying",
+    "confidence": 0.35173681378364563,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156896.9408715
+  },
+  {
+    "frame": 367,
+    "label": "bullying",
+    "confidence": 0.7543963372707367,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156897.081786
+  },
+  {
+    "frame": 381,
+    "label": "bullying",
+    "confidence": 0.5522777259349824,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156897.6265285
+  },
+  {
+    "frame": 383,
+    "label": "bullying",
+    "confidence": 0.6466326892375946,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156897.7665532
+  },
+  {
+    "frame": 397,
+    "label": "bullying",
+    "confidence": 0.575434148311615,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 4,
+    "timestamp": 1776156898.3138738
+  },
+  {
+    "frame": 399,
+    "label": "bullying",
+    "confidence": 0.6982220411300659,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156898.4550757
+  },
+  {
+    "frame": 413,
+    "label": "bullying",
+    "confidence": 0.5244558453559875,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156899.0242555
+  },
+  {
+    "frame": 445,
+    "label": "bullying",
+    "confidence": 0.48906823992729187,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156900.410682
+  },
+  {
+    "frame": 461,
+    "label": "bullying",
+    "confidence": 0.6757984399795532,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156901.1748106
+  },
+  {
+    "frame": 463,
+    "label": "bullying",
+    "confidence": 0.7301253497600556,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156901.318419
+  },
+  {
+    "frame": 477,
+    "label": "bullying",
+    "confidence": 0.6633388280868531,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156901.8581357
+  },
+  {
+    "frame": 479,
+    "label": "bullying",
+    "confidence": 0.6741309106349945,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156901.998799
+  },
+  {
+    "frame": 493,
+    "label": "bullying",
+    "confidence": 0.46756041049957275,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156902.5465808
+  },
+  {
+    "frame": 495,
+    "label": "bullying",
+    "confidence": 0.6539506673812866,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156902.687556
+  },
+  {
+    "frame": 509,
+    "label": "bullying",
+    "confidence": 0.4054819345474243,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156903.2347403
+  },
+  {
+    "frame": 511,
+    "label": "bullying",
+    "confidence": 0.4892084002494812,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156903.379182
+  },
+  {
+    "frame": 525,
+    "label": "bullying",
+    "confidence": 0.5096120953559876,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156903.9308417
+  },
+  {
+    "frame": 541,
+    "label": "bullying",
+    "confidence": 0.7126278519630432,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156904.628696
+  },
+  {
+    "frame": 557,
+    "label": "bullying",
+    "confidence": 0.7478133380413056,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156905.330637
+  },
+  {
+    "frame": 573,
+    "label": "bullying",
+    "confidence": 0.5863840520381928,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156906.0206265
+  },
+  {
+    "frame": 575,
+    "label": "bullying",
+    "confidence": 0.6783403158187866,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156906.1599374
+  },
+  {
+    "frame": 589,
+    "label": "bullying",
+    "confidence": 0.5510479867458343,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156906.7183537
+  },
+  {
+    "frame": 591,
+    "label": "bullying",
+    "confidence": 0.7946530222892761,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156906.866358
+  },
+  {
+    "frame": 605,
+    "label": "bullying",
+    "confidence": 0.5239066481590271,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 4,
+    "timestamp": 1776156907.411168
+  },
+  {
+    "frame": 607,
+    "label": "bullying",
+    "confidence": 0.8180201053619385,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156907.555648
+  },
+  {
+    "frame": 623,
+    "label": "bullying",
+    "confidence": 0.7491960167884827,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156908.2533267
+  },
+  {
+    "frame": 639,
+    "label": "bullying",
+    "confidence": 0.7250917553901672,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156908.96481
+  },
+  {
+    "frame": 655,
+    "label": "bullying",
+    "confidence": 0.6867986619472504,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156909.6530848
+  },
+  {
+    "frame": 669,
+    "label": "bullying",
+    "confidence": 0.38549312949180603,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156910.234693
+  },
+  {
+    "frame": 671,
+    "label": "bullying",
+    "confidence": 0.7258888006210328,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156910.3812382
+  },
+  {
+    "frame": 685,
+    "label": "bullying",
+    "confidence": 0.5794822990894318,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156910.9343262
+  },
+  {
+    "frame": 687,
+    "label": "bullying",
+    "confidence": 0.748289966583252,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156911.0788593
+  },
+  {
+    "frame": 701,
+    "label": "bullying",
+    "confidence": 0.5931947708129883,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156911.630884
+  },
+  {
+    "frame": 703,
+    "label": "bullying",
+    "confidence": 0.6369722843170166,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156911.7797701
+  },
+  {
+    "frame": 717,
+    "label": "bullying",
+    "confidence": 0.6560898363590241,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156912.3587213
+  },
+  {
+    "frame": 719,
+    "label": "bullying",
+    "confidence": 0.6717396676540375,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156912.49926
+  },
+  {
+    "frame": 733,
+    "label": "bullying",
+    "confidence": 0.7265469610691071,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156913.0738306
+  },
+  {
+    "frame": 735,
+    "label": "bullying",
+    "confidence": 0.6391687452793121,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156913.2253497
+  },
+  {
+    "frame": 749,
+    "label": "bullying",
+    "confidence": 0.7536033153533935,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156913.8094509
+  },
+  {
+    "frame": 751,
+    "label": "bullying",
+    "confidence": 0.8030264496803284,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156913.9620197
+  },
+  {
+    "frame": 765,
+    "label": "bullying",
+    "confidence": 0.8314827024936676,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156914.5630057
+  },
+  {
+    "frame": 767,
+    "label": "bullying",
+    "confidence": 0.7737013757228851,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156914.7178826
+  },
+  {
+    "frame": 781,
+    "label": "bullying",
+    "confidence": 0.39496177434921265,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156915.3385022
+  },
+  {
+    "frame": 783,
+    "label": "bullying",
+    "confidence": 0.8789766848087311,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156915.5411453
+  },
+  {
+    "frame": 797,
+    "label": "bullying",
+    "confidence": 0.8811698734760285,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156916.1004233
+  },
+  {
+    "frame": 799,
+    "label": "bullying",
+    "confidence": 0.8880779027938843,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156916.2395139
+  },
+  {
+    "frame": 813,
+    "label": "bullying",
+    "confidence": 0.8878624141216278,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156916.7837768
+  },
+  {
+    "frame": 815,
+    "label": "bullying",
+    "confidence": 0.8953634262084961,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156916.9299538
+  },
+  {
+    "frame": 829,
+    "label": "bullying",
+    "confidence": 0.893662691116333,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156917.4868712
+  },
+  {
+    "frame": 831,
+    "label": "bullying",
+    "confidence": 0.8974197149276734,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156917.6279387
+  },
+  {
+    "frame": 845,
+    "label": "bullying",
+    "confidence": 0.8882929086685181,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156918.1733134
+  },
+  {
+    "frame": 847,
+    "label": "bullying",
+    "confidence": 0.8967625737190247,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156918.3140917
+  },
+  {
+    "frame": 861,
+    "label": "bullying",
+    "confidence": 0.8671161711215973,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156918.861008
+  },
+  {
+    "frame": 863,
+    "label": "bullying",
+    "confidence": 0.8898209631443024,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156919.0089424
+  },
+  {
+    "frame": 877,
+    "label": "bullying",
+    "confidence": 0.34874653816223145,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156919.5810678
+  },
+  {
+    "frame": 879,
+    "label": "bullying",
+    "confidence": 0.8847841501235962,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156919.71968
+  },
+  {
+    "frame": 893,
+    "label": "bullying",
+    "confidence": 0.8276140987873077,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156920.2691894
+  },
+  {
+    "frame": 895,
+    "label": "bullying",
+    "confidence": 0.8462861359119416,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156920.4158635
+  },
+  {
+    "frame": 909,
+    "label": "bullying",
+    "confidence": 0.8027461588382722,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156920.9612389
+  },
+  {
+    "frame": 911,
+    "label": "bullying",
+    "confidence": 0.8821898639202118,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156921.0922482
+  },
+  {
+    "frame": 927,
+    "label": "bullying",
+    "confidence": 0.8551170408725739,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156921.6834567
+  },
+  {
+    "frame": 943,
+    "label": "bullying",
+    "confidence": 0.7575119376182556,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156922.2788477
+  },
+  {
+    "frame": 959,
+    "label": "bullying",
+    "confidence": 0.6562966883182526,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156922.9644578
+  },
+  {
+    "frame": 961,
+    "label": "bullying",
+    "confidence": 0.3121786117553711,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156923.1048594
+  },
+  {
+    "frame": 975,
+    "label": "bullying",
+    "confidence": 0.5505946278572083,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156923.6593263
+  },
+  {
+    "frame": 977,
+    "label": "bullying",
+    "confidence": 0.6625346541404724,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 4,
+    "timestamp": 1776156923.8022912
+  },
+  {
+    "frame": 1041,
+    "label": "bullying",
+    "confidence": 0.40133124589920044,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156926.6156979
+  },
+  {
+    "frame": 1057,
+    "label": "bullying",
+    "confidence": 0.796307384967804,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 4,
+    "timestamp": 1776156927.337596
+  },
+  {
+    "frame": 1169,
+    "label": "bullying",
+    "confidence": 0.5367854237556458,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156932.2604053
+  },
+  {
+    "frame": 1185,
+    "label": "bullying",
+    "confidence": 0.460834676027298,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156932.9600062
+  },
+  {
+    "frame": 1199,
+    "label": "bullying",
+    "confidence": 0.5744074523448944,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156933.519607
+  },
+  {
+    "frame": 1201,
+    "label": "bullying",
+    "confidence": 0.4930059492588043,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776156933.6697664
+  },
+  {
+    "frame": 1215,
+    "label": "bullying",
+    "confidence": 0.39223620295524597,
+    "source": "rule_smoking",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156934.2038205
+  },
+  {
+    "frame": 1271,
+    "label": "falling",
+    "confidence": 0.7871707081794739,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156936.2661617
+  },
+  {
+    "frame": 1287,
+    "label": "falling",
+    "confidence": 0.7853844165802002,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156936.8782263
+  },
+  {
+    "frame": 1303,
+    "label": "falling",
+    "confidence": 0.7829009890556335,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156937.582819
+  },
+  {
+    "frame": 1319,
+    "label": "falling",
+    "confidence": 0.8084945678710938,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156942.1105516
+  },
+  {
+    "frame": 1335,
+    "label": "falling",
+    "confidence": 0.8051667213439941,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156942.8506417
+  },
+  {
+    "frame": 1351,
+    "label": "falling",
+    "confidence": 0.8043584823608398,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156943.5674772
+  },
+  {
+    "frame": 1359,
+    "label": "fighting",
+    "confidence": 0.650428295135498,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156943.9980419
+  },
+  {
+    "frame": 1367,
+    "label": "falling",
+    "confidence": 0.8064054846763611,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156944.2826405
+  },
+  {
+    "frame": 1368,
+    "label": "fighting",
+    "confidence": 0.5994861721992493,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776156944.3967447
+  },
+  {
+    "frame": 1383,
+    "label": "falling",
+    "confidence": 0.7868843078613281,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156945.0075092
+  },
+  {
+    "frame": 1399,
+    "label": "falling",
+    "confidence": 0.6831674575805664,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156946.0534656
+  },
+  {
+    "frame": 1415,
+    "label": "falling",
+    "confidence": 0.6720145344734192,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156946.7441807
+  },
+  {
+    "frame": 1431,
+    "label": "falling",
+    "confidence": 0.6138567924499512,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156947.4605904
+  },
+  {
+    "frame": 1447,
+    "label": "falling",
+    "confidence": 0.6468521356582642,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156948.167139
+  },
+  {
+    "frame": 1463,
+    "label": "falling",
+    "confidence": 0.6186289191246033,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156949.1472557
+  },
+  {
+    "frame": 1479,
+    "label": "falling",
+    "confidence": 0.6328596472740173,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156949.9142733
+  },
+  {
+    "frame": 1495,
+    "label": "falling",
+    "confidence": 0.6179858446121216,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 5,
+    "timestamp": 1776156950.6380334
+  },
+  {
+    "frame": 1551,
+    "label": "falling",
+    "confidence": 0.7582737803459167,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156952.8852313
+  },
+  {
+    "frame": 1560,
+    "label": "climbing",
+    "confidence": 0.49437615275382996,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776156953.2069678
+  },
+  {
+    "frame": 1567,
+    "label": "falling",
+    "confidence": 0.9806877374649048,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156953.4740772
+  },
+  {
+    "frame": 1576,
+    "label": "climbing",
+    "confidence": 0.5150755643844604,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156953.9225557
+  },
+  {
+    "frame": 1583,
+    "label": "falling",
+    "confidence": 0.9763311743736267,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156954.4774175
+  },
+  {
+    "frame": 1592,
+    "label": "climbing",
+    "confidence": 0.8897590041160583,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156954.8171692
+  },
+  {
+    "frame": 1632,
+    "label": "bullying",
+    "confidence": 0.7566242218017578,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156956.5697546
+  },
+  {
+    "frame": 1640,
+    "label": "falling",
+    "confidence": 0.41657495498657227,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776156956.8823812
+  },
+  {
+    "frame": 1648,
+    "label": "bullying",
+    "confidence": 0.7740631103515625,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156957.3140187
+  },
+  {
+    "frame": 1656,
+    "label": "falling",
+    "confidence": 0.9619118571281433,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156957.6092958
+  },
+  {
+    "frame": 1664,
+    "label": "bullying",
+    "confidence": 0.7452489137649536,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156958.0230436
+  },
+  {
+    "frame": 1672,
+    "label": "falling",
+    "confidence": 0.9681791067123413,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156958.3146155
+  },
+  {
+    "frame": 1680,
+    "label": "bullying",
+    "confidence": 0.6992387771606445,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156958.7112095
+  },
+  {
+    "frame": 1696,
+    "label": "bullying",
+    "confidence": 0.5302469730377197,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156959.409833
+  },
+  {
+    "frame": 1711,
+    "label": "bullying",
+    "confidence": 0.6905227482318879,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156960.0007913
+  },
+  {
+    "frame": 1712,
+    "label": "bullying",
+    "confidence": 0.36650988459587097,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156960.1164844
+  },
+  {
+    "frame": 1720,
+    "label": "falling",
+    "confidence": 0.3294817805290222,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776156960.4264126
+  },
+  {
+    "frame": 1727,
+    "label": "bullying",
+    "confidence": 0.6586650788784028,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156960.7173588
+  },
+  {
+    "frame": 1728,
+    "label": "bullying",
+    "confidence": 0.559742271900177,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156960.8370845
+  },
+  {
+    "frame": 1736,
+    "label": "falling",
+    "confidence": 0.9832058548927307,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156961.1431887
+  },
+  {
+    "frame": 1743,
+    "label": "bullying",
+    "confidence": 0.6374323904514313,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156961.4398565
+  },
+  {
+    "frame": 1744,
+    "label": "bullying",
+    "confidence": 0.3385877013206482,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156961.5571268
+  },
+  {
+    "frame": 1752,
+    "label": "falling",
+    "confidence": 0.3444942831993103,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776156961.8511295
+  },
+  {
+    "frame": 1759,
+    "label": "bullying",
+    "confidence": 0.6115551352500915,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156962.1467187
+  },
+  {
+    "frame": 1760,
+    "label": "bullying",
+    "confidence": 0.5673335790634155,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156962.262184
+  },
+  {
+    "frame": 1768,
+    "label": "falling",
+    "confidence": 0.9801415205001831,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156962.5646484
+  },
+  {
+    "frame": 1775,
+    "label": "bullying",
+    "confidence": 0.5336420595645904,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156962.8579004
+  },
+  {
+    "frame": 1776,
+    "label": "bullying",
+    "confidence": 0.676103413105011,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156962.987991
+  },
+  {
+    "frame": 1784,
+    "label": "falling",
+    "confidence": 0.9884119629859924,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156963.3076034
+  },
+  {
+    "frame": 1791,
+    "label": "bullying",
+    "confidence": 0.5953761577606201,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156963.598005
+  },
+  {
+    "frame": 1792,
+    "label": "bullying",
+    "confidence": 0.7381068468093872,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156963.7279952
+  },
+  {
+    "frame": 1807,
+    "label": "bullying",
+    "confidence": 0.5537421047687531,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156964.3393703
+  },
+  {
+    "frame": 1808,
+    "label": "bullying",
+    "confidence": 0.7220051288604736,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156964.4598126
+  },
+  {
+    "frame": 1823,
+    "label": "bullying",
+    "confidence": 0.8391217410564423,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156965.0419657
+  },
+  {
+    "frame": 1824,
+    "label": "bullying",
+    "confidence": 0.4661301076412201,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156965.163372
+  },
+  {
+    "frame": 1839,
+    "label": "bullying",
+    "confidence": 0.7186826705932617,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156965.7833025
+  },
+  {
+    "frame": 1840,
+    "label": "bullying",
+    "confidence": 0.6675513982772827,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156965.9043837
+  },
+  {
+    "frame": 1855,
+    "label": "bullying",
+    "confidence": 0.6882810652256012,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156966.8950047
+  },
+  {
+    "frame": 1856,
+    "label": "bullying",
+    "confidence": 0.7208056449890137,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156967.0165327
+  },
+  {
+    "frame": 1871,
+    "label": "bullying",
+    "confidence": 0.5099341571331024,
+    "source": "rule_fight_low_conf",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156967.63012
+  },
+  {
+    "frame": 1872,
+    "label": "bullying",
+    "confidence": 0.7672551870346069,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156967.7497668
+  },
+  {
+    "frame": 1887,
+    "label": "bullying",
+    "confidence": 0.4914940416812897,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156968.3327105
+  },
+  {
+    "frame": 1888,
+    "label": "bullying",
+    "confidence": 0.625873327255249,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156968.4484997
+  },
+  {
+    "frame": 1903,
+    "label": "bullying",
+    "confidence": 0.48839705586433413,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156969.0528436
+  },
+  {
+    "frame": 1904,
+    "label": "bullying",
+    "confidence": 0.7811964154243469,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156969.17038
+  },
+  {
+    "frame": 1919,
+    "label": "bullying",
+    "confidence": 0.5825584173202515,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156969.7592947
+  },
+  {
+    "frame": 1920,
+    "label": "bullying",
+    "confidence": 0.742487370967865,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156969.8743217
+  },
+  {
+    "frame": 1935,
+    "label": "bullying",
+    "confidence": 0.46603097319602965,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156970.4566715
+  },
+  {
+    "frame": 1936,
+    "label": "bullying",
+    "confidence": 0.5050918757915497,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156970.5742412
+  },
+  {
+    "frame": 1944,
+    "label": "falling",
+    "confidence": 0.32989591360092163,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776156970.8668416
+  },
+  {
+    "frame": 1951,
+    "label": "bullying",
+    "confidence": 0.6954218566417695,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156971.1557486
+  },
+  {
+    "frame": 1952,
+    "label": "bullying",
+    "confidence": 0.45984789729118347,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156971.2706425
+  },
+  {
+    "frame": 1960,
+    "label": "falling",
+    "confidence": 0.9903113842010498,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156971.5847063
+  },
+  {
+    "frame": 1967,
+    "label": "bullying",
+    "confidence": 0.7353505074977875,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156971.8813775
+  },
+  {
+    "frame": 1968,
+    "label": "bullying",
+    "confidence": 0.5634522438049316,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156972.0010386
+  },
+  {
+    "frame": 1976,
+    "label": "falling",
+    "confidence": 0.9908657670021057,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156972.2993813
+  },
+  {
+    "frame": 1983,
+    "label": "bullying",
+    "confidence": 0.7548078417778016,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156972.5884726
+  },
+  {
+    "frame": 1984,
+    "label": "bullying",
+    "confidence": 0.600813627243042,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156972.7026906
+  },
+  {
+    "frame": 1999,
+    "label": "bullying",
+    "confidence": 0.7926089107990265,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156973.2962008
+  },
+  {
+    "frame": 2000,
+    "label": "bullying",
+    "confidence": 0.7543021440505981,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156973.412078
+  },
+  {
+    "frame": 2015,
+    "label": "bullying",
+    "confidence": 0.8253091156482697,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156973.9990447
+  },
+  {
+    "frame": 2016,
+    "label": "bullying",
+    "confidence": 0.8092002272605896,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156974.1226833
+  },
+  {
+    "frame": 2031,
+    "label": "bullying",
+    "confidence": 0.856392377614975,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156974.7293975
+  },
+  {
+    "frame": 2032,
+    "label": "bullying",
+    "confidence": 0.47639623284339905,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156974.8502479
+  },
+  {
+    "frame": 2047,
+    "label": "bullying",
+    "confidence": 0.8738680422306061,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156975.4568036
+  },
+  {
+    "frame": 2048,
+    "label": "bullying",
+    "confidence": 0.7883162498474121,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156975.5751119
+  },
+  {
+    "frame": 2063,
+    "label": "bullying",
+    "confidence": 0.8777460336685181,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156976.1698556
+  },
+  {
+    "frame": 2064,
+    "label": "bullying",
+    "confidence": 0.47789180278778076,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156976.2843728
+  },
+  {
+    "frame": 2072,
+    "label": "falling",
+    "confidence": 0.40408506989479065,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776156976.5928557
+  },
+  {
+    "frame": 2079,
+    "label": "bullying",
+    "confidence": 0.885547024011612,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156976.89552
+  },
+  {
+    "frame": 2080,
+    "label": "bullying",
+    "confidence": 0.6515377163887024,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156977.0171216
+  },
+  {
+    "frame": 2088,
+    "label": "falling",
+    "confidence": 0.9912319779396057,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156977.346997
+  },
+  {
+    "frame": 2095,
+    "label": "bullying",
+    "confidence": 0.8937777042388916,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156977.6474714
+  },
+  {
+    "frame": 2096,
+    "label": "bullying",
+    "confidence": 0.7754375338554382,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156977.7669384
+  },
+  {
+    "frame": 2104,
+    "label": "falling",
+    "confidence": 0.9909419417381287,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156978.070684
+  },
+  {
+    "frame": 2111,
+    "label": "bullying",
+    "confidence": 0.8826196074485779,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156978.3642762
+  },
+  {
+    "frame": 2112,
+    "label": "bullying",
+    "confidence": 0.5628020763397217,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156978.4809258
+  },
+  {
+    "frame": 2127,
+    "label": "bullying",
+    "confidence": 0.8677011609077454,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156979.0649395
+  },
+  {
+    "frame": 2128,
+    "label": "bullying",
+    "confidence": 0.8863526523113251,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156979.1786509
+  },
+  {
+    "frame": 2143,
+    "label": "bullying",
+    "confidence": 0.8858702838420868,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156979.7862113
+  },
+  {
+    "frame": 2144,
+    "label": "bullying",
+    "confidence": 0.382928729057312,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156979.9090197
+  },
+  {
+    "frame": 2159,
+    "label": "bullying",
+    "confidence": 0.8848131716251374,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156980.4878414
+  },
+  {
+    "frame": 2160,
+    "label": "bullying",
+    "confidence": 0.8880394399166107,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156980.6017148
+  },
+  {
+    "frame": 2175,
+    "label": "bullying",
+    "confidence": 0.8944251894950866,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156981.2017252
+  },
+  {
+    "frame": 2176,
+    "label": "bullying",
+    "confidence": 0.3712007403373718,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156981.321654
+  },
+  {
+    "frame": 2191,
+    "label": "bullying",
+    "confidence": 0.896288412809372,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156981.8949697
+  },
+  {
+    "frame": 2192,
+    "label": "bullying",
+    "confidence": 0.8922300159931184,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156982.008395
+  },
+  {
+    "frame": 2207,
+    "label": "bullying",
+    "confidence": 0.8983191668987275,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156982.5840447
+  },
+  {
+    "frame": 2208,
+    "label": "bullying",
+    "confidence": 0.3886491656303406,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156982.6982872
+  },
+  {
+    "frame": 2223,
+    "label": "bullying",
+    "confidence": 0.8973741710186005,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156983.289344
+  },
+  {
+    "frame": 2224,
+    "label": "bullying",
+    "confidence": 0.5230416059494019,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156983.407472
+  },
+  {
+    "frame": 2239,
+    "label": "bullying",
+    "confidence": 0.8924498498439789,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156984.0395164
+  },
+  {
+    "frame": 2240,
+    "label": "bullying",
+    "confidence": 0.8948173284530639,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156984.1597128
+  },
+  {
+    "frame": 2255,
+    "label": "bullying",
+    "confidence": 0.8909561812877655,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156984.7693038
+  },
+  {
+    "frame": 2256,
+    "label": "bullying",
+    "confidence": 0.5083943009376526,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156984.890077
+  },
+  {
+    "frame": 2271,
+    "label": "bullying",
+    "confidence": 0.8976451814174652,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156985.4799573
+  },
+  {
+    "frame": 2272,
+    "label": "bullying",
+    "confidence": 0.7359083294868469,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156985.5936139
+  },
+  {
+    "frame": 2287,
+    "label": "bullying",
+    "confidence": 0.8978258013725281,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156986.1596293
+  },
+  {
+    "frame": 2288,
+    "label": "bullying",
+    "confidence": 0.6954808831214905,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156986.2721038
+  },
+  {
+    "frame": 2303,
+    "label": "bullying",
+    "confidence": 0.8957385063171387,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156986.857666
+  },
+  {
+    "frame": 2304,
+    "label": "bullying",
+    "confidence": 0.6715050935745239,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156986.971936
+  },
+  {
+    "frame": 2319,
+    "label": "bullying",
+    "confidence": 0.8956793367862702,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156987.5691462
+  },
+  {
+    "frame": 2320,
+    "label": "bullying",
+    "confidence": 0.7736177444458008,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156987.6806455
+  },
+  {
+    "frame": 2335,
+    "label": "bullying",
+    "confidence": 0.8921797513961792,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156988.2734642
+  },
+  {
+    "frame": 2336,
+    "label": "bullying",
+    "confidence": 0.7842302918434143,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156988.3868122
+  },
+  {
+    "frame": 2351,
+    "label": "bullying",
+    "confidence": 0.8810507833957673,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156988.9980567
+  },
+  {
+    "frame": 2352,
+    "label": "bullying",
+    "confidence": 0.6756944060325623,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156989.1103277
+  },
+  {
+    "frame": 2367,
+    "label": "bullying",
+    "confidence": 0.8814294576644898,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156989.7145715
+  },
+  {
+    "frame": 2368,
+    "label": "bullying",
+    "confidence": 0.4870181977748871,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156989.8312504
+  },
+  {
+    "frame": 2383,
+    "label": "bullying",
+    "confidence": 0.849319338798523,
+    "source": "rule_bullying",
+    "smoothed": false,
+    "track_id": 1,
+    "timestamp": 1776156990.437158
+  },
+  {
+    "frame": 2384,
+    "label": "bullying",
+    "confidence": 0.7381561398506165,
+    "source": "rule_yolo_bullying",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156990.5549235
+  },
+  {
+    "frame": 2399,
+    "label": "bullying",
+    "confidence": 0.20163649320602417,
+    "source": "rule_no_proximity",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156991.15105
+  },
+  {
+    "frame": 2400,
+    "label": "bullying",
+    "confidence": 0.7113462686538696,
+    "source": "rule_yolo_falling",
+    "smoothed": true,
+    "track_id": 7,
+    "timestamp": 1776156991.2662423
+  },
+  {
+    "frame": 2416,
+    "label": "falling",
+    "confidence": 0.7069500684738159,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 7,
+    "timestamp": 1776156991.9784257
+  },
+  {
+    "frame": 2424,
+    "label": "falling",
+    "confidence": 0.4986976981163025,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776156992.2874398
+  },
+  {
+    "frame": 2432,
+    "label": "falling",
+    "confidence": 0.6132847666740417,
+    "source": "rule_yolo_bullying",
+    "smoothed": true,
+    "track_id": 7,
+    "timestamp": 1776156992.7033596
+  },
+  {
+    "frame": 2440,
+    "label": "falling",
+    "confidence": 0.9890509843826294,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156993.0104043
+  },
+  {
+    "frame": 2456,
+    "label": "falling",
+    "confidence": 0.9868773221969604,
+    "source": "posec3d",
+    "smoothed": true,
+    "track_id": 2,
+    "timestamp": 1776156993.630262
+  },
+  {
+    "frame": 2479,
+    "label": "falling",
+    "confidence": 0.024074137210845947,
+    "source": "rule_no_proximity",
+    "smoothed": true,
+    "track_id": 1,
+    "timestamp": 1776156994.5757976
+  },
+  {
+    "frame": 2494,
+    "label": "falling",
+    "confidence": 0.792061984539032,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157001.5899508
+  },
+  {
+    "frame": 2510,
+    "label": "falling",
+    "confidence": 0.7756173610687256,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157002.341076
+  },
+  {
+    "frame": 2526,
+    "label": "falling",
+    "confidence": 0.7699297070503235,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157003.0840492
+  },
+  {
+    "frame": 2536,
+    "label": "loitering",
+    "confidence": 0.5567667265733083,
+    "source": "rule_loitering",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776157003.5660768
+  },
+  {
+    "frame": 2542,
+    "label": "falling",
+    "confidence": 0.7694380879402161,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157003.814944
+  },
+  {
+    "frame": 2552,
+    "label": "loitering",
+    "confidence": 0.5627735813458761,
+    "source": "rule_loitering",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776157004.2868822
+  },
+  {
+    "frame": 2558,
+    "label": "falling",
+    "confidence": 0.7329601049423218,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157004.5261257
+  },
+  {
+    "frame": 2568,
+    "label": "loitering",
+    "confidence": 0.568645719687144,
+    "source": "rule_loitering",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776157004.9914846
+  },
+  {
+    "frame": 2574,
+    "label": "falling",
+    "confidence": 0.6982923746109009,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157005.2340782
+  },
+  {
+    "frame": 2584,
+    "label": "loitering",
+    "confidence": 0.5748856782913208,
+    "source": "rule_loitering",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776157005.7405744
+  },
+  {
+    "frame": 2590,
+    "label": "falling",
+    "confidence": 0.306762158870697,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157005.994258
+  },
+  {
+    "frame": 2600,
+    "label": "loitering",
+    "confidence": 0.5808168868223826,
+    "source": "rule_loitering",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776157006.452031
+  },
+  {
+    "frame": 2606,
+    "label": "falling",
+    "confidence": 0.49516814947128296,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157006.6914184
+  },
+  {
+    "frame": 2616,
+    "label": "loitering",
+    "confidence": 0.5867378572622935,
+    "source": "rule_loitering",
+    "smoothed": false,
+    "track_id": 2,
+    "timestamp": 1776157007.162554
+  },
+  {
+    "frame": 2622,
+    "label": "falling",
+    "confidence": 0.8051978945732117,
+    "source": "rule_yolo_falling",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776157007.4189465
+  }
+]

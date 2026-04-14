@@ -1,0 +1,32 @@
+nohup: ignoring input
+/home/hzcu/miniconda3/envs/dtc/lib/python3.10/site-packages/mmcv/__init__.py:20: UserWarning: On January 1, 2023, MMCV will release v2.0.0, in which it will remove components related to the training process and add a data transformation module. In addition, it will rename the package names mmcv to mmcv-lite and mmcv-full to mmcv. See https://github.com/open-mmlab/mmcv/blob/master/docs/en/compatibility.md for more details.
+  warnings.warn(
+/home/hzcu/BullyDetection/pyskl/pyskl/utils/misc.py:130: UserWarning: [UniformSampleFrames] The following args has been deprecated: 
+  warnings.warn(warn_str)
+/home/hzcu/BullyDetection/pyskl/pyskl/utils/misc.py:130: UserWarning: Arg name: test_mode; Arg value: True
+  warnings.warn(warn_str)
+Checkpoint: /home/hzcu/BullyDetection/pyskl/work_dirs/posec3d_campus_v9/epoch_50.pth
+load checkpoint from local path: /home/hzcu/BullyDetection/pyskl/work_dirs/posec3d_campus_v9/epoch_50.pth
+Model loaded.
+
+Loading /home/hzcu/BullyDetection/data/campus/campus.pkl ...
+  Raw annotations: 71825
+  After filter label>=5: 62158
+  After filter zero keypoint: 42842
+  After dedup frame_dir: 40895
+    0 normal        16396
+    1 fighting      13981
+    2 bullying        497
+    3 falling        9351
+    4 climbing        670
+
+Scoring 40895 samples ...
+
+Traceback (most recent call last):
+  File "/home/hzcu/BullyDetection/mil_cleaning/score_samples.py", line 186, in <module>
+    main()
+  File "/home/hzcu/BullyDetection/mil_cleaning/score_samples.py", line 161, in main
+    results = score_all(model, anns, pipeline, args.device, args.batch_log)
+  File "/home/hzcu/BullyDetection/mil_cleaning/score_samples.py", line 131, in score_all
+    p_true = probs[ann['label']]
+IndexError: index 1 is out of bounds for axis 0 with size 1

@@ -1,0 +1,83 @@
+[
+  {
+    "frame": 340,
+    "label": "fighting",
+    "confidence": 0.9791985750198364,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776062439.0484538
+  },
+  {
+    "frame": 356,
+    "label": "fighting",
+    "confidence": 0.6706265807151794,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 4,
+    "timestamp": 1776062439.3526454
+  },
+  {
+    "frame": 436,
+    "label": "fighting",
+    "confidence": 0.9668915271759033,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776062440.94671
+  },
+  {
+    "frame": 452,
+    "label": "fighting",
+    "confidence": 0.9304209351539612,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 8,
+    "timestamp": 1776062441.2607083
+  },
+  {
+    "frame": 858,
+    "label": "fighting",
+    "confidence": 0.9910809397697449,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 76,
+    "timestamp": 1776062451.4375901
+  },
+  {
+    "frame": 874,
+    "label": "fighting",
+    "confidence": 0.9872439503669739,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 76,
+    "timestamp": 1776062451.8811924
+  },
+  {
+    "frame": 890,
+    "label": "fighting",
+    "confidence": 0.979822039604187,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 76,
+    "timestamp": 1776062452.1947515
+  },
+  {
+    "frame": 906,
+    "label": "fighting",
+    "confidence": 0.7125887274742126,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 76,
+    "timestamp": 1776062452.51556
+  },
+  {
+    "frame": 922,
+    "label": "fighting",
+    "confidence": 0.6615508794784546,
+    "source": "posec3d",
+    "smoothed": false,
+    "track_id": 76,
+    "timestamp": 1776062452.9071503
+  }
+]

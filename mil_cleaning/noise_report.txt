@@ -1,0 +1,150 @@
+======================================================================
+MIL Noise Analysis Report
+======================================================================
+
+Total samples: 37289
+
+
+────────────────────────────────────────────────────────────
+Class: normal (label=0), N=14917
+────────────────────────────────────────────────────────────
+  P(true_label) stats:
+    mean   = 0.7658
+    median = 0.9436
+    std    = 0.3222
+    min    = 0.0000
+    max    = 1.0000
+
+  Threshold analysis (samples to REMOVE if P(true) < threshold):
+    P(true) < 0.2:   1747 / 14917 ( 11.7%)
+    P(true) < 0.3:   2196 / 14917 ( 14.7%)
+    P(true) < 0.4:   2622 / 14917 ( 17.6%)
+    P(true) < 0.5:   3045 / 14917 ( 20.4%)
+    P(true) < 0.6:   3519 / 14917 ( 23.6%)
+
+  Prediction breakdown (model thinks these are):
+    → normal        11966 ( 80.2%) ✓
+    → fighting       2478 ( 16.6%) ← NOISE
+    → bullying         33 (  0.2%)
+    → falling         392 (  2.6%)
+    → climbing         48 (  0.3%)
+
+────────────────────────────────────────────────────────────
+Class: fighting (label=1), N=12772
+────────────────────────────────────────────────────────────
+  P(true_label) stats:
+    mean   = 0.7291
+    median = 0.9531
+    std    = 0.3587
+    min    = 0.0000
+    max    = 1.0000
+
+  Threshold analysis (samples to REMOVE if P(true) < threshold):
+    P(true) < 0.2:   2149 / 12772 ( 16.8%)
+    P(true) < 0.3:   2559 / 12772 ( 20.0%)
+    P(true) < 0.4:   2930 / 12772 ( 22.9%)
+    P(true) < 0.5:   3301 / 12772 ( 25.8%)
+    P(true) < 0.6:   3654 / 12772 ( 28.6%)
+
+  Prediction breakdown (model thinks these are):
+    → normal         2803 ( 21.9%) ← NOISE
+    → fighting       9564 ( 74.9%) ✓
+    → bullying         83 (  0.6%)
+    → falling         289 (  2.3%)
+    → climbing         33 (  0.3%)
+
+────────────────────────────────────────────────────────────
+Class: bullying (label=2), N=446
+────────────────────────────────────────────────────────────
+  P(true_label) stats:
+    mean   = 0.4430
+    median = 0.1741
+    std    = 0.4482
+    min    = 0.0000
+    max    = 1.0000
+
+  Threshold analysis (samples to REMOVE if P(true) < threshold):
+    P(true) < 0.2:    231 / 446 ( 51.8%)
+    P(true) < 0.3:    240 / 446 ( 53.8%)
+    P(true) < 0.4:    254 / 446 ( 57.0%)
+    P(true) < 0.5:    257 / 446 ( 57.6%)
+    P(true) < 0.6:    267 / 446 ( 59.9%)
+
+  Prediction breakdown (model thinks these are):
+    → normal           98 ( 22.0%) ← NOISE
+    → fighting        149 ( 33.4%) ← NOISE
+    → bullying        191 ( 42.8%) ✓
+    → falling           7 (  1.6%)
+    → climbing          1 (  0.2%)
+
+────────────────────────────────────────────────────────────
+Class: falling (label=3), N=8546
+────────────────────────────────────────────────────────────
+  P(true_label) stats:
+    mean   = 0.9350
+    median = 0.9996
+    std    = 0.1975
+    min    = 0.0000
+    max    = 1.0000
+
+  Threshold analysis (samples to REMOVE if P(true) < threshold):
+    P(true) < 0.2:    273 / 8546 (  3.2%)
+    P(true) < 0.3:    347 / 8546 (  4.1%)
+    P(true) < 0.4:    411 / 8546 (  4.8%)
+    P(true) < 0.5:    478 / 8546 (  5.6%)
+    P(true) < 0.6:    548 / 8546 (  6.4%)
+
+  Prediction breakdown (model thinks these are):
+    → normal          235 (  2.7%)
+    → fighting        201 (  2.4%)
+    → bullying          5 (  0.1%)
+    → falling        8095 ( 94.7%) ✓
+    → climbing         10 (  0.1%)
+
+────────────────────────────────────────────────────────────
+Class: climbing (label=4), N=608
+────────────────────────────────────────────────────────────
+  P(true_label) stats:
+    mean   = 0.6984
+    median = 0.9398
+    std    = 0.3846
+    min    = 0.0000
+    max    = 1.0000
+
+  Threshold analysis (samples to REMOVE if P(true) < threshold):
+    P(true) < 0.2:    124 / 608 ( 20.4%)
+    P(true) < 0.3:    142 / 608 ( 23.4%)
+    P(true) < 0.4:    158 / 608 ( 26.0%)
+    P(true) < 0.5:    179 / 608 ( 29.4%)
+    P(true) < 0.6:    196 / 608 ( 32.2%)
+
+  Prediction breakdown (model thinks these are):
+    → normal           49 (  8.1%)
+    → fighting         85 ( 14.0%) ← NOISE
+    → bullying          2 (  0.3%)
+    → falling          34 (  5.6%)
+    → climbing        438 ( 72.0%) ✓
+
+======================================================================
+FOCUS: normal ↔ fighting Cross-Confusion
+======================================================================
+
+  normal samples predicted as fighting: 2478/14917 (16.6%)
+    P(fighting) in these: mean=0.788, max=1.000
+    High confidence (P>0.7): 1637 samples
+
+  fighting samples predicted as normal: 2803/12772 (21.9%)
+    P(normal) in these: mean=0.816, max=1.000
+    High confidence (P>0.7): 2047 samples
+
+======================================================================
+RECOMMENDATION
+======================================================================
+
+  Based on the analysis above, consider these cleaning strategies:
+  1. Conservative: --threshold 0.3 (remove only obvious noise)
+  2. Moderate:     --threshold 0.4
+  3. Aggressive:   --threshold 0.5 (remove all uncertain samples)
+
+  Recommended: start with --threshold 0.4 on fighting+normal,
+  then compare training results.
