@@ -751,20 +751,51 @@ mil_cleaning/
 
 ---
 
+### E2E Fix Round 6 — YOLO11 三类小物体模型集成 + YOLO辅助falling + 遮挡宽限期
+
+**背景**: 队友训练的 YOLO11 小物体检测模型升级为统一三类模型（phone, smoking, falling），需要嵌入 pipeline 并用于辅助 falling 识别（一动不动躺地者 PoseC3D 普遍识别不出）。同时发现遮挡恢复后标签会有短暂 normal 空窗期。
+
+**模型路径**: `/home/hzcu/yjm/home/yjm/VideoDetection/v6/runs/detect/campus_A28/unified_3class_model/weights/best.pt`
+
+| 修改 | 文件 | 详情 |
+|---|---|---|
+| SmallObjectDetector 自动读取类名 | pipeline.py | class_map 不再硬编码，从 model.names 自动读取 |
+| check_smoking 兼容新类名 | rule_engine.py | 匹配 'cigarette' 或 'smoking' |
+| YOLO 辅助 falling 检测 | rule_engine.py | `check_fallen_by_yolo()`: YOLO 检测到 falling bbox + 与人物骨骼中心重叠（20% margin） |
+| YOLO falling → bullying 升级 | rule_engine.py | 躺地 + 附近 track 历史含 fighting/bullying → bullying；否则 → falling |
+| 遮挡宽限期 (grace_frames=90) | pipeline.py + rule_engine.py | track 消失后保留 buffer/history/label 90帧（≈3秒），恢复时继承旧状态 |
+| 默认加载小物体模型 | run.py | `--small-obj-model` 默认指向 unified_3class_model，`--small-obj-model none` 可禁用 |
+
+---
+
 ### E2E Pipeline 规则引擎完整逻辑（当前版本）
 
 ```
 PoseC3D 原始 5 类概率
   → Step 1: climbing>0.7 → 直接采信
              falling>0.7 + 非直立 → 采信；直立 → normal
-  → Step 2: 小物体规则 (smoking / phone_call)
-  → Step 3: vandalism (fighting>0.5 + 仅1人)
-  → Step 4: 徘徊检测 (轨迹分析)
-  → Step 5: PoseC3D 默认 (conf >= 0.3)
+  → Step 2: YOLO falling 检测（躺地不动）
+             躺地 + 附近有 fighting/bullying 历史的 track → bullying
+             躺地 + 无攻击者 → falling
+  → Step 3: 小物体规则 (smoking / phone_call)
+  → Step 4: vandalism (fighting>0.5 + 仅1人)
+  → Step 5: 徘徊检测 (轨迹分析)
+  → Step 6: PoseC3D 默认 (conf >= 0.3)
        fighting: conf<0.5→normal | 无近距离人→normal | 不对称→bullying
        falling: 躯干直立→normal
   → Vote Smooth (窗口=3):
        fighting:3次 | bullying:2次 | falling/climbing:1次
+```
+
+### 遮挡宽限期机制
+
+```
+track 被遮挡（从画面消失）
+  → 宽限期 90 帧内：保留 SkeletonBuffer + 投票历史 + 显示标签
+  → ByteTrack 恢复同一 track_id
+  → 立刻显示旧标签（无 normal 空窗），buffer 继续累积
+  → 16 帧后触发新推理，平滑过渡
+  → 超过 90 帧仍未出现 → 清除所有状态
 ```
 
 ### E2E Pipeline 关键参数（当前版本）
@@ -782,3 +813,5 @@ PoseC3D 原始 5 类概率
 | falling/climbing vote_min | 1 | 紧急行为最低确认次数 |
 | proximity_factor | 1.5×max身高 | fighting 近距离约束 |
 | upright_threshold | 8% 画面高度 | falling 姿态验证阈值 |
+| grace_frames | 90 (≈3秒@30fps) | 遮挡宽限期，track 消失后保留状态 |
+| small_obj_model | unified_3class (phone/smoking/falling) | YOLO11 三类检测，辅助 falling + smoking + phone |

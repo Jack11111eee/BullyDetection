@@ -9,3 +9,5 @@ video_annotator/
 *.zip
 *.pt
 *.pth
+*event*.json
+*.log
