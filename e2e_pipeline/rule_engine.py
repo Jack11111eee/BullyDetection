@@ -234,81 +234,46 @@ def _is_upright_posture(kps, scores, img_shape, threshold=0.3):
 
 
 def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
-    """检查是否为坐姿 — 补充 _is_upright_posture 对前倾坐姿的漏检。
-    坐姿特征：大腿水平（髋-膝同高）+ 头在髋上方 + 膝盖弯曲（膝上踝下）。
-    返回 True 表示坐姿，不应判为 falling。
+    """检查是否为坐姿/非倒地姿态 — 基于躯干角度，不依赖下肢关键点。
+    核心判据：肩膀中点→髋部中点的向量与垂直方向夹角 < 60° → 躯干竖直 → 非倒地。
+    只需要肩膀和髋部关键点（坐在桌前时几乎不会被遮挡）。
+    返回 True 表示非倒地姿态，不应判为 falling。
     """
-    # 1. 获取头部 Y
-    head_y = None
-    for idx in [0, 1, 2]:
-        if keypoint_valid(kps, scores, idx, threshold):
-            head_y = kps[idx][1]
-            break
-    # 2. 获取髋部 Y（左右平均）
-    hip_y = None
-    hip_count = 0
-    for idx in [11, 12]:
-        if keypoint_valid(kps, scores, idx, threshold):
-            hip_y = (hip_y or 0) + kps[idx][1]
-            hip_count += 1
-    if hip_count > 0:
-        hip_y /= hip_count
-    # 3. 获取膝盖 Y（左右平均）
-    knee_y = None
-    knee_count = 0
-    for idx in [13, 14]:
-        if keypoint_valid(kps, scores, idx, threshold):
-            knee_y = (knee_y or 0) + kps[idx][1]
-            knee_count += 1
-    if knee_count > 0:
-        knee_y /= knee_count
-    # 4. 获取脚踝 Y（左右平均）
-    ankle_y = None
-    ankle_count = 0
-    for idx in [15, 16]:
-        if keypoint_valid(kps, scores, idx, threshold):
-            ankle_y = (ankle_y or 0) + kps[idx][1]
-            ankle_count += 1
-    if ankle_count > 0:
-        ankle_y /= ankle_count
-
-    if head_y is None or hip_y is None or knee_y is None:
-        return False  # 关键点不足，无法判断
-
-    # 获取躯干长度作为参考尺度（肩到髋）
-    shoulder_y = None
-    shoulder_count = 0
+    # 获取肩膀中点 (x, y)
+    shoulder_pts = []
     for idx in [5, 6]:
         if keypoint_valid(kps, scores, idx, threshold):
-            shoulder_y = (shoulder_y or 0) + kps[idx][1]
-            shoulder_count += 1
-    if shoulder_count > 0:
-        shoulder_y /= shoulder_count
-
-    # 用躯干长度或画面高度作为参考
-    if shoulder_y is not None and hip_y > shoulder_y:
-        torso_len = hip_y - shoulder_y
-    else:
-        torso_len = img_shape[0] * 0.15  # fallback
-
-    # 条件1: 头在髋上方（head_y < hip_y，y轴向下）
-    if head_y >= hip_y:
+            shoulder_pts.append(kps[idx])
+    if not shoulder_pts:
         return False
+    shoulder_center = np.mean(shoulder_pts, axis=0)  # (x, y)
 
-    # 条件2: 大腿水平 — 髋膝垂直距离 < 躯干长度的 60%
-    thigh_vertical = abs(hip_y - knee_y)
-    if thigh_vertical > torso_len * 0.6:
-        return False  # 大腿不够水平（站立或倒地腿伸直）
+    # 获取髋部中点 (x, y)
+    hip_pts = []
+    for idx in [11, 12]:
+        if keypoint_valid(kps, scores, idx, threshold):
+            hip_pts.append(kps[idx])
+    if not hip_pts:
+        return False
+    hip_center = np.mean(hip_pts, axis=0)  # (x, y)
 
-    # 条件3（可选加强）: 膝盖弯曲 — 踝在膝下方
-    if ankle_y is not None and ankle_y < knee_y:
-        return False  # 踝在膝上面，不像坐姿
+    # 躯干向量：从肩膀到髋部（y轴向下，正常站/坐时 dy > 0）
+    torso_vec = hip_center - shoulder_center  # (dx, dy)
+    torso_len = np.linalg.norm(torso_vec)
+    if torso_len < 1:
+        return False  # 躯干长度太小，无法判断
 
-    is_sitting = True
-    if is_sitting:
-        logger.debug(f'  [RULE] 坐姿检测: head_y={head_y:.0f} < hip_y={hip_y:.0f}, '
-                     f'thigh_vert={thigh_vertical:.0f} < {torso_len * 0.6:.0f} → 坐姿(非falling)')
-    return is_sitting
+    # 与垂直方向 (0, 1) 的夹角
+    # cos(angle) = dot(torso, vertical) / |torso|
+    cos_angle = torso_vec[1] / torso_len  # vertical = (0,1), dot = dy
+    angle_deg = np.degrees(np.arccos(np.clip(cos_angle, -1, 1)))
+
+    # 躯干与垂直方向夹角 < 60° → 躯干更偏竖直 → 坐着/站着，不是倒地
+    is_non_fallen = angle_deg < 60
+
+    if is_non_fallen:
+        logger.debug(f'  [RULE] 躯干角度检测: angle={angle_deg:.1f}° < 60° → 非倒地(坐姿/站姿)')
+    return is_non_fallen
 
 
 def check_fallen_by_yolo(person_kps, person_scores, small_obj_detections, img_shape):
