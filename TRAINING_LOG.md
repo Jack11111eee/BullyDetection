@@ -442,7 +442,7 @@ cd /home/hzcu/BullyDetection && python per_class_eval_v2.py
 |---|---|---|
 | Rule Engine | `rule_engine.py` | Built. Adds vandalism/smoking/phone_call via heuristics |
 | Inference Pipeline | `main_inference.py` | Built. End-to-end video inference |
-| YOLO11s Small Object | `YOLO_HANDOFF.md` | Teammate responsible. For cigarette/phone detection |
+| YOLO11 Unified 3-Class | `unified_3class_model/best.pt` | Teammate trained. phone/smoking/falling 三类检测 |
 | Training Curves | `plot_training_curves.py` | Built. Parses mmcv logs, plots curves |
 | Data Diagnostics | `diagnose_data.py`, `diagnose_all_data.py` | Built. Pipeline-wide data quality checks |
 | Sample Visualization | `visualize_samples.py` | Built. Draws skeleton from pkl samples |
@@ -490,6 +490,9 @@ cd /home/hzcu/BullyDetection && python per_class_eval_v2.py
 13. **交叉折 MIL 清洗是突破 85% 瓶颈的关键**: 仅去掉 11.6% 的噪声样本就带来 +9.1% test 提升，远超任何超参调优
 14. **训练/推理管线一致性至关重要**: 训练用 2 人骨骼但推理只送 1 人 → fighting 全部漏检。必须保证 M 维度一致
 15. **不要用训练集模型给训练集打分**: 模型会过度自信（P(true)≈1.0），必须用交叉折让每个样本被未见过它的模型评分
+16. **PoseC3D 对静态场景有盲区**: 一动不动躺地者无时序特征 → 输出 normal。需要 YOLO 单帧检测兜底
+17. **规则引擎判定要有证据链**: 「躺地+有人」不等于 bullying，必须检查附近人的行为历史（fighting/bullying），避免路人误触发
+18. **遮挡恢复需要宽限期**: track 消失后立即清除状态会导致恢复后标签空窗。grace_frames=90 保留 buffer/history/label，恢复时平滑过渡
 
 ---
 
@@ -622,6 +625,28 @@ mil_cleaning/
   1. `SkeletonBuffer.get_clip(track_id, secondary_tid)` 改为输出 `(2, T, 17, 2)`
   2. `_process_frame()` 先收集所有 track 位置，为每个推理目标找空间最近邻配对
   3. 两遍处理：第一遍收集位置，第二遍推理（确保配对时能看到当前帧所有人）
+- **Status**: 已修复
+
+### Problem 11: PoseC3D 无法识别一动不动躺地者
+
+- **Discovery**: E2E Fix Round 6
+- **Details**: 一动不动躺在地上的人（如摔倒后失去意识），PoseC3D 因无时序动作变化普遍输出 normal
+- **Fix**: 集成队友的 YOLO11 unified_3class_model（phone/smoking/falling），用 YOLO falling 检测框匹配人物骨骼中心（20% margin），补偿 PoseC3D 的静态场景盲区
+- **Status**: 已修复
+
+### Problem 12: YOLO falling 误判 bullying 逻辑
+
+- **Discovery**: E2E Fix Round 6 首版逻辑
+- **Details**: 最初设计「躺地+附近有人→bullying」，但路人经过也会触发误报
+- **Fix**: 改为检查附近 track 的投票历史（`self.history`），只有附近有 fighting/bullying 标签历史的 track 才判 bullying
+- **Status**: 已修复
+
+### Problem 13: 遮挡恢复后标签空窗期
+
+- **Discovery**: E2E Fix Round 6
+- **Details**: 人被遮挡后 track 消失 → buffer/history/label 全部清除 → 恢复后标签短暂变 normal
+- **Root Cause**: `remove_stale()` 和 `clear_stale_tracks()` 在 track 消失的下一帧就删除所有状态
+- **Fix**: 三个组件（SkeletonBuffer / RuleEngine / Pipeline.track_labels）统一添加 grace_frames=90（≈3秒@30fps）宽限期，track 消失后保留状态，恢复时继承旧 buffer 和投票窗口
 - **Status**: 已修复
 
 ---
