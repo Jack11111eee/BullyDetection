@@ -225,7 +225,7 @@ def _is_upright_posture(kps, scores, img_shape, threshold=0.3):
     # head_hip 是 hip_y - head_y，正值越大=头越高于髋=越直立
     # 正常站立/坐着时，head_hip > 画面高度的 8%（头明显在髋之上）
     # 摔倒时，head_hip 接近 0 或为负（头和髋同高甚至头更低）
-    upright_threshold = h * 0.08
+    upright_threshold = h * 0.03
     is_upright = head_hip > upright_threshold
 
     if is_upright:
@@ -234,46 +234,31 @@ def _is_upright_posture(kps, scores, img_shape, threshold=0.3):
 
 
 def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
-    """检查是否为坐姿/非倒地姿态 — 基于躯干角度，不依赖下肢关键点。
-    核心判据：肩膀中点→髋部中点的向量与垂直方向夹角 < 60° → 躯干竖直 → 非倒地。
-    只需要肩膀和髋部关键点（坐在桌前时几乎不会被遮挡）。
+    """检查骨骼包围框纵横比 — 纵向展开=坐/站，横向展开=躺倒。
+    只需要任意 3+ 个有效关键点即可计算，不依赖特定关键点。
     返回 True 表示非倒地姿态，不应判为 falling。
     """
-    # 获取肩膀中点 (x, y)
-    shoulder_pts = []
-    for idx in [5, 6]:
-        if keypoint_valid(kps, scores, idx, threshold):
-            shoulder_pts.append(kps[idx])
-    if not shoulder_pts:
-        return False
-    shoulder_center = np.mean(shoulder_pts, axis=0)  # (x, y)
+    valid = scores > threshold
+    if valid.sum() < 3:
+        return False  # 有效关键点太少
 
-    # 获取髋部中点 (x, y)
-    hip_pts = []
-    for idx in [11, 12]:
-        if keypoint_valid(kps, scores, idx, threshold):
-            hip_pts.append(kps[idx])
-    if not hip_pts:
-        return False
-    hip_center = np.mean(hip_pts, axis=0)  # (x, y)
+    valid_kps = kps[valid]  # (N, 2)
+    x_min, y_min = valid_kps.min(axis=0)
+    x_max, y_max = valid_kps.max(axis=0)
+    bbox_w = x_max - x_min
+    bbox_h = y_max - y_min
 
-    # 躯干向量：从肩膀到髋部（y轴向下，正常站/坐时 dy > 0）
-    torso_vec = hip_center - shoulder_center  # (dx, dy)
-    torso_len = np.linalg.norm(torso_vec)
-    if torso_len < 1:
-        return False  # 躯干长度太小，无法判断
+    if bbox_w < 1:
+        return True  # 宽度几乎为0，人是竖直的
+    aspect_ratio = bbox_h / bbox_w
 
-    # 与垂直方向 (0, 1) 的夹角
-    # cos(angle) = dot(torso, vertical) / |torso|
-    cos_angle = torso_vec[1] / torso_len  # vertical = (0,1), dot = dy
-    angle_deg = np.degrees(np.arccos(np.clip(cos_angle, -1, 1)))
+    # 纵横比 > 1.0 → 骨骼纵向展开 → 坐着/站着（身体竖直）
+    # 纵横比 < 1.0 → 骨骼横向展开 → 躺倒（身体水平）
+    is_upright = aspect_ratio > 1.0
 
-    # 躯干与垂直方向夹角 < 60° → 躯干更偏竖直 → 坐着/站着，不是倒地
-    is_non_fallen = angle_deg < 60
-
-    if is_non_fallen:
-        logger.debug(f'  [RULE] 躯干角度检测: angle={angle_deg:.1f}° < 60° → 非倒地(坐姿/站姿)')
-    return is_non_fallen
+    if is_upright:
+        logger.debug(f'  [RULE] 骨骼纵横比检测: h/w={aspect_ratio:.2f} > 1.0 → 非倒地(坐姿/站姿)')
+    return is_upright
 
 
 def check_fallen_by_yolo(person_kps, person_scores, small_obj_detections, img_shape):
