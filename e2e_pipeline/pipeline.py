@@ -74,6 +74,7 @@ class SkeletonBuffer:
             'kps': [], 'scores': [], 'new_frames': 0,
         })
         self._missing_count = {}  # {track_id: 连续消失帧数}
+        self._last_positions = {}  # {track_id: np.array([cx, cy])} 最后已知位置
 
     def update(self, track_id, keypoints_17x2, scores_17):
         buf = self.tracks[track_id]
@@ -83,6 +84,10 @@ class SkeletonBuffer:
         if len(buf['kps']) > self.buf_max:
             buf['kps'] = buf['kps'][-self.buf_max:]
             buf['scores'] = buf['scores'][-self.buf_max:]
+        # 更新最后已知位置
+        valid = scores_17 > 0.3
+        if valid.sum() > 0:
+            self._last_positions[track_id] = keypoints_17x2[valid].mean(axis=0)
 
     def should_infer(self, track_id):
         buf = self.tracks[track_id]
@@ -132,6 +137,48 @@ class SkeletonBuffer:
                 keypoint_score[1, offset2 + i] = sampled_scores2[i]
 
         return keypoint, keypoint_score
+
+    def try_reassociate(self, new_tid, new_position, max_dist_ratio=0.15, img_h=1080):
+        """新 track 出现时，检查是否匹配某个宽限期内的消失 track。
+        匹配条件：空间距离 < max_dist_ratio * img_h（默认15%画面高度）
+        Returns: old_tid if matched, else None
+        """
+        if new_position is None:
+            return None
+        threshold = img_h * max_dist_ratio
+        best_tid, best_dist = None, threshold
+        for tid, cnt in self._missing_count.items():
+            if cnt > self.grace_frames:
+                continue  # 已超出宽限期
+            if tid not in self._last_positions:
+                continue
+            old_pos = self._last_positions[tid]
+            d = np.linalg.norm(new_position - old_pos)
+            if d < best_dist:
+                best_dist = d
+                best_tid = tid
+        return best_tid
+
+    def migrate(self, old_tid, new_tid):
+        """将 old_tid 的 buffer 迁移到 new_tid"""
+        if old_tid in self.tracks:
+            old_buf = self.tracks[old_tid]
+            new_buf = self.tracks[new_tid]
+            # 把旧 buffer 的历史帧拼到新 track 前面
+            new_buf['kps'] = old_buf['kps'] + new_buf['kps']
+            new_buf['scores'] = old_buf['scores'] + new_buf['scores']
+            # 截断到 buf_max
+            if len(new_buf['kps']) > self.buf_max:
+                new_buf['kps'] = new_buf['kps'][-self.buf_max:]
+                new_buf['scores'] = new_buf['scores'][-self.buf_max:]
+            # new_frames 保留新 track 自身的（触发推理用）
+            new_buf['new_frames'] += old_buf['new_frames']
+            # 清理旧 track
+            del self.tracks[old_tid]
+            self._missing_count.pop(old_tid, None)
+            self._last_positions.pop(old_tid, None)
+            logger.info(f'[REASSOC] SkeletonBuffer: T{old_tid} → T{new_tid} '
+                        f'(migrated {len(old_buf["kps"])} frames)')
 
     def remove_stale(self, active_ids):
         """遮挡宽限：track 消失后保留 grace_frames 帧，恢复时继承旧 buffer"""
@@ -319,6 +366,7 @@ class InferencePipeline:
         self.yolo_conf = yolo_conf
         self.track_labels = {}
         self._label_missing_count = {}  # 遮挡宽限：标签保留
+        self._known_track_ids = set()   # 已见过的 track ID，用于检测新 track
         self.event_log = []
 
         print(f'  clip_len={clip_len} (auto-detected from config)')
@@ -460,6 +508,22 @@ class InferencePipeline:
                 self.skeleton_buf.update(track_id, kps_xy, kps_sc)
                 self.rule_engine.update_track_position(track_id, kps_xy, kps_sc)
 
+            # 重关联：新 track 出现时匹配宽限期内的消失 track，迁移状态
+            for track_id in current_track_ids:
+                if track_id not in self._known_track_ids:
+                    self._known_track_ids.add(track_id)
+                    pos = track_positions.get(track_id)
+                    old_tid = self.skeleton_buf.try_reassociate(
+                        track_id, pos, img_h=img_shape[0])
+                    if old_tid is not None:
+                        logger.info(f'[F{frame_idx}] REASSOC: T{old_tid} → T{track_id} '
+                                    f'(位置匹配，迁移状态)')
+                        self.skeleton_buf.migrate(old_tid, track_id)
+                        self.rule_engine.migrate_track(old_tid, track_id)
+                        if old_tid in self.track_labels:
+                            self.track_labels[track_id] = self.track_labels.pop(old_tid)
+                        self._label_missing_count.pop(old_tid, None)
+
             # 第二遍: 推理 + 可视化
             for track_id, (kps_xy, kps_sc) in track_kps.items():
                 # 画骨骼
@@ -544,4 +608,5 @@ class InferencePipeline:
         stale = [tid for tid, cnt in self._label_missing_count.items() if cnt > grace]
         for tid in stale:
             self.track_labels.pop(tid, None)
+            self._known_track_ids.discard(tid)
             del self._label_missing_count[tid]

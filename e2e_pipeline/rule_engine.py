@@ -631,6 +631,28 @@ class RuleEngine:
                 self.track_positions[track_id] = []
             self.track_positions[track_id].append((cx, cy, time.time()))
 
+    def migrate_track(self, old_tid, new_tid):
+        """将 old_tid 的投票历史和位置迁移到 new_tid"""
+        if old_tid in self.history:
+            # 旧历史拼到新 track（新 track 可能还没有 history）
+            old_hist = self.history.pop(old_tid)
+            if new_tid not in self.history:
+                self.history[new_tid] = old_hist
+            else:
+                self.history[new_tid] = old_hist + self.history[new_tid]
+                # 截断到 vote_window
+                if len(self.history[new_tid]) > self.vote_window:
+                    self.history[new_tid] = self.history[new_tid][-self.vote_window:]
+            logger.info(f'[REASSOC] RuleEngine: T{old_tid} → T{new_tid} '
+                        f'(history={self.history[new_tid]})')
+        if old_tid in self.track_positions:
+            old_pos = self.track_positions.pop(old_tid)
+            if new_tid not in self.track_positions:
+                self.track_positions[new_tid] = old_pos
+            else:
+                self.track_positions[new_tid] = old_pos + self.track_positions[new_tid]
+        self._missing_count.pop(old_tid, None)
+
     def clear_stale_tracks(self, active_track_ids):
         """遮挡宽限：track 消失后保留历史 grace_frames 帧，恢复时继承投票窗口"""
         all_tids = set(self.history.keys()) | set(self.track_positions.keys())
