@@ -342,12 +342,12 @@ class RuleEngine:
     2. YOLO 辅助 falling 检测（一动不动躺地）
     3. 小物体规则（smoking / phone_call）
     4. vandalism 规则
-    5. 徘徊检测（轨迹分析）
-    6. PoseC3D 默认结果
+    5. PoseC3D 默认结果（fighting/bullying/falling）
+    6. 徘徊检测（轨迹分析，5分钟阈值）
     """
 
     def __init__(self, pose_threshold=0.3, vote_window=5, vote_ratio=0.6,
-                 loiter_time=60.0, loiter_radius=100.0, grace_frames=90):
+                 loiter_time=300.0, loiter_radius=100.0, grace_frames=90):
         """
         Args:
             pose_threshold: PoseC3D 结果的最低置信度
@@ -478,16 +478,11 @@ class RuleEngine:
             logger.debug(f'  [RAW] T{track_id} → vandalism (规则引擎: fighting={pose_probs[1]:.3f}, 1人)')
             return 'vandalism', vandal_conf, 'rule_vandalism'
 
-        # 6. 检查徘徊
-        is_loiter, loiter_conf = self._check_loitering(track_id, person_kps, person_scores)
-        if is_loiter:
-            return 'loitering', loiter_conf, 'rule_loitering'
-
-        # 7. 默认用 PoseC3D 结果
+        # 6. 默认用 PoseC3D 结果（优先于徘徊检测，避免 bullying 被误判为 loitering）
         if pose_conf >= self.pose_threshold:
             final_label = pose_label
 
-            # 7a. fighting 额外置信度要求 + 近距离约束
+            # 6a. fighting 额外置信度要求 + 近距离约束
             if final_label == 'fighting':
                 if pose_conf < 0.5:
                     logger.debug(f'  [RAW] T{track_id} → normal (fighting置信度不足: {pose_conf:.3f} < 0.5)')
@@ -505,7 +500,7 @@ class RuleEngine:
                                      f'nearest={nearest_dist:.0f} > {max_fight_dist:.0f})')
                         return 'normal', 1.0 - pose_conf, 'rule_no_proximity'
 
-                # 7b. fighting → bullying 不对称性修正
+                # 6b. fighting → bullying 不对称性修正
                 is_bully, bully_conf = check_bullying_asymmetry(
                     person_kps, person_scores, all_person_kps_scores, img_shape
                 )
@@ -513,7 +508,7 @@ class RuleEngine:
                     logger.debug(f'  [RAW] T{track_id} → bullying (fighting改判: 姿态不对称)')
                     return 'bullying', pose_conf * 0.9, 'rule_bullying'
 
-            # 7c. falling 姿态验证：躯干直立（坐下）不算 falling
+            # 6c. falling 姿态验证：躯干直立（坐下）不算 falling
             if final_label == 'falling':
                 if _is_upright_posture(person_kps, person_scores, img_shape):
                     logger.debug(f'  [RAW] T{track_id} → normal (falling但躯干直立, 可能是坐下)')
@@ -521,6 +516,11 @@ class RuleEngine:
 
             logger.debug(f'  [RAW] T{track_id} → {final_label} (conf={pose_conf:.3f} >= threshold={self.pose_threshold})')
             return final_label, pose_conf, 'posec3d'
+
+        # 7. 检查徘徊（低于 PoseC3D 优先级，避免覆盖 bullying/fighting）
+        is_loiter, loiter_conf = self._check_loitering(track_id, person_kps, person_scores)
+        if is_loiter:
+            return 'loitering', loiter_conf, 'rule_loitering'
 
         logger.debug(f'  [RAW] T{track_id} → normal (conf={pose_conf:.3f} < threshold={self.pose_threshold}, 被过滤!)')
         return 'normal', 1.0 - pose_conf, 'posec3d_default'
