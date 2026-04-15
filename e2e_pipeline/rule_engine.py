@@ -233,6 +233,84 @@ def _is_upright_posture(kps, scores, img_shape, threshold=0.3):
     return is_upright
 
 
+def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
+    """检查是否为坐姿 — 补充 _is_upright_posture 对前倾坐姿的漏检。
+    坐姿特征：大腿水平（髋-膝同高）+ 头在髋上方 + 膝盖弯曲（膝上踝下）。
+    返回 True 表示坐姿，不应判为 falling。
+    """
+    # 1. 获取头部 Y
+    head_y = None
+    for idx in [0, 1, 2]:
+        if keypoint_valid(kps, scores, idx, threshold):
+            head_y = kps[idx][1]
+            break
+    # 2. 获取髋部 Y（左右平均）
+    hip_y = None
+    hip_count = 0
+    for idx in [11, 12]:
+        if keypoint_valid(kps, scores, idx, threshold):
+            hip_y = (hip_y or 0) + kps[idx][1]
+            hip_count += 1
+    if hip_count > 0:
+        hip_y /= hip_count
+    # 3. 获取膝盖 Y（左右平均）
+    knee_y = None
+    knee_count = 0
+    for idx in [13, 14]:
+        if keypoint_valid(kps, scores, idx, threshold):
+            knee_y = (knee_y or 0) + kps[idx][1]
+            knee_count += 1
+    if knee_count > 0:
+        knee_y /= knee_count
+    # 4. 获取脚踝 Y（左右平均）
+    ankle_y = None
+    ankle_count = 0
+    for idx in [15, 16]:
+        if keypoint_valid(kps, scores, idx, threshold):
+            ankle_y = (ankle_y or 0) + kps[idx][1]
+            ankle_count += 1
+    if ankle_count > 0:
+        ankle_y /= ankle_count
+
+    if head_y is None or hip_y is None or knee_y is None:
+        return False  # 关键点不足，无法判断
+
+    # 获取躯干长度作为参考尺度（肩到髋）
+    shoulder_y = None
+    shoulder_count = 0
+    for idx in [5, 6]:
+        if keypoint_valid(kps, scores, idx, threshold):
+            shoulder_y = (shoulder_y or 0) + kps[idx][1]
+            shoulder_count += 1
+    if shoulder_count > 0:
+        shoulder_y /= shoulder_count
+
+    # 用躯干长度或画面高度作为参考
+    if shoulder_y is not None and hip_y > shoulder_y:
+        torso_len = hip_y - shoulder_y
+    else:
+        torso_len = img_shape[0] * 0.15  # fallback
+
+    # 条件1: 头在髋上方（head_y < hip_y，y轴向下）
+    if head_y >= hip_y:
+        return False
+
+    # 条件2: 大腿水平 — 髋膝垂直距离 < 躯干长度的 60%
+    thigh_vertical = abs(hip_y - knee_y)
+    if thigh_vertical > torso_len * 0.6:
+        return False  # 大腿不够水平（站立或倒地腿伸直）
+
+    # 条件3（可选加强）: 膝盖弯曲 — 踝在膝下方
+    if ankle_y is not None and ankle_y < knee_y:
+        return False  # 踝在膝上面，不像坐姿
+
+    is_sitting = True
+    if is_sitting:
+        logger.debug(f'  [RULE] 坐姿检测: head_y={head_y:.0f} < hip_y={hip_y:.0f}, '
+                     f'thigh_vert={thigh_vertical:.0f} < {torso_len * 0.6:.0f} → 坐姿(非falling)')
+    return is_sitting
+
+
 def check_fallen_by_yolo(person_kps, person_scores, small_obj_detections, img_shape):
     """YOLO 辅助摔倒检测：检测到躺地人体 + 与当前人物重叠。
     用于补偿 PoseC3D 对一动不动躺地者的漏检。
@@ -419,7 +497,10 @@ class RuleEngine:
             if _is_upright_posture(person_kps, person_scores, img_shape):
                 logger.debug(f'  [RAW] T{track_id} → normal (高置信度falling但躯干直立, 可能是坐下)')
                 return 'normal', 1.0 - pose_conf, 'rule_upright'
-            logger.debug(f'  [RAW] T{track_id} → falling (高置信度+非直立)')
+            if _is_sitting_posture(person_kps, person_scores, img_shape):
+                logger.debug(f'  [RAW] T{track_id} → normal (高置信度falling但检测到坐姿)')
+                return 'normal', 1.0 - pose_conf, 'rule_sitting'
+            logger.debug(f'  [RAW] T{track_id} → falling (高置信度+非直立+非坐姿)')
             return 'falling', pose_conf, 'posec3d'
 
         # 2. YOLO 辅助 falling 检测（一动不动躺地，PoseC3D 识别不出）
@@ -508,11 +589,14 @@ class RuleEngine:
                     logger.debug(f'  [RAW] T{track_id} → bullying (fighting改判: 姿态不对称)')
                     return 'bullying', pose_conf * 0.9, 'rule_bullying'
 
-            # 6c. falling 姿态验证：躯干直立（坐下）不算 falling
+            # 6c. falling 姿态验证：躯干直立或坐姿不算 falling
             if final_label == 'falling':
                 if _is_upright_posture(person_kps, person_scores, img_shape):
                     logger.debug(f'  [RAW] T{track_id} → normal (falling但躯干直立, 可能是坐下)')
                     return 'normal', 1.0 - pose_conf, 'rule_upright'
+                if _is_sitting_posture(person_kps, person_scores, img_shape):
+                    logger.debug(f'  [RAW] T{track_id} → normal (falling但检测到坐姿)')
+                    return 'normal', 1.0 - pose_conf, 'rule_sitting'
 
             logger.debug(f'  [RAW] T{track_id} → {final_label} (conf={pose_conf:.3f} >= threshold={self.pose_threshold})')
             return final_label, pose_conf, 'posec3d'
