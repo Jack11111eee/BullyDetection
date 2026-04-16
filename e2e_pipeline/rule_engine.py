@@ -511,11 +511,12 @@ class RuleEngine:
                         max_dist = (ref_height * 1.5) if ref_height > 0 else img_shape[0] * 0.25
                         if dist > max_dist:
                             continue
-                        # 只有附近这个人的历史标签包含 fighting/bullying 才判 bullying
+                        # 附近的人必须正在持续攻击（历史中 fighting/bullying 占多数）
                         other_history = self.history.get(other_tid, [])
-                        if any(h in ('fighting', 'bullying') for h in other_history):
-                            logger.debug(f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid}有'
-                                         f'攻击历史: {other_history}, dist={dist:.0f})')
+                        attack_count = sum(1 for h in other_history if h in ('fighting', 'bullying'))
+                        if len(other_history) >= 2 and attack_count >= len(other_history) * 0.5:
+                            logger.debug(f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid}'
+                                         f'持续攻击: {attack_count}/{len(other_history)}, dist={dist:.0f})')
                             return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
             # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
             logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
