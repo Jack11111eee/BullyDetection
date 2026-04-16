@@ -289,14 +289,16 @@ def _has_vertical_movement(track_positions_list, img_h, min_samples=3, ratio=0.0
 def check_fallen_by_yolo(person_kps, person_scores, small_obj_detections, img_shape):
     """YOLO 辅助摔倒检测：检测到躺地人体 + 与当前人物重叠。
     用于补偿 PoseC3D 对一动不动躺地者的漏检。
+    Returns: (is_fallen, confidence, bbox_is_horizontal)
+        bbox_is_horizontal: True 如果检测框宽>高（人是水平躺着的）
     """
     fallen = [d for d in small_obj_detections if d['class'] == 'falling']
     if not fallen:
-        return False, 0.0
+        return False, 0.0, False
 
     valid = person_scores > 0.3
     if valid.sum() == 0:
-        return False, 0.0
+        return False, 0.0, False
     person_center = person_kps[valid].mean(axis=0)  # (2,)
 
     for det in fallen:
@@ -306,9 +308,10 @@ def check_fallen_by_yolo(person_kps, person_scores, small_obj_detections, img_sh
         margin = max(bw, bh) * 0.2
         if (x1 - margin <= person_center[0] <= x2 + margin and
                 y1 - margin <= person_center[1] <= y2 + margin):
-            return True, det['conf']
+            bbox_horizontal = bw > bh  # 宽>高 → 人水平躺着
+            return True, det['conf'], bbox_horizontal
 
-    return False, 0.0
+    return False, 0.0, False
 
 
 def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, img_shape):
@@ -486,7 +489,7 @@ class RuleEngine:
         # 2. YOLO 辅助 falling 检测（一动不动躺地，PoseC3D 识别不出）
         #    躺地 + 附近有被标为 fighting/bullying 的人 → bullying（被霸凌）
         #    躺地 + 附近无攻击者 → falling
-        is_fallen_yolo, fallen_yolo_conf = check_fallen_by_yolo(
+        is_fallen_yolo, fallen_yolo_conf, bbox_horizontal = check_fallen_by_yolo(
             person_kps, person_scores, small_obj_detections, img_shape
         )
         if is_fallen_yolo:
@@ -514,11 +517,15 @@ class RuleEngine:
                             logger.debug(f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid}有'
                                          f'攻击历史: {other_history}, dist={dist:.0f})')
                             return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
-            # YOLO 检测到 falling bbox，但需要排除坐姿误检
+            # YOLO bbox 宽>高 → 人水平躺着 → 信任 YOLO，跳过姿态检查
+            if bbox_horizontal:
+                logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, bbox水平)')
+                return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
+            # YOLO bbox 高>宽 → 人可能是坐着被误检 → 做姿态检查
             if _is_upright_posture(person_kps, person_scores, img_shape):
-                logger.debug(f'  [RAW] T{track_id} → normal (YOLO falling但躯干直立, 坐姿)')
+                logger.debug(f'  [RAW] T{track_id} → normal (YOLO falling但bbox竖直+躯干直立, 坐姿)')
             elif _is_sitting_posture(person_kps, person_scores, img_shape):
-                logger.debug(f'  [RAW] T{track_id} → normal (YOLO falling但骨骼纵向展开, 坐姿)')
+                logger.debug(f'  [RAW] T{track_id} → normal (YOLO falling但bbox竖直+骨骼纵向, 坐姿)')
             else:
                 logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f})')
                 return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
