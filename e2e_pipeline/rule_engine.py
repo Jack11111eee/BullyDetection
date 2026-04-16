@@ -517,18 +517,10 @@ class RuleEngine:
                             logger.debug(f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid}有'
                                          f'攻击历史: {other_history}, dist={dist:.0f})')
                             return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
-            # YOLO bbox 宽>高 → 人水平躺着 → 信任 YOLO，跳过姿态检查
-            if bbox_horizontal:
-                logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, bbox水平)')
-                return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
-            # YOLO bbox 高>宽 → 人可能是坐着被误检 → 做姿态检查
-            if _is_upright_posture(person_kps, person_scores, img_shape):
-                logger.debug(f'  [RAW] T{track_id} → normal (YOLO falling但bbox竖直+躯干直立, 坐姿)')
-            elif _is_sitting_posture(person_kps, person_scores, img_shape):
-                logger.debug(f'  [RAW] T{track_id} → normal (YOLO falling但bbox竖直+骨骼纵向, 坐姿)')
-            else:
-                logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f})')
-                return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
+            # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
+            logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
+                         f'bbox={"水平" if bbox_horizontal else "竖直"})')
+            return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
 
         # 3. 检查吸烟
         is_smoking, smoke_conf = check_smoking(
