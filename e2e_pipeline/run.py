@@ -54,10 +54,10 @@ def parse_args():
                         help='YOLO 置信度阈值 (default: 0.3)')
     parser.add_argument('--stride', type=int, default=16,
                         help='PoseC3D 推理步长 (default: 16)')
-    parser.add_argument('--vote-window', type=int, default=3,
-                        help='时序投票窗口大小 (default: 3)')
-    parser.add_argument('--vote-ratio', type=float, default=0.34,
-                        help='时序投票阈值 (default: 0.34)')
+    parser.add_argument('--vote-window', type=int, default=5,
+                        help='时序投票窗口大小 (default: 5)')
+    parser.add_argument('--vote-ratio', type=float, default=0.4,
+                        help='时序投票阈值 (default: 0.4)')
     parser.add_argument('--loiter-time', type=float, default=60.0,
                         help='徘徊判定时间（秒）(default: 60)')
     parser.add_argument('--loiter-radius', type=float, default=100.0,

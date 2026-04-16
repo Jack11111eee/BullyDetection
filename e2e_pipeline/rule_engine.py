@@ -654,16 +654,16 @@ class RuleEngine:
 
     # 各类别 vote 最低确认次数
     VOTE_MIN = {
-        'falling': 1,    # 紧急，1次即告警
-        'climbing': 1,   # 紧急，1次即告警
-        'bullying': 2,   # 交互，2次确认
+        'falling': 2,    # 紧急，2次确认
+        'climbing': 2,   # 紧急，2次确认
+        'bullying': 3,   # 交互，3次确认
         'fighting': 3,   # 最严格，3次确认（减少站立误判）
     }
 
     def _vote_smooth(self, track_id, current_label):
-        """异常偏向时序平滑，分级响应：
-        - falling/climbing（紧急）：窗口内1次即告警
-        - bullying：窗口内需2次
+        """异常偏向时序平滑（窗口=5），分级响应：
+        - falling/climbing（紧急）：窗口内2次即告警
+        - bullying：窗口内需3次
         - fighting：窗口内需3次（最严格，减少误报）
         """
         if track_id not in self.history:
