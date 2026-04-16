@@ -444,6 +444,7 @@ class RuleEngine:
         self.history = {}           # {track_id: [label_str, ...]}
         self.track_positions = {}   # {track_id: [(x, y, timestamp), ...]}
         self._missing_count = {}    # {track_id: 连续消失帧数}
+        self._last_smoothed = {}    # {track_id: 上次 smoothed 输出的标签}（用于 hysteresis）
 
     def judge(self, track_id, pose_probs, person_kps, person_scores,
               all_person_kps, small_obj_detections, img_shape,
@@ -526,12 +527,25 @@ class RuleEngine:
                     overlap = _bbox_overlap_ratio(my_bbox, other_bbox)
                     if overlap < 0.1:  # 重叠不足 10% → 不算近距离互动
                         continue
-                    # 附近的人必须正在持续攻击（历史中 fighting/bullying 占多数）
+                    # 放宽条件（修复 B）：
+                    #   1) 邻居当前平滑标签 ∈ {fighting, bullying}，或
+                    #   2) 最近 3 次 raw history 中有 ≥1 次攻击
                     other_history = self.history.get(other_tid, [])
-                    attack_count = sum(1 for h in other_history if h in ('fighting', 'bullying'))
-                    if len(other_history) >= 2 and attack_count >= len(other_history) * 0.5:
-                        logger.debug(f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid}'
-                                     f'持续攻击: {attack_count}/{len(other_history)}, overlap={overlap:.2f})')
+                    other_smoothed = self._last_smoothed.get(other_tid, 'normal')
+                    neighbor_attacking = other_smoothed in ('fighting', 'bullying')
+                    recent_attack = any(
+                        h in ('fighting', 'bullying') for h in other_history[-3:]
+                    )
+                    if neighbor_attacking or recent_attack:
+                        attack_count = sum(1 for h in other_history if h in ('fighting', 'bullying'))
+                        logger.debug(
+                            f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid} '
+                            f'smoothed={other_smoothed}, recent_attack={recent_attack}, '
+                            f'history_atk={attack_count}/{len(other_history)}, overlap={overlap:.2f})'
+                        )
+                        # 双向传播（修复 C）：向邻居 raw history 注入一次 bullying，
+                        # 帮助攻击者靠滞回维持攻击状态（不覆盖 smoothed，只加弱证据）
+                        self._inject_raw_history(other_tid, 'bullying')
                         return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
             # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
             logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
@@ -667,19 +681,28 @@ class RuleEngine:
 
         return False, 0.0
 
-    # 各类别 vote 最低确认次数
-    VOTE_MIN = {
-        'falling': 2,    # 紧急，2次确认
-        'climbing': 2,   # 紧急，2次确认
+    # 滞回阈值（修复 A）
+    # ENTRY_MIN：进入该异常态所需的窗口内计数
+    # HOLD_MIN：已在该异常态时维持所需的窗口内计数（更低，防止闪断）
+    VOTE_ENTRY_MIN = {
+        'falling': 2,    # 紧急，2次确认即进入
+        'climbing': 2,
         'bullying': 3,   # 交互，3次确认
         'fighting': 3,   # 最严格，3次确认（减少站立误判）
     }
+    VOTE_HOLD_MIN = {
+        'falling': 1,    # 进入后只要 1 次即维持
+        'climbing': 1,
+        'bullying': 1,
+        'fighting': 1,
+    }
 
     def _vote_smooth(self, track_id, current_label):
-        """异常偏向时序平滑（窗口=5），分级响应：
-        - falling/climbing（紧急）：窗口内2次即告警
-        - bullying：窗口内需3次
-        - fighting：窗口内需3次（最严格，减少误报）
+        """异常偏向时序平滑（窗口=5）+ 滞回阈值：
+        - 进入异常：ENTRY_MIN（严格，避免误报）
+        - 维持异常：HOLD_MIN（宽松，避免告警闪断）
+        - 上一帧在异常态 L 时，若 L 在窗口内仍 ≥ HOLD_MIN[L]，继续输出 L；
+          否则走 ENTRY 逻辑重选。
         """
         if track_id not in self.history:
             self.history[track_id] = []
@@ -692,24 +715,51 @@ class RuleEngine:
 
         hist_str = ','.join(history)
 
-        # 统计窗口内非 normal 标签
         anomaly_counts = Counter(h for h in history if h != 'normal')
+        last = self._last_smoothed.get(track_id, 'normal')
 
+        # 1) 滞回维持：上次为异常 L，只要 L 在窗口内 ≥ HOLD_MIN[L] 就继续
+        if last != 'normal':
+            last_count = anomaly_counts.get(last, 0)
+            hold_min = self.VOTE_HOLD_MIN.get(last, 1)
+            if last_count >= hold_min:
+                logger.debug(f'  [VOTE] T{track_id} current={current_label} → {last}'
+                             f' (HOLD {last_count}>={hold_min}) | history=[{hist_str}]')
+                self._last_smoothed[track_id] = last
+                return last
+
+        # 2) 进入逻辑：选窗口内计数最高的异常，达到 ENTRY_MIN 才切换
         if anomaly_counts:
             best_label, best_count = anomaly_counts.most_common(1)[0]
-            min_required = self.VOTE_MIN.get(best_label, 2)
-
-            if best_count >= min_required:
+            entry_min = self.VOTE_ENTRY_MIN.get(best_label, 2)
+            if best_count >= entry_min:
                 logger.debug(f'  [VOTE] T{track_id} current={current_label} → {best_label}'
-                             f'({best_count}>={min_required}) | history=[{hist_str}]')
+                             f' (ENTRY {best_count}>={entry_min}) | history=[{hist_str}]')
+                self._last_smoothed[track_id] = best_label
                 return best_label
-            else:
-                logger.debug(f'  [VOTE] T{track_id} current={current_label} → normal'
-                             f'({best_label}只有{best_count}次<{min_required}) | history=[{hist_str}]')
-                return 'normal'
+            logger.debug(f'  [VOTE] T{track_id} current={current_label} → normal'
+                         f' ({best_label}只有{best_count}次<ENTRY{entry_min}) | history=[{hist_str}]')
+            self._last_smoothed[track_id] = 'normal'
+            return 'normal'
 
         logger.debug(f'  [VOTE] T{track_id} current={current_label} → normal(窗口全normal) | history=[{hist_str}]')
+        self._last_smoothed[track_id] = 'normal'
         return 'normal'
+
+    def _inject_raw_history(self, track_id, label):
+        """双向传播（修复 C）：向指定 track 的 raw history 追加一条弱证据标签。
+        避免重复注入（最后一项已是该标签则跳过），并截断到 vote_window。
+        不修改 _last_smoothed —— 邻居自己的 _vote_smooth 会自然处理。
+        """
+        if track_id not in self.history:
+            self.history[track_id] = []
+        hist = self.history[track_id]
+        if hist and hist[-1] == label:
+            return  # 已注入，避免重复撑满
+        hist.append(label)
+        if len(hist) > self.vote_window:
+            hist.pop(0)
+        logger.debug(f'  [INJECT] T{track_id} raw_history += {label} | history=[{",".join(hist)}]')
 
     def update_track_position(self, track_id, person_kps, person_scores):
         """在非推理帧也更新位置（更精确的徘徊检测）"""
@@ -743,6 +793,11 @@ class RuleEngine:
                 self.track_positions[new_tid] = old_pos
             else:
                 self.track_positions[new_tid] = old_pos + self.track_positions[new_tid]
+        # 迁移滞回状态：优先保留旧 track 的 smoothed（新 track 通常尚未进入异常态）
+        if old_tid in self._last_smoothed:
+            old_smoothed = self._last_smoothed.pop(old_tid)
+            if self._last_smoothed.get(new_tid, 'normal') == 'normal':
+                self._last_smoothed[new_tid] = old_smoothed
         self._missing_count.pop(old_tid, None)
 
     def clear_stale_tracks(self, active_track_ids):
@@ -758,4 +813,5 @@ class RuleEngine:
         for tid in stale:
             self.history.pop(tid, None)
             self.track_positions.pop(tid, None)
+            self._last_smoothed.pop(tid, None)
             del self._missing_count[tid]
