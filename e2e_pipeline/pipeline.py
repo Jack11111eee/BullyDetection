@@ -607,6 +607,7 @@ class InferencePipeline:
                         img_shape=img_shape,
                         all_person_kps_scores=all_kps_scores,
                         track_kps_dict=track_kps,
+                        track_bboxes_dict=track_bboxes,
                     )
                     self.track_labels[track_id] = judgment
 

@@ -261,6 +261,27 @@ def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
     return is_upright
 
 
+def _bbox_overlap_ratio(bbox1, bbox2):
+    """计算两个 bbox 的重叠面积占较小 bbox 面积的比例。
+    返回 0~1，0=无重叠，1=完全包含较小者。
+    用 min(area) 而非 union (IoU) 是因为攻击者站在躺地者上方时，
+    bbox 大小可能差异很大，IoU 会偏低导致漏检。
+    """
+    x1 = max(bbox1[0], bbox2[0])
+    y1 = max(bbox1[1], bbox2[1])
+    x2 = min(bbox1[2], bbox2[2])
+    y2 = min(bbox1[3], bbox2[3])
+    if x2 <= x1 or y2 <= y1:
+        return 0.0
+    inter = (x2 - x1) * (y2 - y1)
+    area1 = max(0, (bbox1[2] - bbox1[0]) * (bbox1[3] - bbox1[1]))
+    area2 = max(0, (bbox2[2] - bbox2[0]) * (bbox2[3] - bbox2[1]))
+    smaller = min(area1, area2)
+    if smaller <= 0:
+        return 0.0
+    return inter / smaller
+
+
 def _has_vertical_movement(track_positions_list, img_h, min_samples=3, ratio=0.05):
     """检查 track 近期是否有显著垂直位移 — 用于验证 climbing。
     climbing 必须有垂直方向运动，坐着的人位置固定。
@@ -426,13 +447,14 @@ class RuleEngine:
 
     def judge(self, track_id, pose_probs, person_kps, person_scores,
               all_person_kps, small_obj_detections, img_shape,
-              all_person_kps_scores=None, track_kps_dict=None):
+              all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None):
         """
         对单个人物做最终行为判定。
 
         Args:
             all_person_kps_scores: [(kps, scores), ...] 所有人的关键点+置信度，用于bullying不对称检测
             track_kps_dict: {track_id: (kps, scores)} 用于 YOLO falling 时查询附近 track 的标签历史
+            track_bboxes_dict: {track_id: [x1,y1,x2,y2]} 用于 bbox 重叠判定（替代距离）
 
         Returns:
             BehaviorResult
@@ -442,6 +464,7 @@ class RuleEngine:
             all_person_kps, small_obj_detections, img_shape,
             all_person_kps_scores=all_person_kps_scores,
             track_kps_dict=track_kps_dict,
+            track_bboxes_dict=track_bboxes_dict,
         )
 
         smoothed_label = self._vote_smooth(track_id, raw_label)
@@ -457,7 +480,7 @@ class RuleEngine:
 
     def _raw_judge(self, track_id, pose_probs, person_kps, person_scores,
                    all_person_kps, small_obj_detections, img_shape,
-                   all_person_kps_scores=None, track_kps_dict=None):
+                   all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None):
         """原始判定（不含时序平滑）"""
 
         pose_label_idx = int(np.argmax(pose_probs))
@@ -493,31 +516,23 @@ class RuleEngine:
             person_kps, person_scores, small_obj_detections, img_shape
         )
         if is_fallen_yolo:
-            if track_kps_dict and len(track_kps_dict) >= 2:
-                valid_self = person_scores > 0.3
-                if valid_self.sum() > 0:
-                    my_center = person_kps[valid_self].mean(axis=0)
-                    my_height = _person_height(person_kps, person_scores)
-                    for other_tid, (other_kps, other_sc) in track_kps_dict.items():
-                        if other_tid == track_id:
-                            continue
-                        valid_other = other_sc > 0.3
-                        if valid_other.sum() == 0:
-                            continue
-                        other_center = other_kps[valid_other].mean(axis=0)
-                        dist = np.linalg.norm(my_center - other_center)
-                        other_height = _person_height(other_kps, other_sc)
-                        ref_height = max(my_height or 0, other_height or 0)
-                        max_dist = (ref_height * 1.5) if ref_height > 0 else img_shape[0] * 0.25
-                        if dist > max_dist:
-                            continue
-                        # 附近的人必须正在持续攻击（历史中 fighting/bullying 占多数）
-                        other_history = self.history.get(other_tid, [])
-                        attack_count = sum(1 for h in other_history if h in ('fighting', 'bullying'))
-                        if len(other_history) >= 2 and attack_count >= len(other_history) * 0.5:
-                            logger.debug(f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid}'
-                                         f'持续攻击: {attack_count}/{len(other_history)}, dist={dist:.0f})')
-                            return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
+            # 用 bbox 重叠（而非距离）判断攻击者：在 3D 纵深场景中
+            # 攻击者站在躺地者上方时两人 bbox 必然重叠，距离判断不可靠
+            my_bbox = track_bboxes_dict.get(track_id) if track_bboxes_dict else None
+            if my_bbox and track_bboxes_dict and len(track_bboxes_dict) >= 2:
+                for other_tid, other_bbox in track_bboxes_dict.items():
+                    if other_tid == track_id:
+                        continue
+                    overlap = _bbox_overlap_ratio(my_bbox, other_bbox)
+                    if overlap < 0.1:  # 重叠不足 10% → 不算近距离互动
+                        continue
+                    # 附近的人必须正在持续攻击（历史中 fighting/bullying 占多数）
+                    other_history = self.history.get(other_tid, [])
+                    attack_count = sum(1 for h in other_history if h in ('fighting', 'bullying'))
+                    if len(other_history) >= 2 and attack_count >= len(other_history) * 0.5:
+                        logger.debug(f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid}'
+                                     f'持续攻击: {attack_count}/{len(other_history)}, overlap={overlap:.2f})')
+                        return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
             # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
             logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
                          f'bbox={"水平" if bbox_horizontal else "竖直"})')
