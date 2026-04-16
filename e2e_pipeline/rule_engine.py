@@ -719,10 +719,19 @@ class RuleEngine:
         last = self._last_smoothed.get(track_id, 'normal')
 
         # 1) 滞回维持：上次为异常 L，只要 L 在窗口内 ≥ HOLD_MIN[L] 就继续
+        #    但若另一个异常票数严格多于 L，允许切换（如 falling→bullying 升级）
         if last != 'normal':
             last_count = anomaly_counts.get(last, 0)
             hold_min = self.VOTE_HOLD_MIN.get(last, 1)
             if last_count >= hold_min:
+                # 检查是否有竞争异常票数更多
+                if anomaly_counts:
+                    top_label, top_count = anomaly_counts.most_common(1)[0]
+                    if top_label != last and top_count > last_count:
+                        logger.debug(f'  [VOTE] T{track_id} current={current_label} → {top_label}'
+                                     f' (UPGRADE {top_label}:{top_count}>{last}:{last_count}) | history=[{hist_str}]')
+                        self._last_smoothed[track_id] = top_label
+                        return top_label
                 logger.debug(f'  [VOTE] T{track_id} current={current_label} → {last}'
                              f' (HOLD {last_count}>={hold_min}) | history=[{hist_str}]')
                 self._last_smoothed[track_id] = last
