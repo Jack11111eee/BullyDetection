@@ -75,19 +75,50 @@ class SkeletonBuffer:
         })
         self._missing_count = {}  # {track_id: 连续消失帧数}
         self._last_positions = {}  # {track_id: np.array([cx, cy])} 最后已知位置
+        self._smooth_kps = {}     # {track_id: np.array(17,2)} EMA平滑关键点
+        self._smooth_scores = {}  # {track_id: np.array(17,)} EMA平滑置信度
+        self.smooth_alpha = 0.5   # EMA系数：0.5=新旧各半
 
     def update(self, track_id, keypoints_17x2, scores_17):
+        """更新骨骼缓冲区，返回平滑后的关键点用于可视化。
+        Returns: (smoothed_kps, smoothed_scores)
+        """
+        kps = keypoints_17x2.copy()
+        sc = scores_17.copy()
+
+        # EMA 时序平滑
+        if track_id in self._smooth_kps:
+            prev_kps = self._smooth_kps[track_id]
+            prev_sc = self._smooth_scores[track_id]
+            alpha = self.smooth_alpha
+            for j in range(17):
+                if sc[j] > 0.3 and prev_sc[j] > 0.3:
+                    # 新旧都有效 → 平滑
+                    kps[j] = alpha * kps[j] + (1 - alpha) * prev_kps[j]
+                    sc[j] = alpha * sc[j] + (1 - alpha) * prev_sc[j]
+                elif sc[j] <= 0.3 and prev_sc[j] > 0.3:
+                    # 新帧丢失但旧帧有效 → 沿用旧值（减少闪烁）
+                    kps[j] = prev_kps[j]
+                    sc[j] = prev_sc[j] * 0.9  # 逐渐衰减
+                # 新帧有效但旧帧无效 → 用新值（不平滑）
+
+        self._smooth_kps[track_id] = kps.copy()
+        self._smooth_scores[track_id] = sc.copy()
+
+        # 存入 buffer（用平滑后的值，推理也更稳定）
         buf = self.tracks[track_id]
-        buf['kps'].append(keypoints_17x2.copy())
-        buf['scores'].append(scores_17.copy())
+        buf['kps'].append(kps)
+        buf['scores'].append(sc)
         buf['new_frames'] += 1
         if len(buf['kps']) > self.buf_max:
             buf['kps'] = buf['kps'][-self.buf_max:]
             buf['scores'] = buf['scores'][-self.buf_max:]
         # 更新最后已知位置
-        valid = scores_17 > 0.3
+        valid = sc > 0.3
         if valid.sum() > 0:
-            self._last_positions[track_id] = keypoints_17x2[valid].mean(axis=0)
+            self._last_positions[track_id] = kps[valid].mean(axis=0)
+
+        return kps, sc
 
     def should_infer(self, track_id):
         buf = self.tracks[track_id]
@@ -177,6 +208,10 @@ class SkeletonBuffer:
             del self.tracks[old_tid]
             self._missing_count.pop(old_tid, None)
             self._last_positions.pop(old_tid, None)
+            # 迁移平滑状态
+            if old_tid in self._smooth_kps:
+                self._smooth_kps[new_tid] = self._smooth_kps.pop(old_tid)
+                self._smooth_scores[new_tid] = self._smooth_scores.pop(old_tid)
             logger.info(f'[REASSOC] SkeletonBuffer: T{old_tid} → T{new_tid} '
                         f'(migrated {len(old_buf["kps"])} frames)')
 
@@ -191,6 +226,8 @@ class SkeletonBuffer:
                  if cnt > self.grace_frames]
         for tid in stale:
             self.tracks.pop(tid, None)
+            self._smooth_kps.pop(tid, None)
+            self._smooth_scores.pop(tid, None)
             del self._missing_count[tid]
 
 
@@ -496,17 +533,19 @@ class InferencePipeline:
                 kps_xy = kps_data[:, :2]
                 kps_sc = kps_data[:, 2]
 
-                frame_persons_kps.append(kps_xy)
-                track_kps[track_id] = (kps_xy, kps_sc)
                 track_bboxes[track_id] = box.xyxy[0].tolist()
 
+                # 平滑关键点（减少抖动）
+                smooth_kps, smooth_sc = self.skeleton_buf.update(track_id, kps_xy, kps_sc)
 
-                center = self._person_center(kps_xy, kps_sc)
+                frame_persons_kps.append(smooth_kps)
+                track_kps[track_id] = (smooth_kps, smooth_sc)
+
+                center = self._person_center(smooth_kps, smooth_sc)
                 if center is not None:
                     track_positions[track_id] = center
 
-                self.skeleton_buf.update(track_id, kps_xy, kps_sc)
-                self.rule_engine.update_track_position(track_id, kps_xy, kps_sc)
+                self.rule_engine.update_track_position(track_id, smooth_kps, smooth_sc)
 
             # 重关联：新 track 出现时匹配宽限期内的消失 track，迁移状态
             for track_id in current_track_ids:
