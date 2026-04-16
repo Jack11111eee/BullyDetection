@@ -261,6 +261,31 @@ def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
     return is_upright
 
 
+def _has_vertical_movement(track_positions_list, img_h, min_samples=3, ratio=0.05):
+    """检查 track 近期是否有显著垂直位移 — 用于验证 climbing。
+    climbing 必须有垂直方向运动，坐着的人位置固定。
+    Args:
+        track_positions_list: [(x, y, timestamp), ...] 该 track 的历史位置
+        img_h: 画面高度
+        min_samples: 最少需要的位置样本数
+        ratio: 垂直位移占画面高度的最小比例（默认5%）
+    Returns: True 如果有明显垂直位移
+    """
+    if not track_positions_list or len(track_positions_list) < min_samples:
+        return True  # 数据不足，不阻止（保守策略）
+
+    # 取最近的位置样本
+    recent = track_positions_list[-min(30, len(track_positions_list)):]
+    ys = [y for _, y, _ in recent]
+    y_range = max(ys) - min(ys)
+    threshold = img_h * ratio
+
+    has_movement = y_range > threshold
+    if not has_movement:
+        logger.debug(f'  [RULE] 垂直位移检测: y_range={y_range:.0f} < {threshold:.0f} → 无垂直运动(非climbing)')
+    return has_movement
+
+
 def check_fallen_by_yolo(person_kps, person_scores, small_obj_detections, img_shape):
     """YOLO 辅助摔倒检测：检测到躺地人体 + 与当前人物重叠。
     用于补偿 PoseC3D 对一动不动躺地者的漏检。
@@ -441,8 +466,13 @@ class RuleEngine:
 
         # 1. 高置信度的紧急行为（仍需姿态验证）
         if pose_label == 'climbing' and pose_conf > 0.7:
-            logger.debug(f'  [RAW] T{track_id} → climbing (高置信度直接采信)')
-            return 'climbing', pose_conf, 'posec3d'
+            positions = self.track_positions.get(track_id, [])
+            if _has_vertical_movement(positions, img_shape[0]):
+                logger.debug(f'  [RAW] T{track_id} → climbing (高置信度+有垂直位移)')
+                return 'climbing', pose_conf, 'posec3d'
+            else:
+                logger.debug(f'  [RAW] T{track_id} → normal (climbing但无垂直位移, 可能坐着)')
+                return 'normal', 1.0 - pose_conf, 'rule_no_vertical'
         if pose_label == 'falling' and pose_conf > 0.7:
             if _is_upright_posture(person_kps, person_scores, img_shape):
                 logger.debug(f'  [RAW] T{track_id} → normal (高置信度falling但躯干直立, 可能是坐下)')
@@ -545,7 +575,14 @@ class RuleEngine:
                     logger.debug(f'  [RAW] T{track_id} → bullying (fighting改判: 姿态不对称)')
                     return 'bullying', pose_conf * 0.9, 'rule_bullying'
 
-            # 6c. falling 姿态验证：躯干直立或坐姿不算 falling
+            # 6c. climbing 垂直位移验证：无垂直运动不算 climbing
+            if final_label == 'climbing':
+                positions = self.track_positions.get(track_id, [])
+                if not _has_vertical_movement(positions, img_shape[0]):
+                    logger.debug(f'  [RAW] T{track_id} → normal (climbing但无垂直位移, 可能坐着)')
+                    return 'normal', 1.0 - pose_conf, 'rule_no_vertical'
+
+            # 6d. falling 姿态验证：躯干直立或坐姿不算 falling
             if final_label == 'falling':
                 if _is_upright_posture(person_kps, person_scores, img_shape):
                     logger.debug(f'  [RAW] T{track_id} → normal (falling但躯干直立, 可能是坐下)')
