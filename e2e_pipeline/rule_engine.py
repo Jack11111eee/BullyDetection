@@ -484,8 +484,14 @@ class RuleEngine:
                             logger.debug(f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid}有'
                                          f'攻击历史: {other_history}, dist={dist:.0f})')
                             return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
-            logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f})')
-            return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
+            # YOLO 检测到 falling bbox，但需要排除坐姿误检
+            if _is_upright_posture(person_kps, person_scores, img_shape):
+                logger.debug(f'  [RAW] T{track_id} → normal (YOLO falling但躯干直立, 坐姿)')
+            elif _is_sitting_posture(person_kps, person_scores, img_shape):
+                logger.debug(f'  [RAW] T{track_id} → normal (YOLO falling但骨骼纵向展开, 坐姿)')
+            else:
+                logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f})')
+                return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
 
         # 3. 检查吸烟
         is_smoking, smoke_conf = check_smoking(
