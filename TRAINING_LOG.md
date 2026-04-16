@@ -840,3 +840,70 @@ track 被遮挡（从画面消失）
 | upright_threshold | 8% 画面高度 | falling 姿态验证阈值 |
 | grace_frames | 90 (≈3秒@30fps) | 遮挡宽限期，track 消失后保留状态 |
 | small_obj_model | unified_3class (phone/smoking/falling) | YOLO11 三类检测，辅助 falling + smoking + phone |
+
+---
+
+### E2E Fix Round 7 — Track 重关联 + 姿态/位移约束 + 投票升级 + Bbox 重叠
+
+**背景**: Round 6 之后真实视频流仍有大量误判：T3 被遮挡后 ByteTrack 给同一个人新 ID（T4），grace_frames 保留的 falling 状态白白浪费；坐着的人被识别为 falling/climbing；攻击历史一次即触发 bullying；附近距离判断在 3D 纵深场景失效。
+
+| 修改 | 文件 | 详情 |
+|---|---|---|
+| Track 重关联 | pipeline.py + rule_engine.py | 新 track 出现时，按位置匹配宽限期内消失的旧 track（threshold=15% 画面高度），迁移 SkeletonBuffer 帧、RuleEngine 投票历史、track_labels 显示标签 |
+| Loitering 5分钟 + 降优先级 | rule_engine.py | loiter_time 60→300秒；优先级从 PoseC3D 之前降到之后（避免 bullying 被误覆盖为 loitering） |
+| 坐姿检测（多次迭代） | rule_engine.py | 最终方案：`_is_sitting_posture` 用骨骼包围框纵横比 h/w > 1.0 → 非倒地；`_is_upright_posture` 阈值 8%→3% 画面高度 |
+| YOLO falling 路径加坐姿验证 | rule_engine.py | 之前坐姿检测只在 PoseC3D 路径，但实际 falling 全部从 YOLO 辅助路径走，绕过了所有验证 |
+| 信任 YOLO falling | rule_engine.py | 测试俯视角度躺地视频后发现：所有像素坐标姿态检查都受相机角度影响，遂移除 YOLO 路径的姿态检查（YOLO 是专门训练的检测器，更可靠） |
+| Climbing 垂直位移约束 | rule_engine.py | `_has_vertical_movement`：track 近 30 个位置 Y 范围 < 5% 画面高度 → 无垂直运动 → 非 climbing（坐着误判用） |
+| EMA 关键点平滑 | pipeline.py | SkeletonBuffer.update() 对 17 个关键点做 alpha=0.5 EMA，新旧帧都有效则平滑，新丢旧存则沿用旧值并衰减置信度 |
+| Bullying 攻击历史阈值 | rule_engine.py | 从「任意一次 fighting/bullying」改为「历史≥2 且攻击占比≥50%」，避免路人偶然误判触发 |
+| Vote 窗口 3→5 | rule_engine.py + run.py | falling/climbing vote_min 1→2, bullying 2→3, fighting 保持 3, vote_ratio 0.34→0.4 |
+| Bbox 重叠替代距离 | rule_engine.py + pipeline.py | YOLO bullying 判定改用 `_bbox_overlap_ratio`（重叠面积/较小 bbox 面积 > 10%），消除 3D 纵深距离误判 |
+
+**提交链路（按时间序）：**
+- `c9dec2b` track 重关联（SkeletonBuffer + RuleEngine + Pipeline 三组件状态迁移）
+- `1a93399` loitering 阈值 300s + 降优先级
+- `2afec40 → 1bac2e6 → 8f9d2f6 → 09395f0` 坐姿检测多版本迭代
+- `1d188fb` climbing 垂直位移约束
+- `e5edb69 → add2edc` YOLO bbox 纵横比 → 最终信任 YOLO 移除姿态检查
+- `b081d01` EMA 关键点平滑
+- `e4539df` bullying 攻击历史持续性要求
+- `4b196ae` vote 窗口 3→5 + 阈值调整
+- `00d2e02` bbox 重叠替代距离
+
+---
+
+### Problem 14: ByteTrack 重新分配 ID 导致状态丢失
+
+- **Discovery**: E2E Fix Round 7
+- **Details**: T3 被遮挡 → grace_frames 保留 buffer/history/label。但 ByteTrack 恢复时分配新 ID T4 → 旧状态永远不会被新 track 继承 → T4 从零积累 buffer，T3 的 falling 投票历史浪费 → 同一个人被识别为 normal
+- **Fix**: 三组件协同重关联：SkeletonBuffer.try_reassociate() 按位置匹配 + migrate() 迁移帧；RuleEngine.migrate_track() 迁移投票历史；Pipeline 在第二遍推理前触发，并迁移 track_labels
+- **Status**: 已修复
+
+### Problem 15: 像素坐标姿态检查受摄像头角度影响
+
+- **Discovery**: E2E Fix Round 7（多次迭代）
+- **Details**: head_hip 像素 Y 差、躯干向量角度、骨骼包围框纵横比，所有基于 2D 像素坐标的姿态检查在不同摄像头角度下表现差异巨大。俯视角度下躺地者头部像素 Y 仍小于髋部 → 被误判为直立
+- **Fix**: 分层处理 — PoseC3D 路径保留姿态检查（用于排除坐姿误判 falling/climbing），YOLO falling 路径直接信任检测器结果
+- **Status**: 已修复
+
+### Problem 16: 距离判断在 3D 纵深场景失效
+
+- **Discovery**: E2E Fix Round 7
+- **Details**: 攻击者站在躺地者上方时，因 3D 纵深透视，两人 2D 像素中心距离可能很大（远超身高 1.5x 阈值），但 bbox 必然重叠
+- **Fix**: 用 `_bbox_overlap_ratio` 替代距离判断 — 用 `intersection / min(area)` 而非 IoU，避免攻击者 bbox 远大于躺地者时 IoU 偏低导致漏检
+- **Status**: 已修复
+
+### E2E Pipeline 关键参数（Round 7 更新）
+
+| 参数 | 旧值 | 新值 | 说明 |
+|---|---|---|---|
+| vote_window | 3 | **5** | 增强鲁棒性 |
+| falling/climbing vote_min | 1 | **2** | 减少瞬态误判 |
+| bullying vote_min | 2 | **3** | 多数确认 |
+| loiter_time | 60s | **300s** | 5分钟才算徘徊 |
+| upright threshold | 8% 画面高 | **3%** | 覆盖前倾坐姿 |
+| smooth_alpha | — | **0.5** | EMA 关键点平滑系数 |
+| bbox overlap threshold | — | **10%** | 替代距离判定 |
+| reassoc max_dist_ratio | — | **15%** 画面高 | 新 track 匹配旧 track 阈值 |
+| vertical movement ratio | — | **5%** 画面高 | climbing 必需垂直位移 |
