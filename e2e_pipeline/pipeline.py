@@ -668,6 +668,15 @@ class InferencePipeline:
             gate_need_smoking = not attack_active
             gate_need_phone = not attack_active
 
+            # R12 (P13)：场景人数 = 本帧检测到的 + grace 期内仍存活的 buffered track
+            # 修复 fighting 中一方被遮挡时 len(all_person_kps)==1 → vandalism 误判
+            # grace 期内的 track 物理上仍在场景中（SkeletonBuffer 保留了骨骼），
+            # 只是本帧未被 YOLO 检测到（被遮挡 / 肢体压缩）。
+            scene_track_ids = set(current_track_ids) | set(self.skeleton_buf.tracks.keys())
+            scene_person_count = len(scene_track_ids)
+            # 每帧推送一次场景人数到 rule_engine（与 per-track judge 解耦）
+            self.rule_engine.push_scene_count(scene_person_count)
+
             # 帧级缓存 —— 同一帧多 track 推理时复用检测结果，避免 N× YOLO 调用
             small_objs_cache = None
 
@@ -725,6 +734,7 @@ class InferencePipeline:
                         all_person_kps_scores=all_kps_scores,
                         track_kps_dict=track_kps,
                         track_bboxes_dict=track_bboxes,
+                        scene_person_count=scene_person_count,
                     )
                     self.track_labels[track_id] = judgment
                     inferred_tids.append(track_id)

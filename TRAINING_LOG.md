@@ -13,7 +13,7 @@
 5. [数据管线](#5-数据管线)
 6. [关键配置总表](#6-关键配置总表)
 7. [训练/评估命令](#7-训练评估命令)
-8. [E2E 部署调优历史（Round 1–11）](#8-e2e-部署调优历史round-111)
+8. [E2E 部署调优历史（Round 1–12）](#8-e2e-部署调优历史round-112)
 9. [E2E 规则引擎当前完整逻辑](#9-e2e-规则引擎当前完整逻辑)
 10. [问题编年史](#10-问题编年史)
 11. [辅助组件](#11-辅助组件)
@@ -420,7 +420,7 @@ cd /home/hzcu/mnt/autodl/e2e_pipeline && python run.py \
 
 ---
 
-## 8. E2E 部署调优历史（Round 1–11）
+## 8. E2E 部署调优历史（Round 1–12）
 
 ### 背景
 
@@ -917,6 +917,60 @@ python e2e_pipeline/run.py --smoking-model none ...
 
 ---
 
+### E2E Fix Round 12 — 遮挡导致 fighting → vandalism 误判修复（commit 待填）
+
+**背景**：fighting 场景中若一方站在画面前方遮挡另一方，被遮挡者的 YOLO-Pose 骨骼会被挤压最终丢失。pipeline.py 第一遍只收集**本帧检测到**的骨骼到 `frame_persons_kps`。此时：
+- PoseC3D 仍从 SkeletonBuffer（grace=90 帧保留）取到 2 人骨架，持续输出 fighting
+- rule_engine step 5 `check_vandalism`：`fighting_prob > 0.5 AND len(all_person_kps) == 1` → 触发 vandalism
+
+**矛盾**：PoseC3D 看到 2 人（buffered 视角），rule_engine 看到 1 人（当前帧视角）—— 同一 pipeline 里两套"场景人数"标准。
+
+#### P13 — pipeline 计算 scene_person_count
+
+**文件**：`e2e_pipeline/pipeline.py` `_process_frame`
+
+```python
+scene_track_ids = set(current_track_ids) | set(self.skeleton_buf.tracks.keys())
+scene_person_count = len(scene_track_ids)
+self.rule_engine.push_scene_count(scene_person_count)
+```
+
+`skeleton_buf.tracks.keys()` 天然包含 grace 期内被遮挡的 track（`remove_stale` 在帧末才清理），作为正确的"场景物理人数"。
+
+#### P14 — check_vandalism 改用 scene_person_count + 持续性门槛
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+| 修改 | 旧 | 新 |
+|---|---|---|
+| 人数判定 | `len(all_person_kps) == 1` | `scene_person_count == 1`（优先，fallback 到 all_person_kps） |
+| 持续性 | 单帧即触发 | 要求近 5 次推理 `scene_person_count` 全为 1 |
+
+新增 `RuleEngine.push_scene_count()` 公共方法，`_scene_count_history` 窗口 5 帧。持续性检查在 `_raw_judge` step 5 内完成。
+
+**设计权衡（未采用的方案及原因）**：
+- **未扩充 `all_person_kps_scores`**：会给 `check_bullying_asymmetry` / proximity 判定加入陈旧位置，污染姿态判定。单独加 `scene_person_count` 参数只影响 vandalism 语义
+- **未给遮挡 track 的骨骼加时间衰减后并入 all_person_kps**：同上，陈旧骨骼会误导位置型判定
+
+#### R12 配置快照
+
+| 参数 | R11 | R12 |
+|---|---|---|
+| vandalism 人数基础 | `len(all_person_kps)`（本帧检测） | `scene_person_count`（本帧 + grace 期 buffered） |
+| vandalism 持续性 | 无（单帧即判） | 近 5 次推理场景人数全为 1 |
+| `_scene_count_window` | — | 5 |
+
+**预期行为**：
+- fighting 中瞬时遮挡 → scene_count 仍=2（被遮挡方在 skeleton_buf.tracks 里）→ 不触发 vandalism ✓
+- 极端情况：被遮挡 track 超过 grace=90 帧（~3s）才彻底丢 → 才会开始 scene_count=1 计数，需再 5 次推理（~5 × stride/30 = 2.5s）才触发 → 实际场景不会误判
+- 真正单人踹垃圾桶：scene_count 本就稳定=1，持续窗口自然满足，vandalism 正常识别
+
+**未处理**：
+- check_vandalism 仍未使用 `small_obj_detections` 验证破坏物（目前 YOLO 无此类）—— 待后续训练破坏物检测器
+- 场景人数窗口与 vote_window 都是 5 但独立维护 —— 概念上场景级 vs track 级，不合并
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -1243,6 +1297,18 @@ track 被分配新 ID（重关联）
   - P10：step 6c 门槛 `b>=f` → `b>=f*1.5 且 b>=0.4`
 - **状态**：已修复（待视频验证）
 
+#### Problem 28: 遮挡导致 fighting → vandalism 误判
+
+- **发现**：E2E Fix Round 12（用户报告）
+- **详情**：fighting 中一方站在画面前方持续遮挡另一方，被遮挡者的 YOLO-Pose 骨骼被挤压→丢失。`frame_persons_kps` 只有 1 人。PoseC3D 从 SkeletonBuffer grace 期 buffer 取骨骼仍输出 fighting → step 5 `check_vandalism` 条件满足（`fighting_prob>0.5 AND len(all_person_kps)==1`）→ fighting 误判为 vandalism
+- **根因**：pipeline 内两套"场景人数"标准不一致
+  - PoseC3D：看 SkeletonBuffer（grace=90 帧保留），视野 = 2 人
+  - rule_engine：看 `frame_persons_kps`（仅本帧 YOLO 检测），视野 = 1 人
+- **修复**：R12 两改动 P13+P14（commit 待填）
+  - P13：pipeline 计算 `scene_person_count = |current_tracks ∪ skeleton_buf.tracks|`，通过 `RuleEngine.push_scene_count()` 推送
+  - P14：`check_vandalism` 改用 `scene_person_count`；新增持续性门槛 —— 近 5 次推理场景人数全=1 才触发
+- **状态**：已修复（待视频验证）
+
 ---
 
 ## 11. 辅助组件
@@ -1305,6 +1371,8 @@ track 被分配新 ID（重关联）
 31. **子模型误检必须有反向守门**：YOLO unified_3class 对 fighting 中交缠/倾斜姿态有 falling 误检，但 step 2 的 rule_yolo_bullying 完全信任 YOLO，不看 PoseC3D。正确做法：当另一个子模型（这里是 PoseC3D）对当前场景有极强的反向信号（fighting≥0.7 + bullying<0.03）时，本子模型的检测应被否决。不要让任一子模型的误检单独驱动关键决策
 32. **cross-inject 需要接收方状态检查**：R8.1 引入 inject 是为解决攻击者/受害者 ENTRY 计数不同步，但对称 fighting 场景下它会把一方的误判传染到稳定 fighting 的另一方，形成自激。传播必须看接收方是否"正在坚持不同的稳定标签"—— 稳定 fighting 的邻居不该被 bullying 注入污染
 33. **训练样本极不平衡时，该类的 softmax 概率大小比较不可靠**：R11 bullying 样本 446 vs fighting 12772（28:1），bullying_prob 在 fighting 场景下边界抖动。用 `b >= f` 这种"相等即采信"的门槛等于让模型用猜的决策。应该要求显著优势（如 1.5 倍）+ 绝对下限（如 0.4）双重过滤，本质是承认模型在该类的边界不可靠
+34. **pipeline 内同一语义量必须单一来源**：R12 发现 PoseC3D 用 SkeletonBuffer 视角（grace 期 2 人），rule_engine 用本帧 YOLO 视角（被遮挡变 1 人），导致 vandalism 误判。修理由的"场景人数"类语义，必须有 single source of truth — 任何跨模块的人数/状态判定都应从同一份数据源推导，否则各模块"自以为"的场景会互相冲突
+35. **遮挡不等于消失**：被遮挡的人物理上还在场景里只是不被看见。grace_frames 机制保留了骨骼 buffer 但没同步到"场景人数"这类派生量。任何"当前帧检测结果"类统计都要考虑遮挡兼容—— 默认用 buffered 视角，只有姿态/位置这类必须精确的才用当前帧
 
 ---
 

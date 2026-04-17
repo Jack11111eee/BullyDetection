@@ -139,10 +139,19 @@ def check_phone_call(person_kps, person_scores, small_obj_detections, img_shape)
     return False, 0.0
 
 
-def check_vandalism(all_person_kps, person_scores, pose_probs, small_obj_detections):
-    """破坏公物：fighting 概率高 + 只检测到 1 个人"""
+def check_vandalism(all_person_kps, person_scores, pose_probs, small_obj_detections,
+                    scene_person_count=None):
+    """破坏公物：fighting 概率高 + 场景只有 1 个人。
+
+    R12 (P14)：`scene_person_count` 优先于 `len(all_person_kps)` —— 前者包含 grace
+    期内被遮挡的 track，后者只看本帧 YOLO 检测结果。修复 fighting 中一方被完全
+    遮挡时 `len(all_person_kps)==1` → vandalism 误判。
+
+    注意：持续性检查由 RuleEngine._raw_judge 在窗口层面完成，这里只做单帧判定。
+    """
     fighting_prob = pose_probs[1]
-    if fighting_prob > 0.5 and len(all_person_kps) == 1:
+    effective_count = scene_person_count if scene_person_count is not None else len(all_person_kps)
+    if fighting_prob > 0.5 and effective_count == 1:
         return True, fighting_prob * 0.8
     return False, 0.0
 
@@ -449,10 +458,13 @@ class RuleEngine:
         self.track_positions = {}   # {track_id: [(x, y, timestamp), ...]}
         self._missing_count = {}    # {track_id: 连续消失帧数}
         self._last_smoothed = {}    # {track_id: 上次 smoothed 输出的标签}（用于 hysteresis）
+        self._scene_count_history = []  # R12 P14: 最近 N 次推理的 scene_person_count（场景级）
+        self._scene_count_window = 5    # vandalism 持续性窗口
 
     def judge(self, track_id, pose_probs, person_kps, person_scores,
               all_person_kps, small_obj_detections, img_shape,
-              all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None):
+              all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None,
+              scene_person_count=None):
         """
         对单个人物做最终行为判定。
 
@@ -460,6 +472,8 @@ class RuleEngine:
             all_person_kps_scores: [(kps, scores), ...] 所有人的关键点+置信度，用于bullying不对称检测
             track_kps_dict: {track_id: (kps, scores)} 用于 YOLO falling 时查询附近 track 的标签历史
             track_bboxes_dict: {track_id: [x1,y1,x2,y2]} 用于 bbox 重叠判定（替代距离）
+            scene_person_count: R12 P13 场景人数（本帧检测 + grace 期内 buffered track），
+                                用于 vandalism 判定，修复遮挡导致的 len(all_person_kps)==1 误判
 
         Returns:
             BehaviorResult
@@ -470,6 +484,7 @@ class RuleEngine:
             all_person_kps_scores=all_person_kps_scores,
             track_kps_dict=track_kps_dict,
             track_bboxes_dict=track_bboxes_dict,
+            scene_person_count=scene_person_count,
         )
 
         smoothed_label = self._vote_smooth(track_id, raw_label)
@@ -485,7 +500,8 @@ class RuleEngine:
 
     def _raw_judge(self, track_id, pose_probs, person_kps, person_scores,
                    all_person_kps, small_obj_detections, img_shape,
-                   all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None):
+                   all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None,
+                   scene_person_count=None):
         """原始判定（不含时序平滑）"""
 
         pose_label_idx = int(np.argmax(pose_probs))
@@ -603,12 +619,27 @@ class RuleEngine:
             return 'phone_call', phone_conf, 'rule_phone'
 
         # 5. 检查破坏公物
+        # R12 P14: 用 scene_person_count（含 grace 期遮挡 track）代替 len(all_person_kps)
+        # 且要求持续性 —— 近 _scene_count_window 次推理场景人数全为 1 才判 vandalism
+        # 避免 fighting 中一方瞬时被遮挡 → 1 人 → vandalism 误判
         is_vandal, vandal_conf = check_vandalism(
-            all_person_kps, person_scores, pose_probs, small_obj_detections
+            all_person_kps, person_scores, pose_probs, small_obj_detections,
+            scene_person_count=scene_person_count,
         )
         if is_vandal:
-            logger.debug(f'  [RAW] T{track_id} → vandalism (规则引擎: fighting={pose_probs[1]:.3f}, 1人)')
-            return 'vandalism', vandal_conf, 'rule_vandalism'
+            history = self._scene_count_history
+            window = self._scene_count_window
+            sustained_solo = (len(history) >= window and
+                              all(c == 1 for c in history[-window:]))
+            if sustained_solo:
+                logger.debug(f'  [RAW] T{track_id} → vandalism (规则引擎: '
+                             f'fighting={pose_probs[1]:.3f}, scene={scene_person_count}, '
+                             f'持续{window}次单人)')
+                return 'vandalism', vandal_conf, 'rule_vandalism'
+            else:
+                logger.debug(f'  [RAW] T{track_id} vandalism 未达持续性 '
+                             f'(scene_history={history[-window:] if history else []}, '
+                             f'需{window}次全1)，不触发')
 
         # 6. 攻击概率主导路径（fighting 或 bullying 概率 >= threshold）
         #    不依赖 argmax —— 只要任一攻击类概率过 0.3，就进入完整的攻击判定流程。
@@ -1014,6 +1045,14 @@ class RuleEngine:
             if self._last_smoothed.get(new_tid, 'normal') == 'normal':
                 self._last_smoothed[new_tid] = old_smoothed
         self._missing_count.pop(old_tid, None)
+
+    def push_scene_count(self, scene_person_count):
+        """R12 P14：pipeline 每帧推理前调用一次，记录场景人数。
+        与 per-track judge 解耦，避免同帧多 track 重复追加。
+        """
+        self._scene_count_history.append(int(scene_person_count))
+        if len(self._scene_count_history) > self._scene_count_window * 2:
+            self._scene_count_history = self._scene_count_history[-self._scene_count_window:]
 
     def clear_stale_tracks(self, active_track_ids):
         """遮挡宽限：track 消失后保留历史 grace_frames 帧，恢复时继承投票窗口"""
