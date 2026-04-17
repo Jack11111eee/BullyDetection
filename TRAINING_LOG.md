@@ -372,8 +372,12 @@ mil_cleaning/*        → campus_mil_kfold_0~4.pkl + campus_mil_test.pkl  ← R1
 | VOTE_ENTRY_MIN.bullying | 3 | 进入 bullying 所需窗口计数 |
 | VOTE_ENTRY_MIN.falling | 2 | 进入 falling 所需窗口计数 |
 | VOTE_ENTRY_MIN.climbing | 2 | 进入 climbing 所需窗口计数 |
-| VOTE_HOLD_MIN（全部）| 1 | **新增 R8**：维持已有异常态的窗口计数（低门槛避免闪断）|
-| hysteresis upgrade | 允许 | **新增 R8**：HOLD 时另一异常票数严格更多即切换 |
+| VOTE_HOLD_MIN.falling / climbing | 1 | R8 / R9 保持 |
+| VOTE_HOLD_MIN.fighting / bullying | **2** | **R9**：1→2 防永锁（原 R8.1 设为 1 后进入态几乎退不出）|
+| hysteresis upgrade | 允许 | **R8**：HOLD 时另一异常票数严格更多即切换 |
+| attack_prob 触发 | ≥0.3 **且** ≥ normal_prob × 0.7 | **R9**：加相对优势判定，normal 主导时攻击门槛抬高 |
+| asymmetry 逻辑 | `ratio<0.5 AND head_hip>0.15` | **R9**：OR→AND + 阈值收紧（原 R3: `<0.6 OR >0.1`）|
+| YOLO falling deferred | 启用 | **R9 P7**：被 PoseC3D 弱攻击信号抢先时暂存，step 6 未判攻击则兜底返回 falling |
 | proximity_factor | 1.5×max(身高) | fighting/bullying 近距离约束 |
 | upright_threshold | 3% 画面高度 | falling 姿态验证阈值 |
 | smooth_alpha | 0.5 | EMA 关键点平滑系数 |
@@ -811,7 +815,8 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
  │   YOLO 检测到 falling bbox + 骨骼中心重叠（20% margin）
  │     ├─ bbox overlap ≥ 10% 的邻居有攻击信号（smoothed ∈ {fighting,bullying}
  │     │   或 最近 3 条 raw history 有攻击）→ bullying + 向邻居注入 'bullying'
- │     ├─ PoseC3D fighting_prob ≥ 0.3 或 bullying_prob ≥ 0.3 → 跳过（交给 step 6）
+ │     ├─ PoseC3D fighting_prob ≥ 0.3 或 bullying_prob ≥ 0.3
+ │     │   → 暂存为 yolo_falling_deferred，交给 step 5/6（R9 P7）
  │     └─ 否则 → falling（信任 YOLO 检测器）
  │
  ├─ Step 3: 小物体规则
@@ -821,13 +826,16 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
  ├─ Step 4: vandalism 规则
  │   fighting_prob > 0.5 + 场景仅 1 人 → vandalism
  │
- ├─ Step 5: 攻击概率主导（R8.4 新增）
- │   attack_prob = max(fighting_prob, bullying_prob) ≥ 0.3 时：
+ ├─ Step 5: 攻击概率主导（R8.4 新增，R9 收紧）
+ │   attack_prob = max(fighting_prob, bullying_prob) ≥ 0.3
+ │   且 attack_prob ≥ normal_prob × 0.7（R9 P1 相对优势）时：
  │     proximity_ok（邻居在 1.5×max 身高范围内）
- │       ├─ 不对称 → bullying + 向 bbox overlap 邻居注入 'bullying' (R8.5)
- │       ├─ bullying_prob ≥ fighting_prob → bullying + 注入 (R8.5)
- │       └─ else → fighting + 注入 'fighting' (R8.5)
+ │       ├─ 不对称（ratio<0.5 AND head_hip>0.15, R9 P5 收紧）→ bullying + 注入
+ │       ├─ bullying_prob ≥ fighting_prob → bullying + 注入
+ │       └─ else → fighting + 注入
  │     proximity 失败 → 落到 step 6
+ │
+ ├─ R9 P7 兜底：step 5 未判攻击且 yolo_falling_deferred 存在 → falling
  │
  ├─ Step 6: argmax 路径
  │   argmax ∈ {fighting, bullying} 但 proximity 失败 → normal
@@ -843,7 +851,7 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
  ▼
 _vote_smooth（窗口 = 5，滞回）：
   ENTRY（首次进入）：fighting/bullying 需 3 次，falling/climbing 需 2 次
-  HOLD（维持）：全部仅需 1 次
+  HOLD（维持）：falling/climbing 需 1 次；fighting/bullying 需 2 次（R9 P2 防永锁）
   UPGRADE（升级）：HOLD 时另一异常票数严格更多即切换
  │
  ▼
@@ -1066,6 +1074,34 @@ track 被分配新 ID（重关联）
 - **修复**：pair coupling 中 `A=bullying + B=falling + overlap≥10% → B=bullying`。受害者在霸凌场景中应判 bullying 而非单纯 falling（commit `20185f3`）
 - **状态**：已修复
 
+#### Problem 23: attack_prob 绝对阈值忽略 normal 压制
+
+- **发现**：E2E Fix Round 9 深度审视
+- **详情**：R8.4 step 6 的 `attack_prob >= 0.3` 是绝对阈值。PoseC3D 分布 `[normal=0.60, fighting=0.32, ...]` 仍会触发攻击判定，但 normal 是 fighting 两倍——语义上 normal 主导，不该进入攻击路径
+- **修复**：P1 — 增加相对优势判定 `attack_prob >= normal_prob * 0.7`（commit `e9cbc11`）
+- **状态**：已修复
+
+#### Problem 24: 攻击态 HOLD_MIN=1 永锁
+
+- **发现**：E2E Fix Round 9 深度审视
+- **详情**：R8.1 为防告警闪断把 `VOTE_HOLD_MIN=1`，配合 pair coupling 注入 + 低 attack 阈值 + R8.5 cross-label injection 三重放大，5 窗口内只要 1 帧异常就维持攻击态 → 进入极易、退出几乎不可能
+- **修复**：P2 — 攻击类（fighting/bullying）HOLD_MIN 1→2，falling/climbing 保持 1（姿态延续性高）（commit `e9cbc11`）
+- **状态**：已修复
+
+#### Problem 25: asymmetry OR 逻辑 + 宽阈值误触发 bullying
+
+- **发现**：E2E Fix Round 9 深度审视
+- **详情**：`check_bullying_asymmetry` 用 `height_ratio<0.6 OR head_hip>0.1`。单帧判定 + OR → 正常弯腰、蹲下、拾物、真实身高差、PoseC3D 下半身漏检均可触发
+- **修复**：P5 — OR→AND + 阈值收紧到 `<0.5 AND >0.15`（commit `e9cbc11`）
+- **状态**：已修复
+
+#### Problem 26: YOLO falling 信号被弱攻击信号吞掉
+
+- **发现**：E2E Fix Round 9 深度审视
+- **详情**：R8.3 的 step 2 跳过逻辑——PoseC3D `fighting_prob/bullying_prob >= 0.3` 时跳过 YOLO falling 交给 step 6。但 step 6 若 proximity 失败（独自躺地）→ 走 argmax 路径 → argmax=normal → 输出 normal。**YOLO 检测到的 falling bbox 被完全吞掉**
+- **修复**：P7 — step 2 跳过时把 YOLO falling 结果存进 `yolo_falling_deferred`，step 6 所有分支走完后若未判攻击则兜底返回 falling（commit `e9cbc11`）
+- **状态**：已修复
+
 ---
 
 ## 11. 辅助组件
@@ -1121,12 +1157,17 @@ track 被分配新 ID（重关联）
 24. **规则引擎的优先级需要语义对齐**：YOLO falling 的本意是补偿 PoseC3D 盲区，当 PoseC3D 已有攻击信号时应让路；不能让"补偿规则"覆盖"主信号"
 25. **独立判定各 track 在强交互场景会失效**：bbox 重叠的两人是同一事件，必须用 pair coupling 强制共享攻击态；交互物理约束（bbox 重叠）比单 track 时序约束（投票窗口）更可靠，应作为 post-processing 覆盖在单 track 判定之上
 26. **受害者≠普通倒地**：`A=bullying + B=falling + overlap` 场景下 B 不是独立倒地，是霸凌场景中的受害者 → 升级为 bullying；单纯 falling 只适用于无攻击者的跌倒
+27. **连续同向修复累积偏差**：R8.1–R8.5 五连发全部朝"更容易识别攻击"的方向，叠加后 false positive 飙升。修复要有方向记账——每一步是朝"报告攻击"还是朝"报告正常"推，超过 3 次同向就停下来反向审视
+28. **绝对阈值要配相对约束**：`attack_prob ≥ 0.3` 在 softmax 分布下忽略了 normal 的压制。同时考虑绝对下限（过滤极低置信）和相对优势（避免被其它类主导）才稳健
+29. **HOLD 门槛要分类别设**：falling/climbing 姿态延续性高 HOLD=1 合理；fighting/bullying 是交互事件，PoseC3D 对间歇输出噪声 → HOLD=1 会永锁。延续性类别和交互类别的时序先验不同
+30. **OR 条件要小心**：单判据 OR 拼起来等于"任意一条噪声即触发"；AND 才符合"同时满足两个独立维度"的物理语义。姿态检测这类容易抖的判定尤其要用 AND
 
 ---
 
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+e9cbc11 fix(e2e): R9 rule engine tightening — P1/P2/P5/P7                    (R9)
 20185f3 fix(e2e): pair coupling — bbox-overlapping tracks must share attack state (R8.5)
 18fad7c fix(e2e): attack-prob-driven detection (ignore argmax for fighting/bullying) (R8.4)
 ebbf93c fix(e2e): PoseC3D fighting/bullying priority over YOLO falling       (R8.3)
