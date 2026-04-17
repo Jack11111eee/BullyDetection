@@ -971,7 +971,7 @@ self.rule_engine.push_scene_count(scene_person_count)
 
 ---
 
-### E2E Fix Round 13 — 吸烟检测修复（gating + 关键点 + 投票窗口）（commit 待填）
+### E2E Fix Round 13 — 吸烟检测修复（gating + 关键点 + 投票窗口）（commit `6d3af28`）
 
 **背景**：用户反馈持续抽烟视频里 T1 smoking 只有小部分被识别。分析 debug 日志（F831–F1263）：
 
@@ -1399,7 +1399,7 @@ track 被分配新 ID（重关联）
   - 场景级 gating ≠ per-track 物理互斥；T1 抽烟 vs T3 倒地不该耦合
   - 窗口+HOLD=1 对"脉冲信号"（每 1-2 秒检出一次）不够宽
   - 关键点清单按"成年人拿烟姿势"设计，覆盖面窄
-- **修复**：R13 三改动 P15+P16+P17（commit 待填）
+- **修复**：R13 三改动 P15+P16+P17（commit `6d3af28`）
   - P15：撤销 R11 gating，smoking/phone/falling 固定每帧都跑
   - P16：关键点扩到 `[0, 7, 8, 9, 10]` + 骨骼 bbox 上半身兜底
   - P17：smoking/phone 专用 VOTE 窗口=7, ENTRY=2, HOLD=2
@@ -1479,6 +1479,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+6d3af28 fix(e2e): R13 smoking detection — P15/P16/P17                          (R13)
 b4d389d fix(e2e): R12 occlusion-aware scene_person_count — P13/P14            (R12)
 074c47f feat(e2e): R11 small-object 3-way single-class + frame-level gating   (R11 E2E)
 8af7a53 fix(e2e): R10 fighting/bullying desensitization — P8/P9/P10           (R10)
