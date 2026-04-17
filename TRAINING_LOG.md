@@ -917,7 +917,7 @@ python e2e_pipeline/run.py --smoking-model none ...
 
 ---
 
-### E2E Fix Round 12 — 遮挡导致 fighting → vandalism 误判修复（commit 待填）
+### E2E Fix Round 12 — 遮挡导致 fighting → vandalism 误判修复（commit `b4d389d`）
 
 **背景**：fighting 场景中若一方站在画面前方遮挡另一方，被遮挡者的 YOLO-Pose 骨骼会被挤压最终丢失。pipeline.py 第一遍只收集**本帧检测到**的骨骼到 `frame_persons_kps`。此时：
 - PoseC3D 仍从 SkeletonBuffer（grace=90 帧保留）取到 2 人骨架，持续输出 fighting
@@ -1304,7 +1304,7 @@ track 被分配新 ID（重关联）
 - **根因**：pipeline 内两套"场景人数"标准不一致
   - PoseC3D：看 SkeletonBuffer（grace=90 帧保留），视野 = 2 人
   - rule_engine：看 `frame_persons_kps`（仅本帧 YOLO 检测），视野 = 1 人
-- **修复**：R12 两改动 P13+P14（commit 待填）
+- **修复**：R12 两改动 P13+P14（commit `b4d389d`）
   - P13：pipeline 计算 `scene_person_count = |current_tracks ∪ skeleton_buf.tracks|`，通过 `RuleEngine.push_scene_count()` 推送
   - P14：`check_vandalism` 改用 `scene_person_count`；新增持续性门槛 —— 近 5 次推理场景人数全=1 才触发
 - **状态**：已修复（待视频验证）
@@ -1379,6 +1379,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+b4d389d fix(e2e): R12 occlusion-aware scene_person_count — P13/P14            (R12)
 074c47f feat(e2e): R11 small-object 3-way single-class + frame-level gating   (R11 E2E)
 8af7a53 fix(e2e): R10 fighting/bullying desensitization — P8/P9/P10           (R10)
 e9cbc11 fix(e2e): R9 rule engine tightening — P1/P2/P5/P7                    (R9)
