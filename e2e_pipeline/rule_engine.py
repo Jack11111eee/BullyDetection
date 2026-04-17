@@ -527,28 +527,39 @@ class RuleEngine:
             # 用 bbox 重叠（而非距离）判断攻击者：在 3D 纵深场景中
             # 攻击者站在躺地者上方时两人 bbox 必然重叠，距离判断不可靠
             my_bbox = track_bboxes_dict.get(track_id) if track_bboxes_dict else None
-            if my_bbox and track_bboxes_dict and len(track_bboxes_dict) >= 2:
+            # P8 (R10)：PoseC3D 否决门 —— fighting 强主导时 YOLO 躺地视为误检
+            # 场景：fighting 中肢体交缠 / 倾斜，YOLO unified_3class 对此类姿态有误检，
+            # 日志 F546–F627 显示 PoseC3D fighting=0.998 被 step 2 无视 → bullying 自激 82 帧
+            fighting_prob_pre = float(pose_probs[1])
+            bullying_prob_pre = float(pose_probs[2])
+            yolo_veto = (fighting_prob_pre >= 0.7 and
+                         bullying_prob_pre < fighting_prob_pre * 0.3)
+            if yolo_veto:
+                logger.debug(
+                    f'  [RAW] T{track_id} YOLO躺地否决 '
+                    f'(PoseC3D fighting={fighting_prob_pre:.3f}强主导, '
+                    f'bullying={bullying_prob_pre:.3f}) → 跳过rule_yolo_bullying/falling'
+                )
+            if my_bbox and track_bboxes_dict and len(track_bboxes_dict) >= 2 and not yolo_veto:
                 for other_tid, other_bbox in track_bboxes_dict.items():
                     if other_tid == track_id:
                         continue
                     overlap = _bbox_overlap_ratio(my_bbox, other_bbox)
                     if overlap < 0.1:  # 重叠不足 10% → 不算近距离互动
                         continue
-                    # 放宽条件（修复 B）：
-                    #   1) 邻居当前平滑标签 ∈ {fighting, bullying}，或
-                    #   2) 最近 3 次 raw history 中有 ≥1 次攻击
+                    # P8 (R10)：邻居条件收紧 —— 只有 bullying 才算 bullying 的证据
+                    # 原逻辑 {fighting, bullying} 均触发；但邻居是 fighting 反而说明
+                    # 两人是对称对打，不应升级本 track 为 bullying 受害者
                     other_history = self.history.get(other_tid, [])
                     other_smoothed = self._last_smoothed.get(other_tid, 'normal')
-                    neighbor_attacking = other_smoothed in ('fighting', 'bullying')
-                    recent_attack = any(
-                        h in ('fighting', 'bullying') for h in other_history[-3:]
-                    )
-                    if neighbor_attacking or recent_attack:
-                        attack_count = sum(1 for h in other_history if h in ('fighting', 'bullying'))
+                    neighbor_bullying = other_smoothed == 'bullying'
+                    recent_bullying = any(h == 'bullying' for h in other_history[-3:])
+                    if neighbor_bullying or recent_bullying:
+                        bully_count = sum(1 for h in other_history if h == 'bullying')
                         logger.debug(
                             f'  [RAW] T{track_id} → bullying (YOLO躺地 + T{other_tid} '
-                            f'smoothed={other_smoothed}, recent_attack={recent_attack}, '
-                            f'history_atk={attack_count}/{len(other_history)}, overlap={overlap:.2f})'
+                            f'smoothed={other_smoothed}, recent_bullying={recent_bullying}, '
+                            f'history_bully={bully_count}/{len(other_history)}, overlap={overlap:.2f})'
                         )
                         # 双向传播（修复 C）：向邻居 raw history 注入一次 bullying，
                         # 帮助攻击者靠滞回维持攻击状态（不覆盖 smoothed，只加弱证据）
@@ -560,7 +571,11 @@ class RuleEngine:
             # 不应覆盖 PoseC3D 已有的攻击信号。
             fighting_prob_early = float(pose_probs[1])
             bullying_prob_early = float(pose_probs[2])
-            if fighting_prob_early >= self.pose_threshold or bullying_prob_early >= self.pose_threshold:
+            if yolo_veto:
+                # P8 (R10)：fighting 强主导时 YOLO 检测整体不可信，既不判 bullying 也不判 falling
+                # 不设置 yolo_falling_deferred —— 让 step 6 正常返回 fighting
+                pass
+            elif fighting_prob_early >= self.pose_threshold or bullying_prob_early >= self.pose_threshold:
                 # P7 (R9)：暂存 YOLO falling 信号给 step 6 之后兜底消费，
                 # 不直接丢弃 — 否则 step 6 攻击判定失败时会被 normal argmax 吞掉。
                 yolo_falling_deferred = (fallen_yolo_conf, bbox_horizontal)
@@ -647,20 +662,25 @@ class RuleEngine:
                     return 'bullying', attack_prob * 0.9, 'rule_bullying'
 
                 # 6c. 对称攻击 → 按概率选 fighting 或 bullying
-                if bullying_prob >= fighting_prob:
-                    logger.debug(f'  [RAW] T{track_id} → bullying (攻击概率: '
-                                 f'b={bullying_prob:.3f}>=f={fighting_prob:.3f})')
+                # P10 (R10)：bullying 需显著优势才采信 —— PoseC3D R11 训练数据中
+                # bullying 样本仅 446（fighting 12772，28:1 不平衡），bullying_prob 在
+                # fighting 场景下边界不稳（常见 b=0.49,f=0.51 翻转）。
+                # 旧阈值 `b >= f` 导致单帧概率抖动即翻转标签。
+                # 新阈值：b >= f*1.5 且 b >= 0.4 —— 要求 bullying 显著压倒且绝对置信度足够。
+                if bullying_prob >= fighting_prob * 1.5 and bullying_prob >= 0.4:
+                    logger.debug(f'  [RAW] T{track_id} → bullying (攻击概率显著优势: '
+                                 f'b={bullying_prob:.3f}>=f={fighting_prob:.3f}*1.5且>=0.4)')
                     self._inject_to_overlapping_neighbor(
                         track_id, 'bullying', track_bboxes_dict
                     )
                     return 'bullying', bullying_prob, 'posec3d'
                 else:
                     logger.debug(f'  [RAW] T{track_id} → fighting (攻击概率: '
-                                 f'f={fighting_prob:.3f}>b={bullying_prob:.3f})')
+                                 f'f={fighting_prob:.3f}, b={bullying_prob:.3f} 未达bullying门槛)')
                     self._inject_to_overlapping_neighbor(
                         track_id, 'fighting', track_bboxes_dict
                     )
-                    return 'fighting', fighting_prob, 'posec3d'
+                    return 'fighting', max(fighting_prob, attack_prob), 'posec3d'
             else:
                 logger.debug(f'  [RAW] T{track_id} 攻击信号但proximity失败 (nearest='
                              f'{nearest_dist_log:.0f} > {max_fight_dist_log:.0f})，落到argmax路径')
@@ -846,12 +866,26 @@ class RuleEngine:
         """双向传播（修复 C）：向指定 track 的 raw history 追加一条弱证据标签。
         避免重复注入（最后一项已是该标签则跳过），并截断到 vote_window。
         不修改 _last_smoothed —— 邻居自己的 _vote_smooth 会自然处理。
+
+        P9 (R10)：注入条件化 —— 邻居最近 3 帧 ≥2 帧 fighting 时拒绝注入 bullying。
+        场景：两人对称 fighting 时，一方因 YOLO 误检短暂判 bullying 会向对方
+        cross-inject bullying；若对方 history 正稳定在 fighting，这条注入会污染
+        ENTRY 计数使对方也 UPGRADE 到 bullying，形成自激传播（日志 F546–F627 即为此）。
         """
         if track_id not in self.history:
             self.history[track_id] = []
         hist = self.history[track_id]
         if hist and hist[-1] == label:
             return  # 已注入，避免重复撑满
+        if label == 'bullying':
+            recent = hist[-3:]
+            if len(recent) >= 2 and recent.count('fighting') >= 2:
+                logger.debug(
+                    f'  [INJECT] T{track_id} 拒绝bullying注入 '
+                    f'(最近{len(recent)}帧fighting={recent.count("fighting")}, '
+                    f'history=[{",".join(hist)}])'
+                )
+                return
         hist.append(label)
         if len(hist) > self.vote_window:
             hist.pop(0)

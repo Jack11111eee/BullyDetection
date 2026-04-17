@@ -13,7 +13,7 @@
 5. [数据管线](#5-数据管线)
 6. [关键配置总表](#6-关键配置总表)
 7. [训练/评估命令](#7-训练评估命令)
-8. [E2E 部署调优历史（Round 1–8）](#8-e2e-部署调优历史round-18)
+8. [E2E 部署调优历史（Round 1–10）](#8-e2e-部署调优历史round-110)
 9. [E2E 规则引擎当前完整逻辑](#9-e2e-规则引擎当前完整逻辑)
 10. [问题编年史](#10-问题编年史)
 11. [辅助组件](#11-辅助组件)
@@ -419,7 +419,7 @@ cd /home/hzcu/mnt/autodl/e2e_pipeline && python run.py \
 
 ---
 
-## 8. E2E 部署调优历史（Round 1–8）
+## 8. E2E 部署调优历史（Round 1–10）
 
 ### 背景
 
@@ -802,6 +802,64 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
 
 ---
 
+### E2E Fix Round 10 — fighting/bullying 判定脱敏（消除 YOLO 误检自激）
+
+**背景**：R9 上线后观察到持续对称 fighting 视频里标签在 fighting ↔ bullying 间反复翻转。debug.log 分析：601 行日志中误判 bullying 集中在 F126–F175 / F415–F450 / **F546–F627（82 帧连续自激）**；其中 F546–F627 两个 track 的 PoseC3D 输出稳定在 `fighting=0.998–0.999, bullying=0.000`，FINAL 却全部是 bullying。
+
+**根因（三条独立病灶）**：
+
+1. **step 2 `rule_yolo_bullying` 完全绕过 PoseC3D argmax** —— YOLO unified_3class falling 模型对 fighting 中倾斜/交缠姿态有误检，即使 PoseC3D 99% 确定 fighting 也被升级为 bullying
+2. **cross-inject 无差别污染** —— 一方误判 bullying 即向邻居 history 注入 bullying，邻居稳定 fighting 时也被污染到 UPGRADE，形成自激
+3. **step 6c `b ≥ f` 门槛过松** —— R11 训练数据 bullying 样本 446 vs fighting 12772（28:1 不平衡），softmax 抖动 `b=0.49 f=0.51` 就能翻转
+
+本 Round 三改动（~40 行）：
+
+#### P8 — step 2 邻居收紧 + PoseC3D 否决门（commit 待填）
+
+**文件**：`e2e_pipeline/rule_engine.py:526-572`
+
+| 修改 | 旧 | 新 |
+|---|---|---|
+| 邻居触发条件 | `smoothed ∈ {fighting,bullying}` 或最近 3 帧含攻击 | 仅 `smoothed=bullying` 或最近 3 帧含 bullying |
+| PoseC3D 否决门 | 无 | `fighting_prob≥0.7 AND bullying_prob<fighting_prob*0.3` 时跳过整个 step 2（bullying+falling 都跳） |
+
+**语义**：邻居是 fighting 说明两人对称对打，不是 bullying 证据；PoseC3D 极度确定 fighting 时无"一动不动躺地"盲区需要 YOLO 补偿，YOLO 信号视为误检。
+
+#### P9 — cross-inject 条件化（commit 待填）
+
+**文件**：`e2e_pipeline/rule_engine.py:865-892`
+
+**修改**：`_inject_raw_history` 接收 `label='bullying'` 前检查邻居最近 3 帧，若 ≥2 帧 fighting 则拒绝注入。
+
+**语义**：邻居正稳定在 fighting（对称对打）时，一方因 YOLO 误检短暂判 bullying 不应污染对方 ENTRY 计数。
+
+#### P10 — step 6c 相对门槛收紧（commit 待填）
+
+**文件**：`e2e_pipeline/rule_engine.py:664-680`
+
+| 修改 | 旧 | 新 |
+|---|---|---|
+| bullying 判定门槛 | `bullying_prob >= fighting_prob` | `bullying_prob >= fighting_prob * 1.5 AND bullying_prob >= 0.4` |
+
+**语义**：要求 bullying 显著压倒 fighting（1.5 倍）且绝对置信度足够（≥0.4）。R11 的 bullying 训练样本太少，概率边界不稳，必须要求显著优势才采信，不然单帧抖动就会翻转。
+
+#### R10 配置快照
+
+| 参数 | R9 | R10 |
+|---|---|---|
+| rule_yolo_bullying 邻居条件 | `{fighting,bullying}` 或 history 含攻击 | `bullying` only |
+| PoseC3D 否决 YOLO | 无 | fighting≥0.7 且 bullying<f*0.3 跳过 step 2 |
+| cross-inject bullying 前置检查 | 无 | 邻居最近 3 帧 fighting<2 |
+| step 6c bullying 阈值 | `b ≥ f` | `b ≥ f*1.5 且 b ≥ 0.4` |
+
+**预期行为变化**：
+- F546–F627 自激完全消除（PoseC3D fighting=0.998 触发 P8 否决门）
+- 单帧 PoseC3D 输出 b=0.35 f=0.33 不再翻转 bullying（P10 要求显著优势）
+- 即使 step 2 误判 bullying，P9 阻断传染到 fighting 邻居
+- 真实 bullying 场景（受害者倒地 + 攻击者单向）仍可识别：邻居 smoothed=bullying 持续时 step 2 正常触发；PoseC3D b=0.6 f=0.3 也满足 P10 门槛
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -813,8 +871,10 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
  │
  ├─ Step 2: YOLO 辅助 falling 检测
  │   YOLO 检测到 falling bbox + 骨骼中心重叠（20% margin）
- │     ├─ bbox overlap ≥ 10% 的邻居有攻击信号（smoothed ∈ {fighting,bullying}
- │     │   或 最近 3 条 raw history 有攻击）→ bullying + 向邻居注入 'bullying'
+ │     ├─ R10 P8 否决门：fighting_prob ≥ 0.7 AND bullying_prob < f*0.3
+ │     │   → 整个 step 2 跳过（YOLO 视为误检）
+ │     ├─ bbox overlap ≥ 10% 的邻居 smoothed=bullying 或最近 3 帧含 bullying
+ │     │   → bullying + 向邻居注入 'bullying'（R10 P8 邻居收紧）
  │     ├─ PoseC3D fighting_prob ≥ 0.3 或 bullying_prob ≥ 0.3
  │     │   → 暂存为 yolo_falling_deferred，交给 step 5/6（R9 P7）
  │     └─ 否则 → falling（信任 YOLO 检测器）
@@ -826,12 +886,13 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
  ├─ Step 4: vandalism 规则
  │   fighting_prob > 0.5 + 场景仅 1 人 → vandalism
  │
- ├─ Step 5: 攻击概率主导（R8.4 新增，R9 收紧）
+ ├─ Step 5: 攻击概率主导（R8.4 新增，R9/R10 收紧）
  │   attack_prob = max(fighting_prob, bullying_prob) ≥ 0.3
  │   且 attack_prob ≥ normal_prob × 0.7（R9 P1 相对优势）时：
  │     proximity_ok（邻居在 1.5×max 身高范围内）
  │       ├─ 不对称（ratio<0.5 AND head_hip>0.15, R9 P5 收紧）→ bullying + 注入
- │       ├─ bullying_prob ≥ fighting_prob → bullying + 注入
+ │       ├─ bullying_prob ≥ fighting_prob*1.5 AND bullying_prob≥0.4 (R10 P10)
+ │       │    → bullying + 注入
  │       └─ else → fighting + 注入
  │     proximity 失败 → 落到 step 6
  │
@@ -1102,6 +1163,29 @@ track 被分配新 ID（重关联）
 - **修复**：P7 — step 2 跳过时把 YOLO falling 结果存进 `yolo_falling_deferred`，step 6 所有分支走完后若未判攻击则兜底返回 falling（commit `e9cbc11`）
 - **状态**：已修复
 
+#### Problem 27: 对称 fighting 被 YOLO 误检触发 bullying 自激
+
+- **发现**：E2E Fix Round 10（R9 上线后真实视频流测试）
+- **详情**：两人持续对称 fighting 视频里标签反复翻转 fighting↔bullying。debug.log F546–F627 连续 82 帧两个 track PoseC3D 均输出 `fighting=0.998~0.999, bullying=0.000`，但 FINAL 全部是 bullying。根因是 YOLO unified_3class falling 对 fighting 中倾斜/交缠姿态误检 → step 2 `rule_yolo_bullying` 完全绕过 PoseC3D argmax → 一方误判 bullying 后 cross-inject 污染邻居 history → 邻居也被 UPGRADE 到 bullying → 形成 82 帧自激
+- **证据**：
+  ```
+  F546: T1 PoseC3D fighting=0.998, bullying=0.000
+        → [RAW] bullying (YOLO躺地 + T3 smoothed=fighting, overlap=0.35)
+        → [INJECT] T3 += bullying
+  F557: T3 PoseC3D fighting=0.999
+        → [RAW] bullying (T1 现在 smoothed=bullying)
+  ... 持续到 F627
+  ```
+- **根因（三条独立病灶）**：
+  - step 2 不看 PoseC3D argmax，YOLO 躺地+邻居攻击即判 bullying
+  - `_inject_raw_history` 无差别注入，污染稳定 fighting 邻居
+  - step 6c `b >= f` 对不平衡训练数据下的抖动过敏
+- **修复**：R10 三改动 P8+P9+P10（commit 待填）
+  - P8：step 2 邻居条件收紧（仅 bullying 算证据）+ `fighting_prob≥0.7 AND bullying<f*0.3` 否决整个 step 2
+  - P9：`_inject_raw_history` 拒绝向最近 3 帧 ≥2 帧 fighting 的邻居注入 bullying
+  - P10：step 6c 门槛 `b>=f` → `b>=f*1.5 且 b>=0.4`
+- **状态**：已修复（待视频验证）
+
 ---
 
 ## 11. 辅助组件
@@ -1161,6 +1245,9 @@ track 被分配新 ID（重关联）
 28. **绝对阈值要配相对约束**：`attack_prob ≥ 0.3` 在 softmax 分布下忽略了 normal 的压制。同时考虑绝对下限（过滤极低置信）和相对优势（避免被其它类主导）才稳健
 29. **HOLD 门槛要分类别设**：falling/climbing 姿态延续性高 HOLD=1 合理；fighting/bullying 是交互事件，PoseC3D 对间歇输出噪声 → HOLD=1 会永锁。延续性类别和交互类别的时序先验不同
 30. **OR 条件要小心**：单判据 OR 拼起来等于"任意一条噪声即触发"；AND 才符合"同时满足两个独立维度"的物理语义。姿态检测这类容易抖的判定尤其要用 AND
+31. **子模型误检必须有反向守门**：YOLO unified_3class 对 fighting 中交缠/倾斜姿态有 falling 误检，但 step 2 的 rule_yolo_bullying 完全信任 YOLO，不看 PoseC3D。正确做法：当另一个子模型（这里是 PoseC3D）对当前场景有极强的反向信号（fighting≥0.7 + bullying<0.03）时，本子模型的检测应被否决。不要让任一子模型的误检单独驱动关键决策
+32. **cross-inject 需要接收方状态检查**：R8.1 引入 inject 是为解决攻击者/受害者 ENTRY 计数不同步，但对称 fighting 场景下它会把一方的误判传染到稳定 fighting 的另一方，形成自激。传播必须看接收方是否"正在坚持不同的稳定标签"—— 稳定 fighting 的邻居不该被 bullying 注入污染
+33. **训练样本极不平衡时，该类的 softmax 概率大小比较不可靠**：R11 bullying 样本 446 vs fighting 12772（28:1），bullying_prob 在 fighting 场景下边界抖动。用 `b >= f` 这种"相等即采信"的门槛等于让模型用猜的决策。应该要求显著优势（如 1.5 倍）+ 绝对下限（如 0.4）双重过滤，本质是承认模型在该类的边界不可靠
 
 ---
 
