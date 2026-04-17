@@ -547,10 +547,22 @@ class RuleEngine:
                         # 帮助攻击者靠滞回维持攻击状态（不覆盖 smoothed，只加弱证据）
                         self._inject_raw_history(other_tid, 'bullying')
                         return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
-            # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
-            logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
-                         f'bbox={"水平" if bbox_horizontal else "竖直"})')
-            return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
+            # PoseC3D 已检出 fighting/bullying 时，跳过 YOLO falling，
+            # 让 step 6 走不对称检测等完整 fighting/bullying 逻辑。
+            # YOLO falling 本意是补偿「一动不动+PoseC3D 输出 normal」的盲区，
+            # 不应覆盖 PoseC3D 已有的攻击信号。
+            # fighting 需 >=0.5 才能通过 step 6 的置信度门槛。
+            if pose_label == 'fighting' and pose_conf >= 0.5:
+                logger.debug(f'  [RAW] T{track_id} YOLO躺地但PoseC3D=fighting({pose_conf:.3f}>=0.5), '
+                             f'跳过YOLO falling, 交给PoseC3D路径处理')
+            elif pose_label == 'bullying' and pose_conf >= self.pose_threshold:
+                logger.debug(f'  [RAW] T{track_id} YOLO躺地但PoseC3D=bullying({pose_conf:.3f}), '
+                             f'跳过YOLO falling, 交给PoseC3D路径处理')
+            else:
+                # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
+                logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
+                             f'bbox={"水平" if bbox_horizontal else "竖直"})')
+                return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
 
         # 3. 检查吸烟
         is_smoking, smoke_conf = check_smoking(
