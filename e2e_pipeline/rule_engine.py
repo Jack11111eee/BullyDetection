@@ -624,16 +624,27 @@ class RuleEngine:
                 if is_bully:
                     logger.debug(f'  [RAW] T{track_id} → bullying (攻击概率'
                                  f'f={fighting_prob:.3f},b={bullying_prob:.3f} + 姿态不对称)')
+                    # 双向传播：向 bbox 重叠最多的邻居 raw history 注入 bullying
+                    # （攻击者和受害者是同一事件，必须同步升级 ENTRY 计数）
+                    self._inject_to_overlapping_neighbor(
+                        track_id, 'bullying', track_bboxes_dict
+                    )
                     return 'bullying', attack_prob * 0.9, 'rule_bullying'
 
                 # 6c. 对称攻击 → 按概率选 fighting 或 bullying
                 if bullying_prob >= fighting_prob:
                     logger.debug(f'  [RAW] T{track_id} → bullying (攻击概率: '
                                  f'b={bullying_prob:.3f}>=f={fighting_prob:.3f})')
+                    self._inject_to_overlapping_neighbor(
+                        track_id, 'bullying', track_bboxes_dict
+                    )
                     return 'bullying', bullying_prob, 'posec3d'
                 else:
                     logger.debug(f'  [RAW] T{track_id} → fighting (攻击概率: '
                                  f'f={fighting_prob:.3f}>b={bullying_prob:.3f})')
+                    self._inject_to_overlapping_neighbor(
+                        track_id, 'fighting', track_bboxes_dict
+                    )
                     return 'fighting', fighting_prob, 'posec3d'
             else:
                 logger.debug(f'  [RAW] T{track_id} 攻击信号但proximity失败 (nearest='
@@ -813,6 +824,91 @@ class RuleEngine:
         if len(hist) > self.vote_window:
             hist.pop(0)
         logger.debug(f'  [INJECT] T{track_id} raw_history += {label} | history=[{",".join(hist)}]')
+
+    def _inject_to_overlapping_neighbor(self, track_id, label, track_bboxes_dict, min_overlap=0.1):
+        """向 bbox 重叠最多的邻居注入攻击标签弱证据。
+        R8.5 扩展双向传播：asymmetry/对称攻击判定时同步升级邻居 ENTRY 计数，
+        避免「bbox 重叠但一个 bullying 一个 normal」的结构性不合理。
+        """
+        if not track_bboxes_dict:
+            return
+        my_bbox = track_bboxes_dict.get(track_id)
+        if not my_bbox:
+            return
+        best_tid, best_overlap = None, min_overlap
+        for other_tid, other_bbox in track_bboxes_dict.items():
+            if other_tid == track_id:
+                continue
+            ov = _bbox_overlap_ratio(my_bbox, other_bbox)
+            if ov > best_overlap:
+                best_overlap = ov
+                best_tid = other_tid
+        if best_tid is not None:
+            logger.debug(f'  [INJECT] T{track_id}→T{best_tid} (overlap={best_overlap:.2f}) {label}')
+            self._inject_raw_history(best_tid, label)
+
+    def couple_overlapping_pairs(self, judgments, track_bboxes_dict, min_overlap=0.1):
+        """Pair coupling 后处理（R8.5）：
+        bbox 重叠 ≥ min_overlap 的 track 对必须共享攻击状态。
+        - A 在攻击态 {fighting, bullying} + B normal → B 升级为 A 的标签
+        - A bullying + B falling → B 升级 bullying（受害者在霸凌场景中应判 bullying）
+        - 同步 _last_smoothed 让后续 HOLD 生效
+
+        Args:
+            judgments: {track_id: BehaviorResult} 已经 smooth 后的判定
+            track_bboxes_dict: {track_id: bbox}
+        Returns:
+            judgments (就地修改 label/confidence/source)
+        """
+        if not track_bboxes_dict or len(judgments) < 2:
+            return judgments
+
+        ATTACK_LABELS = ('fighting', 'bullying')
+        # 找出所有当前在攻击态的 track
+        attackers = [(tid, j) for tid, j in judgments.items()
+                     if j.label in ATTACK_LABELS]
+        if not attackers:
+            return judgments
+
+        for tid, j in list(judgments.items()):
+            if j.label in ATTACK_LABELS:
+                continue  # 已在攻击态
+            my_bbox = track_bboxes_dict.get(tid)
+            if not my_bbox:
+                continue
+            # 找 overlap 最高的攻击者
+            best_atk_tid, best_atk_label, best_overlap = None, None, min_overlap
+            for a_tid, a_j in attackers:
+                if a_tid == tid:
+                    continue
+                a_bbox = track_bboxes_dict.get(a_tid)
+                if not a_bbox:
+                    continue
+                ov = _bbox_overlap_ratio(my_bbox, a_bbox)
+                if ov > best_overlap:
+                    best_overlap = ov
+                    best_atk_tid = a_tid
+                    best_atk_label = a_j.label
+            if best_atk_tid is None:
+                continue
+            # 应用耦合：
+            #   normal / loitering / 其他轻量态 → 升级为攻击态
+            #   falling → 如果攻击者是 bullying，升级为 bullying（受害者被霸凌）
+            #   falling + 攻击者是 fighting → 保持 falling（倒地独立事件）
+            if j.label == 'falling' and best_atk_label != 'bullying':
+                continue
+            new_label = best_atk_label
+            # 受害者场景：bullying + falling overlap → bullying
+            if j.label == 'falling' and best_atk_label == 'bullying':
+                new_label = 'bullying'
+            old_label = j.label
+            j.label = new_label
+            j.source = f'pair_couple({best_atk_tid})'
+            j.smoothed = True
+            self._last_smoothed[tid] = new_label
+            logger.info(f'  [COUPLE] T{tid} {old_label} → {new_label} '
+                        f'(T{best_atk_tid} {best_atk_label}, overlap={best_overlap:.2f})')
+        return judgments
 
     def update_track_position(self, track_id, person_kps, person_scores):
         """在非推理帧也更新位置（更精确的徘徊检测）"""

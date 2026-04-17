@@ -563,9 +563,10 @@ class InferencePipeline:
                             self.track_labels[track_id] = self.track_labels.pop(old_tid)
                         self._label_missing_count.pop(old_tid, None)
 
-            # 第二遍: 推理 + 可视化
+            # 第二遍A: 推理 + 画骨骼（标签绘制延后到耦合之后）
+            inferred_tids = []
             for track_id, (kps_xy, kps_sc) in track_kps.items():
-                # 画骨骼
+                # 画骨骼（用上一帧的标签色，当前帧推理还没完成）
                 label_info = self.track_labels.get(track_id)
                 color = LABEL_COLORS.get(
                     label_info.label if label_info else 'normal', (200, 200, 200))
@@ -574,14 +575,12 @@ class InferencePipeline:
                 # Step 2: PoseC3D 推理（双人配对）
                 buf = self.skeleton_buf.tracks[track_id]
                 buf_len = len(buf['kps'])
-                new_frames = buf['new_frames']
 
                 if self.skeleton_buf.should_infer(track_id):
                     nearest_tid = self._find_nearest_track(track_id, track_positions)
                     keypoint, keypoint_score = self.skeleton_buf.get_clip(track_id, nearest_tid)
 
-                    # Debug: 检查输入数据质量
-                    kp_nonzero = np.any(keypoint[0] != 0, axis=(1, 2))  # (T,) 每帧是否有数据
+                    kp_nonzero = np.any(keypoint[0] != 0, axis=(1, 2))
                     n_valid_frames = int(kp_nonzero.sum())
                     kp2_nonzero = np.any(keypoint[1] != 0, axis=(1, 2))
                     n_valid_p2 = int(kp2_nonzero.sum())
@@ -610,22 +609,33 @@ class InferencePipeline:
                         track_bboxes_dict=track_bboxes,
                     )
                     self.track_labels[track_id] = judgment
-
-                    logger.debug(f'[F{frame_idx}] T{track_id} FINAL → {judgment.label} '
-                                 f'(conf={judgment.confidence:.3f}, src={judgment.source}, smooth={judgment.smoothed})')
-
-                    # 记录非 normal 事件
-                    if judgment.label != 'normal':
-                        self.event_log.append({
-                            'frame': frame_idx,
-                            **judgment.to_dict(),
-                        })
+                    inferred_tids.append(track_id)
                 else:
                     min_frames = max(16, self.skeleton_buf.clip_len // 2)
                     if buf_len < min_frames:
                         logger.debug(f'[F{frame_idx}] T{track_id} SKIP: buffer不足 {buf_len}/{min_frames}')
 
-                # Step 5: 可视化标签（始终显示 bbox + 标签）
+            # 第二遍B: Pair coupling —— bbox 重叠的 track 必须共享攻击态
+            # 对所有当前活跃 track（不只本帧推理的）跑耦合，
+            # 因为非推理帧的 track_labels 可能保留攻击态，需要传播给新出现的 normal 邻居
+            active_judgments = {tid: self.track_labels[tid]
+                                for tid in current_track_ids
+                                if tid in self.track_labels}
+            self.rule_engine.couple_overlapping_pairs(active_judgments, track_bboxes)
+
+            # 记录事件（用耦合后的标签）
+            for track_id in inferred_tids:
+                judgment = self.track_labels[track_id]
+                logger.debug(f'[F{frame_idx}] T{track_id} FINAL → {judgment.label} '
+                             f'(conf={judgment.confidence:.3f}, src={judgment.source}, smooth={judgment.smoothed})')
+                if judgment.label != 'normal':
+                    self.event_log.append({
+                        'frame': frame_idx,
+                        **judgment.to_dict(),
+                    })
+
+            # 第二遍C: 可视化标签（用耦合后的标签）
+            for track_id in track_kps.keys():
                 bbox = track_bboxes.get(track_id)
                 if bbox:
                     if track_id in self.track_labels:
@@ -633,7 +643,6 @@ class InferencePipeline:
                         color = LABEL_COLORS.get(info.label, (200, 200, 200))
                         draw_label(frame, bbox, info.label, info.confidence, color)
                     else:
-                        # 尚未推理，显示 normal
                         draw_label(frame, bbox, 'normal', 1.0, LABEL_COLORS['normal'])
 
         # 清理消失的 track（带遮挡宽限期）
