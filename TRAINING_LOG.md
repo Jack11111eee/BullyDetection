@@ -13,7 +13,7 @@
 5. [数据管线](#5-数据管线)
 6. [关键配置总表](#6-关键配置总表)
 7. [训练/评估命令](#7-训练评估命令)
-8. [E2E 部署调优历史（Round 1–12）](#8-e2e-部署调优历史round-112)
+8. [E2E 部署调优历史（Round 1–13）](#8-e2e-部署调优历史round-113)
 9. [E2E 规则引擎当前完整逻辑](#9-e2e-规则引擎当前完整逻辑)
 10. [问题编年史](#10-问题编年史)
 11. [辅助组件](#11-辅助组件)
@@ -420,7 +420,7 @@ cd /home/hzcu/mnt/autodl/e2e_pipeline && python run.py \
 
 ---
 
-## 8. E2E 部署调优历史（Round 1–12）
+## 8. E2E 部署调优历史（Round 1–13）
 
 ### 背景
 
@@ -971,6 +971,77 @@ self.rule_engine.push_scene_count(scene_person_count)
 
 ---
 
+### E2E Fix Round 13 — 吸烟检测修复（gating + 关键点 + 投票窗口）（commit 待填）
+
+**背景**：用户反馈持续抽烟视频里 T1 smoking 只有小部分被识别。分析 debug 日志（F831–F1263）：
+
+1. **F943 起 `[YOLO-GATE] ran=['falling'] skipped=['smoking', 'phone']`**：T3 被 laying YOLO 模型持续误判 falling → 整场 smoking 模型被 gating 关闭 → T1 smoking 模型**根本没跑** → 180 帧苟延到 F1135 彻底失联
+2. **F831–F927 gate 开的时候**：T1 RAW smoking 大约 4/7 次推理命中，但 VOTE 窗口 5 帧 ENTRY=2 对稀疏信号太严 —— history=[n,n,s,n,s,n,s,n,n,n] 就会反复进出态
+3. **check_smoking 关键点范围过窄**：只查鼻子(0)/左腕(9)/右腕(10)，"手肘弯起拿烟"姿势(kp 7/8 附近)会漏检
+
+#### P15 — 撤销 R11 场景级 gating
+
+**文件**：`e2e_pipeline/pipeline.py`
+
+```python
+# R11（错误实现，已撤销）：任一 track 在 fighting/bullying/falling/climbing → 全场跳 smoking/phone
+# R13：smoking/phone/falling 固定每帧都跑
+gate_need_falling = True
+gate_need_smoking = True
+gate_need_phone = True
+```
+
+**根因**：R11 加 gating 初衷是"物理互斥"（一人倒地不会同时吸烟），但 **per-track 语义被错误实现为场景级** —— T3 倒地会把 T1 的 smoking 模型关掉。YOLO 是帧级调用（一次检测整张画面），per-track gating 在这里根本无法实现，最干净的做法是取消 gating。算力代价有限（每帧 3 路 YOLO 本来就在跑）。
+
+#### P16 — check_smoking 关键点扩展 + 骨骼 bbox 兜底
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+| 修改 | 旧 | 新 |
+|---|---|---|
+| 关键点范围 | `[0, 9, 10]`（鼻子、两腕） | `[0, 7, 8, 9, 10]`（+ 两肘） |
+| 兜底判据 | 无 | 香烟中心落在人骨骼 bbox **上半身** (y < bbox 中线) → True，置信度×0.8 |
+
+**语义**：
+- 肘部覆盖"手肘弯起拿烟在嘴前"、"手垂在身侧拿烟"两种姿势
+- 骨骼 bbox 上半身兜底覆盖"香烟位置特殊（腰前/胸前）+ kp 漂移"的边角情况；只限上半身避免裤兜物品误判
+
+#### P17 — smoking/phone 专用 VOTE 窗口
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+| 修改 | 旧 | 新 |
+|---|---|---|
+| smoking/phone VOTE_ENTRY_MIN | 默认 2 | 2（不变） |
+| smoking/phone VOTE_HOLD_MIN | 默认 1 | **2**（防闪断） |
+| smoking/phone 投票窗口 | 默认 5 | **7**（per-label window） |
+
+实现：新增 `VOTE_WINDOW_LABEL = {'smoking': 7, 'phone_call': 7}` 和 `_window_for(label)` helper；`_vote_smooth` 按标签独立计数；history buffer 截断改为 `_max_window()`。
+
+**预期效果**：
+- 窗口 5→7，稀疏信号有更多累积面。history=[n,n,s,n,s,n,s] 中 smoking=3 过 ENTRY=2 ✓
+- HOLD=2 避免单帧漏检立即退出（窗口内仍有 2 帧 smoking 即维持）
+- 攻击/倒地类保持原窗口 5 不变（交互事件节奏不同）
+
+#### R13 配置快照
+
+| 参数 | R12 | R13 |
+|---|---|---|
+| smoking/phone gating | 场景级互斥 | 无（每帧都跑） |
+| check_smoking 关键点 | `[0, 9, 10]` | `[0, 7, 8, 9, 10]` |
+| check_smoking 兜底 | 无 | 骨骼 bbox 上半身 |
+| smoking VOTE 窗口 | 5 | **7** |
+| smoking HOLD_MIN | 1（fallback 默认） | **2** |
+
+**未处理 / 已知风险**：
+- T3 的 laying 模型持续误判 falling 是另一个 bug（PoseC3D 明确输出 `normal=1.000, falling=0.000`，但 laying YOLO 连续输出 falling bbox conf=0.3+）。laying 模型在"竖直姿态"场景下的误检率偏高，可能需要：
+  1. `check_fallen_by_yolo` 加 PoseC3D 否决门（`normal_prob ≥ 0.9` 时不信任 laying YOLO）
+  2. 重训 laying 模型增加"非倒地负样本"
+  —— 本轮先不改，优先验证 smoking 侧修复效果
+- 7 帧窗口意味着 smoking 退出延迟增加 ~40%（从 5×stride → 7×stride），真正停止吸烟后标签还会保留 ~4 秒
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -1309,6 +1380,32 @@ track 被分配新 ID（重关联）
   - P14：`check_vandalism` 改用 `scene_person_count`；新增持续性门槛 —— 近 5 次推理场景人数全=1 才触发
 - **状态**：已修复（待视频验证）
 
+#### Problem 29: 持续抽烟只检出一小部分（gating 误关 + VOTE 对稀疏信号过严 + 关键点范围窄）
+
+- **发现**：E2E Fix Round 13（用户报告 + debug.log F831–F1263 分析）
+- **详情**：持续抽烟视频里 T1 的 smoking 只有小部分帧被识别。三条独立病灶叠加：
+  1. **R11 场景级 gating 错误实现**：T3 被 laying YOLO 误判 falling → `[YOLO-GATE] ran=['falling'] skipped=['smoking', 'phone']` 从 F943 持续到 F1135（约 180 帧 / 6 秒），T1 smoking 模型**完全未运行**，RAW 没有任何 smoking 信号输入
+  2. **VOTE 窗口对稀疏信号过严**：gate 开时 T1 RAW smoking 命中率约 4/7，但 5 窗口 HOLD=1 的默认滞回对脉冲式检测不友好，反复进出态
+  3. **check_smoking 关键点范围窄**：只查鼻子(0)/左腕(9)/右腕(10)，"手肘弯起拿烟"(kp 7/8) 或香烟位置特殊时漏检
+- **证据**：
+  ```
+  F943: [YOLO-GATE] ran=['falling'] skipped=['smoking', 'phone']
+  F975: T1 FINAL → smoking (HOLD 1>=1, 最后一次 HOLD)
+  F991–F1135: T1 FINAL → normal (smoking 模型未跑 + history 清空)
+  F1151: T1 FINAL → normal (smoking 1 次 < ENTRY 2)
+  F1167: T1 FINAL → smoking (ENTRY 2，终于重新入态)
+  ```
+- **根因（三处独立）**：
+  - 场景级 gating ≠ per-track 物理互斥；T1 抽烟 vs T3 倒地不该耦合
+  - 窗口+HOLD=1 对"脉冲信号"（每 1-2 秒检出一次）不够宽
+  - 关键点清单按"成年人拿烟姿势"设计，覆盖面窄
+- **修复**：R13 三改动 P15+P16+P17（commit 待填）
+  - P15：撤销 R11 gating，smoking/phone/falling 固定每帧都跑
+  - P16：关键点扩到 `[0, 7, 8, 9, 10]` + 骨骼 bbox 上半身兜底
+  - P17：smoking/phone 专用 VOTE 窗口=7, ENTRY=2, HOLD=2
+- **状态**：已修复（待视频验证）
+- **未处理**：T3 的 laying YOLO 在竖直姿态下误判 falling（PoseC3D `normal=1.000 falling=0.000` 但 laying 持续输出 bbox conf=0.3+），本轮未动 —— 候选修复：`check_fallen_by_yolo` 加 `normal_prob ≥ 0.9` 否决门
+
 ---
 
 ## 11. 辅助组件
@@ -1373,6 +1470,9 @@ track 被分配新 ID（重关联）
 33. **训练样本极不平衡时，该类的 softmax 概率大小比较不可靠**：R11 bullying 样本 446 vs fighting 12772（28:1），bullying_prob 在 fighting 场景下边界抖动。用 `b >= f` 这种"相等即采信"的门槛等于让模型用猜的决策。应该要求显著优势（如 1.5 倍）+ 绝对下限（如 0.4）双重过滤，本质是承认模型在该类的边界不可靠
 34. **pipeline 内同一语义量必须单一来源**：R12 发现 PoseC3D 用 SkeletonBuffer 视角（grace 期 2 人），rule_engine 用本帧 YOLO 视角（被遮挡变 1 人），导致 vandalism 误判。修理由的"场景人数"类语义，必须有 single source of truth — 任何跨模块的人数/状态判定都应从同一份数据源推导，否则各模块"自以为"的场景会互相冲突
 35. **遮挡不等于消失**：被遮挡的人物理上还在场景里只是不被看见。grace_frames 机制保留了骨骼 buffer 但没同步到"场景人数"这类派生量。任何"当前帧检测结果"类统计都要考虑遮挡兼容—— 默认用 buffered 视角，只有姿态/位置这类必须精确的才用当前帧
+36. **性能 gating 必须 per-track 而不是场景级**：R11 的"任一 track 在攻击/倒地态就关掉 smoking/phone YOLO"设计把独立事件耦合在一起—— T1 抽烟 vs T3 倒地被同一个 gate 同时切断。"物理互斥"是 per-track 语义（一个人不会同时做两件事），不该跨 track 放大成场景级。而且 YOLO 是帧级调用，per-track gating 在实现上也节省不了算力，干脆每帧都跑
+37. **稀疏脉冲信号和持续姿态信号需要不同的时序策略**：fighting/bullying/falling 是持续姿态，5 帧窗口 + HOLD=1 够用；smoking/phone 是小物体 + 间歇可见（烟被遮挡、手放下），需要更大窗口（7+）和更宽的 HOLD（2+）。不能一套 VOTE 参数套所有标签 —— 行为的物理节奏不同
+38. **判据关键点要覆盖行为的多种姿势，不只是"典型姿势"**：check_smoking 原设计只查鼻子/手腕（"拿烟在嘴边"姿势），漏掉"手肘弯起在胸前"、"烟垂在身侧"等常见姿势。设计关键点时要枚举该行为的多种常见变体（文化/习惯差异），而不是选一个最典型的姿势
 
 ---
 

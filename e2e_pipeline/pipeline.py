@@ -655,18 +655,16 @@ class InferencePipeline:
                             self.track_labels[track_id] = self.track_labels.pop(old_tid)
                         self._label_missing_count.pop(old_tid, None)
 
-            # R11：帧级 gating —— 根据上一帧的 track 标签决定本帧跑哪些检测器
-            # - falling 始终跑（安全兜底）
-            # - smoking / phone 在任一 track 处于攻击/倒地/攀爬态时跳过（物理互斥）
-            _EXCLUSIVE_STATES = {'fighting', 'bullying', 'falling', 'climbing'}
-            attack_active = any(
-                self.track_labels.get(tid) is not None
-                and self.track_labels[tid].label in _EXCLUSIVE_STATES
-                for tid in current_track_ids
-            )
+            # R13 (P15)：撤销 R11 的场景级 gating —— gating 原本想用"物理互斥"
+            # 省算力(一个人在 fighting/falling 时不会同时吸烟),但实现是场景级的：
+            # 任一 track 进攻击/倒地态就全场跳过 smoking/phone。
+            # 真实场景里 T1 抽烟 + T3 倒地会互相干扰 —— T3 误判 falling 会把 T1
+            # smoking 模型的输入彻底掐断。per-track gating 在 YOLO 帧级调用下无法实现
+            # (YOLO 一次检测整张画面),所以干脆全部跑。
+            # 保留接口(need_falling/smoking/phone)用于未来可能的扩展,当前固定 True。
             gate_need_falling = True
-            gate_need_smoking = not attack_active
-            gate_need_phone = not attack_active
+            gate_need_smoking = True
+            gate_need_phone = True
 
             # R12 (P13)：场景人数 = 本帧检测到的 + grace 期内仍存活的 buffered track
             # 修复 fighting 中一方被遮挡时 len(all_person_kps)==1 → vandalism 误判

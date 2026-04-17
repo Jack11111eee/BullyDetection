@@ -84,7 +84,14 @@ def keypoint_valid(keypoints, scores, idx, threshold=0.3):
 # 规则判定函数
 # ============================================================
 def check_smoking(person_kps, person_scores, small_obj_detections, img_shape):
-    """吸烟判定：检测到香烟 + 在人手或嘴附近"""
+    """吸烟判定：检测到香烟 + 在人上半身附近
+
+    R13 P16：扩展关键点范围 + 骨骼 bbox 上半身兜底。
+    旧版只查 鼻子/手腕,漏掉"手拿烟在身侧"(肘部)、"胳膊弯起烟在腰前"等姿势。
+    新版：
+      1. 关键点范围：鼻子 + 两肘 + 两腕 (kp 0, 7, 8, 9, 10)
+      2. 兜底：香烟中心落在人骨骼 bbox 的上半身范围内(y < bbox 中线)也算
+    """
     cigarettes = [d for d in small_obj_detections if d['class'] in ('cigarette', 'smoking')]
     if not cigarettes:
         return False, 0.0
@@ -98,8 +105,10 @@ def check_smoking(person_kps, person_scores, small_obj_detections, img_shape):
         if shoulder_w > 10:
             ref_dist = shoulder_w * 0.8
 
-    check_kps = [0, 9, 10]  # 鼻子、左腕、右腕
+    # P16：扩展到肘部 (kp 7, 8) —— 覆盖"手肘弯起拿烟"姿势
+    check_kps = [0, 7, 8, 9, 10]  # 鼻子、左肘、右肘、左腕、右腕
 
+    # 关键点距离判据(主)
     for cig in cigarettes:
         cig_center = bbox_center(cig['bbox'])
         for kp_idx in check_kps:
@@ -108,6 +117,22 @@ def check_smoking(person_kps, person_scores, small_obj_detections, img_shape):
             kp_pos = get_keypoint(person_kps, kp_idx)
             if distance(cig_center, kp_pos) < ref_dist:
                 return True, cig['conf']
+
+    # P16 兜底：香烟中心落在骨骼 bbox 上半身(y < 中线)
+    # 场景：手拿烟姿势特殊(如烟放下去 kp 位置不稳),但烟显然在人上半身
+    # 下半身兜底不启用 —— 避免裤兜里手机/烟盒等物品误判
+    valid = person_scores > 0.3
+    if valid.sum() >= 3:
+        valid_kps = person_kps[valid]
+        x_min, y_min = valid_kps.min(axis=0)
+        x_max, y_max = valid_kps.max(axis=0)
+        y_mid = (y_min + y_max) / 2
+        for cig in cigarettes:
+            cx, cy = bbox_center(cig['bbox'])
+            if x_min <= cx <= x_max and y_min <= cy <= y_mid:
+                logger.debug(f'  [RULE] smoking 骨骼 bbox 上半身兜底: cig=({cx:.0f},{cy:.0f}) '
+                             f'in bbox ({x_min:.0f},{y_min:.0f})-({x_max:.0f},{y_mid:.0f})')
+                return True, cig['conf'] * 0.8  # 兜底判据稍降置信度
 
     return False, 0.0
 
@@ -822,6 +847,8 @@ class RuleEngine:
         'climbing': 2,
         'bullying': 3,   # 交互，3次确认
         'fighting': 3,   # 最严格，3次确认（减少站立误判）
+        'smoking': 2,    # R13 P17: 稀疏信号(烟小+间歇遮挡),2次确认
+        'phone_call': 2,
     }
     # P2 (R9)：攻击类 HOLD_MIN 1→2，降低永锁风险。
     # 配合 P1（attack_prob 相对优势）+ P5（asymmetry 收紧）+ pair coupling 注入，
@@ -833,14 +860,35 @@ class RuleEngine:
         'climbing': 1,
         'bullying': 2,   # R9: 1→2 防永锁
         'fighting': 2,   # R9: 1→2 防永锁
+        'smoking': 2,    # R13 P17: 小物体检测稀疏,2次维持防闪断
+        'phone_call': 2,
+    }
+    # R13 P17：per-label 投票窗口 —— smoking 等稀疏信号用更长窗口累积证据
+    # 默认所有标签用 self.vote_window (=5),此处 override
+    VOTE_WINDOW_LABEL = {
+        'smoking': 7,     # 吸烟是持续几分钟行为,但单帧检测稀疏,放大窗口
+        'phone_call': 7,
     }
 
+    def _window_for(self, label):
+        """返回指定标签的投票窗口长度"""
+        return self.VOTE_WINDOW_LABEL.get(label, self.vote_window)
+
+    def _max_window(self):
+        """history buffer 应保留的最大长度(所有标签窗口的最大值)"""
+        return max(self.vote_window, *self.VOTE_WINDOW_LABEL.values())
+
+    def _count_in_label_window(self, history, label):
+        """在 label 专属窗口内计 label 出现次数"""
+        window = self._window_for(label)
+        return sum(1 for h in history[-window:] if h == label)
+
     def _vote_smooth(self, track_id, current_label):
-        """异常偏向时序平滑（窗口=5）+ 滞回阈值：
+        """异常偏向时序平滑 + 滞回阈值（R13 P17：per-label 投票窗口）
         - 进入异常：ENTRY_MIN（严格，避免误报）
         - 维持异常：HOLD_MIN（宽松，避免告警闪断）
-        - 上一帧在异常态 L 时，若 L 在窗口内仍 ≥ HOLD_MIN[L]，继续输出 L；
-          否则走 ENTRY 逻辑重选。
+        - 不同标签用不同窗口长度: 攻击/倒地类用 self.vote_window (=5),
+          smoking/phone_call 用 7 (稀疏信号需更长观察面)
         """
         if track_id not in self.history:
             self.history[track_id] = []
@@ -848,44 +896,54 @@ class RuleEngine:
         history = self.history[track_id]
         history.append(current_label)
 
-        if len(history) > self.vote_window:
+        # 用最大窗口截断,保证所有标签的 window 都能拿到完整数据
+        if len(history) > self._max_window():
             history.pop(0)
 
         hist_str = ','.join(history)
 
-        anomaly_counts = Counter(h for h in history if h != 'normal')
+        # per-label 计数：每个异常标签用它自己的窗口
+        anomaly_labels = set(h for h in history if h != 'normal')
+        anomaly_counts = {L: self._count_in_label_window(history, L) for L in anomaly_labels}
         last = self._last_smoothed.get(track_id, 'normal')
 
-        # 1) 滞回维持：上次为异常 L，只要 L 在窗口内 ≥ HOLD_MIN[L] 就继续
-        #    但若另一个异常票数严格多于 L，允许切换（如 falling→bullying 升级）
+        def _top_anomaly():
+            """返回 (label, count) 或 (None, 0)"""
+            if not anomaly_counts:
+                return None, 0
+            best = max(anomaly_counts, key=anomaly_counts.get)
+            return best, anomaly_counts[best]
+
+        # 1) 滞回维持：上次为异常 L，只要 L 在 L 的窗口内 ≥ HOLD_MIN[L] 就继续
+        #    但若另一个异常(按各自窗口计数)严格多于 L，允许切换
         if last != 'normal':
             last_count = anomaly_counts.get(last, 0)
             hold_min = self.VOTE_HOLD_MIN.get(last, 1)
             if last_count >= hold_min:
-                # 检查是否有竞争异常票数更多
-                if anomaly_counts:
-                    top_label, top_count = anomaly_counts.most_common(1)[0]
-                    if top_label != last and top_count > last_count:
-                        logger.debug(f'  [VOTE] T{track_id} current={current_label} → {top_label}'
-                                     f' (UPGRADE {top_label}:{top_count}>{last}:{last_count}) | history=[{hist_str}]')
-                        self._last_smoothed[track_id] = top_label
-                        return top_label
+                top_label, top_count = _top_anomaly()
+                if top_label is not None and top_label != last and top_count > last_count:
+                    logger.debug(f'  [VOTE] T{track_id} current={current_label} → {top_label}'
+                                 f' (UPGRADE {top_label}:{top_count}>{last}:{last_count}) | history=[{hist_str}]')
+                    self._last_smoothed[track_id] = top_label
+                    return top_label
                 logger.debug(f'  [VOTE] T{track_id} current={current_label} → {last}'
-                             f' (HOLD {last_count}>={hold_min}) | history=[{hist_str}]')
+                             f' (HOLD {last_count}>={hold_min}, window={self._window_for(last)}) | history=[{hist_str}]')
                 self._last_smoothed[track_id] = last
                 return last
 
-        # 2) 进入逻辑：选窗口内计数最高的异常，达到 ENTRY_MIN 才切换
-        if anomaly_counts:
-            best_label, best_count = anomaly_counts.most_common(1)[0]
+        # 2) 进入逻辑：选 per-label 窗口内计数最高的异常，达到 ENTRY_MIN 才切换
+        best_label, best_count = _top_anomaly()
+        if best_label is not None:
             entry_min = self.VOTE_ENTRY_MIN.get(best_label, 2)
             if best_count >= entry_min:
                 logger.debug(f'  [VOTE] T{track_id} current={current_label} → {best_label}'
-                             f' (ENTRY {best_count}>={entry_min}) | history=[{hist_str}]')
+                             f' (ENTRY {best_count}>={entry_min}, window={self._window_for(best_label)}) '
+                             f'| history=[{hist_str}]')
                 self._last_smoothed[track_id] = best_label
                 return best_label
             logger.debug(f'  [VOTE] T{track_id} current={current_label} → normal'
-                         f' ({best_label}只有{best_count}次<ENTRY{entry_min}) | history=[{hist_str}]')
+                         f' ({best_label}只有{best_count}次<ENTRY{entry_min}, window={self._window_for(best_label)}) '
+                         f'| history=[{hist_str}]')
             self._last_smoothed[track_id] = 'normal'
             return 'normal'
 
@@ -918,7 +976,7 @@ class RuleEngine:
                 )
                 return
         hist.append(label)
-        if len(hist) > self.vote_window:
+        if len(hist) > self._max_window():
             hist.pop(0)
         logger.debug(f'  [INJECT] T{track_id} raw_history += {label} | history=[{",".join(hist)}]')
 
@@ -1028,9 +1086,10 @@ class RuleEngine:
                 self.history[new_tid] = old_hist
             else:
                 self.history[new_tid] = old_hist + self.history[new_tid]
-                # 截断到 vote_window
-                if len(self.history[new_tid]) > self.vote_window:
-                    self.history[new_tid] = self.history[new_tid][-self.vote_window:]
+                # 截断到 max_window (兼容 per-label 窗口,如 smoking=7)
+                max_w = self._max_window()
+                if len(self.history[new_tid]) > max_w:
+                    self.history[new_tid] = self.history[new_tid][-max_w:]
             logger.info(f'[REASSOC] RuleEngine: T{old_tid} → T{new_tid} '
                         f'(history={self.history[new_tid]})')
         if old_tid in self.track_positions:
