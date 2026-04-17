@@ -861,7 +861,7 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
 
 ---
 
-### E2E Fix Round 11 — 小物体检测三路拆分 + 帧级 gating（commit 待填）
+### E2E Fix Round 11 — 小物体检测三路拆分 + 帧级 gating（commit `074c47f`）
 
 **背景**：队友重训了小物体检测模型，从一个 unified 3-class 模型拆成 3 个独立单类 YOLO11m（性能更好但每类名字可能不一致）。原 `unified_3class_model/best.pt` 替换为：
 - `v8/falling/runs/laying_yolo11m_v1/weights/best.pt`（注意：模型文件夹名 `laying` 而非 `falling`，原始 `model.names` 可能输出 `laying` → 直接换权重会导致 rule_engine 字符串匹配失效）
@@ -1311,6 +1311,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+074c47f feat(e2e): R11 small-object 3-way single-class + frame-level gating   (R11 E2E)
 8af7a53 fix(e2e): R10 fighting/bullying desensitization — P8/P9/P10           (R10)
 e9cbc11 fix(e2e): R9 rule engine tightening — P1/P2/P5/P7                    (R9)
 20185f3 fix(e2e): pair coupling — bbox-overlapping tracks must share attack state (R8.5)
