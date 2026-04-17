@@ -814,7 +814,7 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
 
 本 Round 三改动（~40 行）：
 
-#### P8 — step 2 邻居收紧 + PoseC3D 否决门（commit 待填）
+#### P8 — step 2 邻居收紧 + PoseC3D 否决门（commit `8af7a53`）
 
 **文件**：`e2e_pipeline/rule_engine.py:526-572`
 
@@ -825,7 +825,7 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
 
 **语义**：邻居是 fighting 说明两人对称对打，不是 bullying 证据；PoseC3D 极度确定 fighting 时无"一动不动躺地"盲区需要 YOLO 补偿，YOLO 信号视为误检。
 
-#### P9 — cross-inject 条件化（commit 待填）
+#### P9 — cross-inject 条件化（commit `8af7a53`）
 
 **文件**：`e2e_pipeline/rule_engine.py:865-892`
 
@@ -833,7 +833,7 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
 
 **语义**：邻居正稳定在 fighting（对称对打）时，一方因 YOLO 误检短暂判 bullying 不应污染对方 ENTRY 计数。
 
-#### P10 — step 6c 相对门槛收紧（commit 待填）
+#### P10 — step 6c 相对门槛收紧（commit `8af7a53`）
 
 **文件**：`e2e_pipeline/rule_engine.py:664-680`
 
@@ -1180,7 +1180,7 @@ track 被分配新 ID（重关联）
   - step 2 不看 PoseC3D argmax，YOLO 躺地+邻居攻击即判 bullying
   - `_inject_raw_history` 无差别注入，污染稳定 fighting 邻居
   - step 6c `b >= f` 对不平衡训练数据下的抖动过敏
-- **修复**：R10 三改动 P8+P9+P10（commit 待填）
+- **修复**：R10 三改动 P8+P9+P10（commit `8af7a53`）
   - P8：step 2 邻居条件收紧（仅 bullying 算证据）+ `fighting_prob≥0.7 AND bullying<f*0.3` 否决整个 step 2
   - P9：`_inject_raw_history` 拒绝向最近 3 帧 ≥2 帧 fighting 的邻居注入 bullying
   - P10：step 6c 门槛 `b>=f` → `b>=f*1.5 且 b>=0.4`
@@ -1254,6 +1254,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+8af7a53 fix(e2e): R10 fighting/bullying desensitization — P8/P9/P10           (R10)
 e9cbc11 fix(e2e): R9 rule engine tightening — P1/P2/P5/P7                    (R9)
 20185f3 fix(e2e): pair coupling — bbox-overlapping tracks must share attack state (R8.5)
 18fad7c fix(e2e): attack-prob-driven detection (ignore argmax for fighting/bullying) (R8.4)
