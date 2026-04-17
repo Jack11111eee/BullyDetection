@@ -377,7 +377,9 @@ mil_cleaning/*        → campus_mil_kfold_0~4.pkl + campus_mil_test.pkl  ← R1
 | proximity_factor | 1.5×max(身高) | fighting/bullying 近距离约束 |
 | upright_threshold | 3% 画面高度 | falling 姿态验证阈值 |
 | smooth_alpha | 0.5 | EMA 关键点平滑系数 |
-| bbox overlap threshold | 10% | 替代距离判定（3D 纵深）|
+| bbox overlap threshold | 10% | 替代距离判定（3D 纵深）+ pair coupling 门槛（R8.5）|
+| pair coupling | 启用 | **R8.5**：bbox overlap ≥ 10% 的 track 对强制共享攻击态 |
+| cross-label injection | 扩展到全攻击路径 | **R8.5**：rule_bullying/fighting 触发时向 bbox overlap 邻居 raw history 注入同标签 |
 | reassoc max_dist_ratio | 15% 画面高 | 新 track 匹配旧 track 阈值 |
 | vertical movement ratio | 5% 画面高 | climbing 必需垂直位移 |
 | grace_frames | 90（~3s @30fps）| 遮挡宽限期 |
@@ -623,6 +625,75 @@ else: 走 argmax 路径（normal/falling/climbing 的姿态验证）
 
 **删除**：`fighting conf<0.5 → normal`（被 0.3 概率阈值替代）
 
+#### R8.5 — Pair Coupling：bbox 重叠 track 强制共享攻击态（commit `20185f3`）
+
+**背景**：R8.4 后日志发现仍有两个结构性 bug：
+
+**Bug 1 (F575–F618)**：T1 持续殴打躺地的 T4，bbox 明显重叠，但 T4 持续被判 bullying，T1 持续被判 normal。
+
+```
+F554: T4 RAW=bullying(对称)  history=[b,b,b,b,b]           → bullying ✓
+F575: T1 RAW=normal(0.854)   history=[n,n,n,n,n]           → normal  ✗ T1 掉出
+F591: T1 RAW=bullying(对称)  history=[n,n,n,n,b] ENTRY 1<3 → normal  ✗
+F607: T1 RAW=bullying(对称)  history=[n,n,n,b,b] ENTRY 2<3 → normal  ✗
+F618: T4 RAW=normal(0.821)   history=[b,n,n,n,n] HOLD 1>=1 → bullying ✓
+```
+
+**Bug 2 (F618–F778)**：受害者 T4 也掉出 bullying 被锁进 falling，直到 F778 才恢复。
+
+```
+F634: T4 RAW=normal(0.816)   history=[n,n,n,n,n]           → normal
+F682: T4 RAW=falling(YOLO)   history=[n,n,n,fa,fa] ENTRY 2 → falling ✗
+       _last_smoothed[T4] = falling
+F762: T4 RAW=bullying        HOLD falling 1>=1             → falling ✗
+F778: T4 RAW=bullying        UPGRADE bullying:2>falling:1   → bullying ✓
+```
+
+**根因**：每个 track 独立判定。bbox 重叠说明 T1 和 T4 是**同一场交互事件**，但判定机制不耦合 → T4 早期入 bullying 的 HOLD 保持，T1 后入场却因 fighting_prob 在 0.15~0.38 波动，永远凑不齐 5/5 窗口中的 3 次。受害者 PoseC3D 看倒地不动输出 normal 冲刷窗口 + YOLO falling 又锁进 falling，双方同时失效。
+
+**修复 A：扩展双向传播到 asymmetry / 对称攻击路径**
+
+R8.1 只在 `rule_yolo_bullying` 路径（YOLO 躺地检测）注入邻居 raw history。R8.5 扩展到 step 5 的 `rule_bullying`（asymmetry）和对称攻击路径：
+
+```python
+# 新增 _inject_to_overlapping_neighbor(track_id, label, track_bboxes_dict)
+# 找 bbox overlap 最高的邻居（≥10%）→ _inject_raw_history(neighbor, label)
+```
+
+每次 rule_bullying/fighting 判定，向配对邻居 raw history 同步注入同一标签 → 加速邻居达成 ENTRY=3。
+
+**修复 B：Post-smoothing pair coupling**
+
+新增 `RuleEngine.couple_overlapping_pairs(judgments, track_bboxes_dict)`，在所有 track smooth 判定完成后，扫描 track 对强制共享攻击态：
+
+```
+A ∈ {fighting, bullying} + B normal + bbox overlap ≥ 10%
+  → B 升级为 A 的标签，source = 'pair_couple(A_tid)'
+  → _last_smoothed[B] = A 的标签（让后续 HOLD 维持）
+
+A = bullying + B falling + overlap ≥ 10%
+  → B 升级为 bullying（受害者在霸凌场景中应判 bullying，不是单纯 falling）
+
+A = fighting + B falling + overlap ≥ 10%
+  → B 保持 falling（独立倒地事件）
+```
+
+**pipeline.py 结构调整**：`_process_frame` 从 `loop(infer+visualize)` 重构为 `loop(infer) → couple → loop(visualize)`，确保耦合作用在所有 track 上（不只本帧推理的）。事件日志也用耦合后的标签。
+
+**保留的保护**：
+- ENTRY=3/2 严格入口（防止路人被错误拉入攻击态）
+- bbox overlap ≥ 10% 是耦合的必要门槛（只有真的互动才耦合）
+- falling + fighting 不耦合（独立事件）
+
+**预期对照 Bug 1/2**：
+
+| 帧 | T1 | T4 | 预期效果 |
+|---|---|---|---|
+| F586 | normal | bullying (HOLD) | 耦合：T1 ← bullying from T4 |
+| F591 | RAW=bullying | bullying | T1 ENTRY 被 A 注入加速 |
+| F634 | (holds via couple) | normal → 被 T1 coupling 拉回 bullying | T4 不再掉入 normal |
+| F682 | bullying | falling (YOLO) | A=bullying + B=falling → B 升级 bullying |
+
 ---
 
 ## 9. E2E 规则引擎当前完整逻辑
@@ -648,12 +719,12 @@ else: 走 argmax 路径（normal/falling/climbing 的姿态验证）
  ├─ Step 4: vandalism 规则
  │   fighting_prob > 0.5 + 场景仅 1 人 → vandalism
  │
- ├─ Step 5: 攻击概率主导（R8 新增）
+ ├─ Step 5: 攻击概率主导（R8.4 新增）
  │   attack_prob = max(fighting_prob, bullying_prob) ≥ 0.3 时：
  │     proximity_ok（邻居在 1.5×max 身高范围内）
- │       ├─ 不对称 → bullying
- │       ├─ bullying_prob ≥ fighting_prob → bullying
- │       └─ else → fighting
+ │       ├─ 不对称 → bullying + 向 bbox overlap 邻居注入 'bullying' (R8.5)
+ │       ├─ bullying_prob ≥ fighting_prob → bullying + 注入 (R8.5)
+ │       └─ else → fighting + 注入 'fighting' (R8.5)
  │     proximity 失败 → 落到 step 6
  │
  ├─ Step 6: argmax 路径
@@ -672,6 +743,14 @@ _vote_smooth（窗口 = 5，滞回）：
   ENTRY（首次进入）：fighting/bullying 需 3 次，falling/climbing 需 2 次
   HOLD（维持）：全部仅需 1 次
   UPGRADE（升级）：HOLD 时另一异常票数严格更多即切换
+ │
+ ▼
+couple_overlapping_pairs（R8.5 新增 post-processing）：
+  对所有活跃 track，bbox overlap ≥ 10% 的 pair 强制共享攻击态
+    - A ∈ {fighting,bullying} + B normal → B 升级为 A 的标签
+    - A bullying + B falling → B 升级 bullying（受害者在霸凌场景）
+    - A fighting + B falling → B 保持 falling（独立倒地）
+  同步 _last_smoothed[B] 让后续 HOLD 维持
 
 最终 FINAL label → 可视化 + event_log
 ```
@@ -856,6 +935,35 @@ track 被分配新 ID（重关联）
 - **修复**：step 6 重构为**攻击概率主导** — `max(fighting_prob, bullying_prob) ≥ 0.3` 触发攻击判定，不依赖 argmax；保留 proximity + asymmetry 强约束（commit `18fad7c`）
 - **状态**：已修复
 
+#### Problem 21: bbox 重叠却独立判定导致状态不一致
+
+- **发现**：E2E Fix Round 8.4 后
+- **详情**：T1 持续殴打躺地的 T4，bbox 明显重叠（>10%），但 T4 靠 HOLD 保持 bullying 状态，T1 因 fighting_prob 在 0.15~0.38 波动无法凑齐 ENTRY=3，持续 normal。bbox 重叠意味着两人处于同一交互事件，一个 bullying 一个 normal 是结构性不合理
+- **证据**：
+  ```
+  F591: T1 RAW=bullying history=[n,n,n,n,b] ENTRY 1<3 → normal
+  F607: T1 RAW=bullying history=[n,n,n,b,b] ENTRY 2<3 → normal
+  F618: T4 history=[b,n,n,n,n] HOLD 1>=1 → bullying
+  ```
+- **根因**：每个 track 独立判定，状态机无跨 track 耦合
+- **修复**：
+  - 修复 A：扩展双向传播到 asymmetry / 对称攻击路径 — 每次 rule_bullying/fighting 触发时向 bbox overlap 最高邻居注入同标签
+  - 修复 B：`RuleEngine.couple_overlapping_pairs()` post-smoothing 耦合 — bbox overlap ≥10% 的 pair 强制共享攻击态，同步 `_last_smoothed`（commit `20185f3`）
+- **状态**：已修复
+
+#### Problem 22: 受害者被 YOLO falling 锁死，无法恢复 bullying
+
+- **发现**：E2E Fix Round 8.4 后
+- **详情**：倒地受害者 PoseC3D 看到静止躯体普遍输出 normal，几帧后窗口被 normal 填满 → bullying HOLD 失效。此时 YOLO falling 检测躺地，raw=falling，两次确认后 `_last_smoothed[T]=falling`。之后即使受害者 RAW 恢复 bullying，HOLD(falling)=1 优先于 UPGRADE，bullying 只有 1 票时被锁在 falling
+- **证据**：
+  ```
+  F634: T4 history=[n,n,n,n,n] → normal (T4 掉出 bullying)
+  F682: T4 RAW=falling ENTRY 2>=2 → falling (_last_smoothed=falling)
+  F762: T4 RAW=bullying HOLD falling 1>=1 → falling  (UPGRADE 需 strict more)
+  ```
+- **修复**：pair coupling 中 `A=bullying + B=falling + overlap≥10% → B=bullying`。受害者在霸凌场景中应判 bullying 而非单纯 falling（commit `20185f3`）
+- **状态**：已修复
+
 ---
 
 ## 11. 辅助组件
@@ -909,16 +1017,19 @@ track 被分配新 ID（重关联）
 22. **滞回投票防止告警闪断**：ENTRY 严格（防误报）+ HOLD 宽松（防断裂）+ UPGRADE 允许（防锁死）
 23. **不能只看 argmax**：施暴者站在躺地者上方时 PoseC3D 概率分散（normal=0.5, fighting=0.4），argmax=normal 丢失信号；改为**攻击概率主导**（`max(fighting_prob, bullying_prob) ≥ 0.3`）配合 proximity + asymmetry 强约束
 24. **规则引擎的优先级需要语义对齐**：YOLO falling 的本意是补偿 PoseC3D 盲区，当 PoseC3D 已有攻击信号时应让路；不能让"补偿规则"覆盖"主信号"
+25. **独立判定各 track 在强交互场景会失效**：bbox 重叠的两人是同一事件，必须用 pair coupling 强制共享攻击态；交互物理约束（bbox 重叠）比单 track 时序约束（投票窗口）更可靠，应作为 post-processing 覆盖在单 track 判定之上
+26. **受害者≠普通倒地**：`A=bullying + B=falling + overlap` 场景下 B 不是独立倒地，是霸凌场景中的受害者 → 升级为 bullying；单纯 falling 只适用于无攻击者的跌倒
 
 ---
 
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+20185f3 fix(e2e): pair coupling — bbox-overlapping tracks must share attack state (R8.5)
+18fad7c fix(e2e): attack-prob-driven detection (ignore argmax for fighting/bullying) (R8.4)
 ebbf93c fix(e2e): PoseC3D fighting/bullying priority over YOLO falling       (R8.3)
 1fa3a21 fix(e2e): allow anomaly upgrade in hysteresis hold (falling→bullying) (R8.2)
 9d8ced2 fix(e2e): hysteresis vote + relaxed bullying victim + cross-label propagation (R8.1)
-18fad7c fix(e2e): attack-prob-driven detection (ignore argmax for fighting/bullying) (R8.4)
 4a16b2b docs: log E2E Fix Round 7                                            (R7)
 00d2e02 fix: use bbox overlap (not distance) for YOLO bullying check         (R7)
 4b196ae feat: increase vote window 3→5 and adjust vote thresholds            (R7)
