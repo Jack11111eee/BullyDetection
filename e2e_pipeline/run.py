@@ -44,8 +44,18 @@ def parse_args():
     parser.add_argument('--yolo-pose', default='yolo11m-pose.pt',
                         help='YOLO Pose 模型路径 (default: yolo11m-pose.pt)')
     parser.add_argument('--small-obj-model',
-                        default='/home/hzcu/yjm/home/yjm/VideoDetection/v6/runs/detect/campus_A28/unified_3class_model/weights/best.pt',
-                        help='小物体检测模型路径（phone/smoking/falling），设为 none 则跳过')
+                        default=None,
+                        help='[Legacy] 统一 3 类 YOLO 模型（unified_3class）。若指定则覆盖 3 路单类模型。'
+                             '设为 none 则显式禁用')
+    parser.add_argument('--falling-model',
+                        default='/home/hzcu/yjm/home/yjm/VideoDetection/v8/falling/runs/laying_yolo11m_v1/weights/best.pt',
+                        help='单类 YOLO 躺地检测模型（输出语义类 falling）。设为 none 禁用')
+    parser.add_argument('--smoking-model',
+                        default='/home/hzcu/yjm/home/yjm/VideoDetection/v8/smoking/runs/smoking_yolo11m_v1/weights/best.pt',
+                        help='单类 YOLO 吸烟检测模型（输出语义类 smoking）。设为 none 禁用')
+    parser.add_argument('--phone-model',
+                        default='/home/hzcu/yjm/home/yjm/VideoDetection/v8/phone/runs/phone_yolo11m_v1/weights/best.pt',
+                        help='单类 YOLO 手机检测模型（输出语义类 phone）。设为 none 禁用')
     parser.add_argument('--device', default='cuda:0',
                         help='推理设备 (default: cuda:0)')
 
@@ -98,16 +108,26 @@ def main():
     else:
         debug_logger.setLevel(logging.WARNING)
 
-    # 支持 --small-obj-model none 显式禁用
-    small_obj = args.small_obj_model
-    if small_obj and small_obj.lower() == 'none':
-        small_obj = None
+    def _norm(v):
+        return None if (v is None or (isinstance(v, str) and v.lower() == 'none')) else v
+
+    small_obj = _norm(args.small_obj_model)
+    falling_model = _norm(args.falling_model)
+    smoking_model = _norm(args.smoking_model)
+    phone_model = _norm(args.phone_model)
+
+    # 若 legacy --small-obj-model 给了路径，优先使用它（pipeline 里 multi 会被跳过）
+    if small_obj:
+        falling_model = smoking_model = phone_model = None
 
     pipeline = InferencePipeline(
         yolo_pose_model=args.yolo_pose,
         posec3d_config=args.posec3d_config,
         posec3d_checkpoint=args.posec3d_ckpt,
         small_obj_model=small_obj,
+        falling_model=falling_model,
+        smoking_model=smoking_model,
+        phone_model=phone_model,
         device=args.device,
         yolo_conf=args.yolo_conf,
         stride=args.stride,

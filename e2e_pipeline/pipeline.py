@@ -305,12 +305,14 @@ class PoseC3DInferencer:
 # YOLO 小物体检测封装
 # ============================================================
 class SmallObjectDetector:
+    """Legacy 统一多类模型封装（unified_3class）。保留向后兼容。
+    新 pipeline 应使用 SingleClassDetector + MultiSmallObjectDetector。
+    """
 
     def __init__(self, model_path, class_map=None, conf=0.3, imgsz=1280):
         self.model = YOLO(model_path)
         self.conf = conf
         self.imgsz = imgsz
-        # 自动从模型读取类名，不再硬编码
         if class_map is not None:
             self.class_map = class_map
         else:
@@ -329,6 +331,79 @@ class SmallObjectDetector:
                 'bbox': box.xyxy[0].tolist(),
                 'conf': float(box.conf.item()),
             })
+        return detections
+
+
+class SingleClassDetector:
+    """单类 YOLO 模型适配层（R11 新增）。
+
+    把单类专用 YOLO 模型（如 laying_yolo11m_v1 / smoking_yolo11m_v1 / phone_yolo11m_v1）
+    的任意输出强制映射为固定的 rule_engine 语义类名（falling/smoking/phone）。
+
+    设计前提：每个模型只检测单一目标，其原始 model.names 里的类名不确定
+    （可能是 'laying' 不是 'falling'）。此包装层统一输出 rule_engine 认的名字，
+    无需修改 rule_engine 字符串匹配逻辑。
+    """
+
+    def __init__(self, model_path, target_class, conf=0.3, imgsz=1280):
+        self.model = YOLO(model_path)
+        self.target_class = target_class
+        self.conf = conf
+        self.imgsz = imgsz
+
+    def detect(self, frame):
+        results = self.model(frame, conf=self.conf, imgsz=self.imgsz, verbose=False)
+        detections = []
+        for box in results[0].boxes:
+            detections.append({
+                'class': self.target_class,  # 强制语义类名,忽略模型原始 names
+                'bbox': box.xyxy[0].tolist(),
+                'conf': float(box.conf.item()),
+            })
+        return detections
+
+
+class MultiSmallObjectDetector:
+    """三路并列的单类检测器管理器（R11 新增）。
+
+    每帧按需跳过不相关的检测器以节省算力：
+      - falling 检测始终运行（安全兜底 —— PoseC3D 对一动不动躺地有盲区）
+      - smoking / phone 在任一 track 处于攻击/倒地/攀爬态时跳过（物理互斥）
+    """
+
+    def __init__(self, falling_model=None, smoking_model=None, phone_model=None,
+                 conf=0.3, imgsz=1280):
+        self.falling = SingleClassDetector(falling_model, 'falling', conf, imgsz) \
+            if falling_model else None
+        self.smoking = SingleClassDetector(smoking_model, 'smoking', conf, imgsz) \
+            if smoking_model else None
+        self.phone = SingleClassDetector(phone_model, 'phone', conf, imgsz) \
+            if phone_model else None
+
+    def any_loaded(self):
+        return any(d is not None for d in (self.falling, self.smoking, self.phone))
+
+    def detect(self, frame, need_falling=True, need_smoking=True, need_phone=True):
+        detections = []
+        ran = []
+        skipped = []
+        if self.falling and need_falling:
+            detections.extend(self.falling.detect(frame))
+            ran.append('falling')
+        elif self.falling:
+            skipped.append('falling')
+        if self.smoking and need_smoking:
+            detections.extend(self.smoking.detect(frame))
+            ran.append('smoking')
+        elif self.smoking:
+            skipped.append('smoking')
+        if self.phone and need_phone:
+            detections.extend(self.phone.detect(frame))
+            ran.append('phone')
+        elif self.phone:
+            skipped.append('phone')
+        if skipped and logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'  [YOLO-GATE] ran={ran} skipped={skipped}')
         return detections
 
 
@@ -376,7 +451,8 @@ class InferencePipeline:
     def __init__(self, yolo_pose_model, posec3d_config, posec3d_checkpoint,
                  small_obj_model=None, device='cuda:0', yolo_conf=0.3,
                  stride=16, vote_window=5, vote_ratio=0.6,
-                 loiter_time=60.0, loiter_radius=100.0):
+                 loiter_time=60.0, loiter_radius=100.0,
+                 falling_model=None, smoking_model=None, phone_model=None):
 
         print('[1/3] Loading YOLO Pose model...')
         self.yolo_pose = YOLO(yolo_pose_model)
@@ -384,9 +460,25 @@ class InferencePipeline:
         print('[2/3] Loading PoseC3D model...')
         self.posec3d = PoseC3DInferencer(posec3d_config, posec3d_checkpoint, device=device)
 
+        # R11：优先使用 3 个单类模型；若都没给且 small_obj_model 给了，用 legacy unified 模型
         self.small_obj_detector = None
-        if small_obj_model:
-            print('[2.5/3] Loading small object model...')
+        self.multi_detector = None
+        if any(m for m in (falling_model, smoking_model, phone_model)):
+            print('[2.5/3] Loading single-class YOLO models...')
+            if falling_model:
+                print(f'  falling ← {falling_model}')
+            if smoking_model:
+                print(f'  smoking ← {smoking_model}')
+            if phone_model:
+                print(f'  phone ← {phone_model}')
+            self.multi_detector = MultiSmallObjectDetector(
+                falling_model=falling_model,
+                smoking_model=smoking_model,
+                phone_model=phone_model,
+                conf=yolo_conf,
+            )
+        elif small_obj_model:
+            print(f'[2.5/3] Loading legacy unified small object model... {small_obj_model}')
             self.small_obj_detector = SmallObjectDetector(small_obj_model)
 
         print('[3/3] Initializing pipeline...')
@@ -563,6 +655,22 @@ class InferencePipeline:
                             self.track_labels[track_id] = self.track_labels.pop(old_tid)
                         self._label_missing_count.pop(old_tid, None)
 
+            # R11：帧级 gating —— 根据上一帧的 track 标签决定本帧跑哪些检测器
+            # - falling 始终跑（安全兜底）
+            # - smoking / phone 在任一 track 处于攻击/倒地/攀爬态时跳过（物理互斥）
+            _EXCLUSIVE_STATES = {'fighting', 'bullying', 'falling', 'climbing'}
+            attack_active = any(
+                self.track_labels.get(tid) is not None
+                and self.track_labels[tid].label in _EXCLUSIVE_STATES
+                for tid in current_track_ids
+            )
+            gate_need_falling = True
+            gate_need_smoking = not attack_active
+            gate_need_phone = not attack_active
+
+            # 帧级缓存 —— 同一帧多 track 推理时复用检测结果，避免 N× YOLO 调用
+            small_objs_cache = None
+
             # 第二遍A: 推理 + 画骨骼（标签绘制延后到耦合之后）
             inferred_tids = []
             for track_id, (kps_xy, kps_sc) in track_kps.items():
@@ -589,10 +697,20 @@ class InferencePipeline:
 
                     pose_probs = self.posec3d.infer(keypoint, keypoint_score, img_shape)
 
-                    # Step 3: 小物体检测
-                    small_objs = []
-                    if self.small_obj_detector is not None:
-                        small_objs = self.small_obj_detector.detect(frame)
+                    # Step 3: 小物体检测（按需 + 帧级缓存）
+                    if small_objs_cache is None:
+                        if self.multi_detector is not None:
+                            small_objs_cache = self.multi_detector.detect(
+                                frame,
+                                need_falling=gate_need_falling,
+                                need_smoking=gate_need_smoking,
+                                need_phone=gate_need_phone,
+                            )
+                        elif self.small_obj_detector is not None:
+                            small_objs_cache = self.small_obj_detector.detect(frame)
+                        else:
+                            small_objs_cache = []
+                    small_objs = small_objs_cache
 
                     # Step 4: 规则引擎
                     all_kps_scores = [(kps, sc) for kps, sc in track_kps.values()]

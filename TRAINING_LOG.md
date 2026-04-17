@@ -13,7 +13,7 @@
 5. [数据管线](#5-数据管线)
 6. [关键配置总表](#6-关键配置总表)
 7. [训练/评估命令](#7-训练评估命令)
-8. [E2E 部署调优历史（Round 1–10）](#8-e2e-部署调优历史round-110)
+8. [E2E 部署调优历史（Round 1–11）](#8-e2e-部署调优历史round-111)
 9. [E2E 规则引擎当前完整逻辑](#9-e2e-规则引擎当前完整逻辑)
 10. [问题编年史](#10-问题编年史)
 11. [辅助组件](#11-辅助组件)
@@ -388,7 +388,8 @@ mil_cleaning/*        → campus_mil_kfold_0~4.pkl + campus_mil_test.pkl  ← R1
 | vertical movement ratio | 5% 画面高 | climbing 必需垂直位移 |
 | grace_frames | 90（~3s @30fps）| 遮挡宽限期 |
 | loiter_time | 300s | 徘徊阈值 |
-| small_obj_model | unified_3class | YOLO11 三类（phone/smoking/falling）|
+| small_obj_model | 3 路单类 | **R11 (E2E)**：v8 拆分为 3 个独立 YOLO11m 模型 — laying / smoking / phone。SingleClassDetector 统一语义映射 |
+| YOLO gating | 帧级按需触发 | **R11 (E2E)**：falling 始终跑（安全兜底）；smoking/phone 在任一 track ∈ {fighting,bullying,falling,climbing} 时跳过（物理互斥）|
 
 ---
 
@@ -419,7 +420,7 @@ cd /home/hzcu/mnt/autodl/e2e_pipeline && python run.py \
 
 ---
 
-## 8. E2E 部署调优历史（Round 1–10）
+## 8. E2E 部署调优历史（Round 1–11）
 
 ### 背景
 
@@ -857,6 +858,62 @@ P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R
 - 单帧 PoseC3D 输出 b=0.35 f=0.33 不再翻转 bullying（P10 要求显著优势）
 - 即使 step 2 误判 bullying，P9 阻断传染到 fighting 邻居
 - 真实 bullying 场景（受害者倒地 + 攻击者单向）仍可识别：邻居 smoothed=bullying 持续时 step 2 正常触发；PoseC3D b=0.6 f=0.3 也满足 P10 门槛
+
+---
+
+### E2E Fix Round 11 — 小物体检测三路拆分 + 帧级 gating（commit 待填）
+
+**背景**：队友重训了小物体检测模型，从一个 unified 3-class 模型拆成 3 个独立单类 YOLO11m（性能更好但每类名字可能不一致）。原 `unified_3class_model/best.pt` 替换为：
+- `v8/falling/runs/laying_yolo11m_v1/weights/best.pt`（注意：模型文件夹名 `laying` 而非 `falling`，原始 `model.names` 可能输出 `laying` → 直接换权重会导致 rule_engine 字符串匹配失效）
+- `v8/smoking/runs/smoking_yolo11m_v1/weights/best.pt`
+- `v8/phone/runs/phone_yolo11m_v1/weights/best.pt`
+
+#### 修改 A — SingleClassDetector 语义适配层（pipeline.py）
+
+新增 `SingleClassDetector` 包装单类模型：任何输出 box 强制打固定 `target_class` 标签（`falling`/`smoking`/`phone`），完全忽略模型原始 `names`。rule_engine 字符串匹配逻辑保持不变。
+
+新增 `MultiSmallObjectDetector` 管理 3 路检测器：`detect(frame, need_falling, need_smoking, need_phone)` 按需跳过。
+
+#### 修改 B — 帧级 gating（pipeline.py `_process_frame`）
+
+- **帧级缓存**：同一帧多 track 推理时只调一次 YOLO（原实现 N 个 track 触发 N 次 detect，浪费）
+- **按类延迟触发（物理互斥 gating）**：
+  - `falling`：始终运行（PoseC3D 对一动不动躺地的盲区必须补偿）
+  - `smoking` / `phone`：任一 track 上一帧标签 ∈ {fighting, bullying, falling, climbing} 时跳过（这些状态下人不可能同时吸烟/打电话）
+
+Gating 基于**上一帧**的 track 标签（因果性，不等当前帧判定完）。
+
+#### 修改 C — run.py CLI
+
+新增 `--falling-model` / `--smoking-model` / `--phone-model`，默认指向 v8 三路新路径。保留 `--small-obj-model`（legacy unified 模型）用于回退；若指定则覆盖 3 路配置。`none` 显式禁用单个检测器。
+
+```bash
+# 默认使用 3 路单类模型
+python e2e_pipeline/run.py --source demo.mp4 --posec3d-config ... --posec3d-ckpt ...
+
+# 回退到旧 unified 模型
+python e2e_pipeline/run.py --small-obj-model /old/unified_3class/best.pt ...
+
+# 禁用 smoking 检测
+python e2e_pipeline/run.py --smoking-model none ...
+```
+
+#### R11 (E2E) 配置快照
+
+| 参数 | R10 | R11 |
+|---|---|---|
+| 小物体模型 | 1 个 unified 3-class | 3 个 single-class + SingleClassDetector 语义映射 |
+| 类名语义 | 依赖 `model.names` 字典 | 强制覆盖为 rule_engine 预期名（falling/smoking/phone） |
+| 检测调用频率 | 每 track 推理时都调 | 每帧缓存一次，多 track 共享 |
+| gating | 无 | falling 始终跑；smoking/phone 在攻击/倒地/攀爬态跳过 |
+
+**预期效果**：
+- 检测器升级（v6 → v8）精度提升（需视频验证）
+- 跳过开销：典型 fighting 段每帧少跑 2 次 YOLO；多 track 场景每帧少跑 (N-1) 次
+
+**未处理 / 已知风险**：
+- 若 3 个模型的 `conf/imgsz` 需要不同（如 laying 要更高 imgsz 捕大 bbox），目前共用 `yolo_conf=0.3, imgsz=1280`
+- 上一帧 gating 有 1 帧延迟：开始吸烟的第一帧若另一 track 仍在 fighting 态，smoking 会被跳过（下一帧 fighting 结束自然恢复）
 
 ---
 
