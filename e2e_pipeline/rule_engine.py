@@ -416,11 +416,13 @@ class RuleEngine:
 
     优先级（从高到低）：
     1. PoseC3D 高置信度结果（falling/climbing > 0.7 直接采信）
-    2. YOLO 辅助 falling 检测（一动不动躺地）
+    2. YOLO 辅助 falling 检测（一动不动躺地，有攻击信号时让路）
     3. 小物体规则（smoking / phone_call）
     4. vandalism 规则
-    5. PoseC3D 默认结果（fighting/bullying/falling）
-    6. 徘徊检测（轨迹分析，5分钟阈值）
+    5. 攻击概率主导（fighting 或 bullying 概率 >= 0.3 触发，
+       不依赖 argmax，proximity + asymmetry 强约束）
+    6. argmax 路径（normal/falling/climbing 的姿态验证）
+    7. 徘徊检测（轨迹分析，5分钟阈值）
     """
 
     def __init__(self, pose_threshold=0.3, vote_window=5, vote_ratio=0.6,
@@ -547,17 +549,16 @@ class RuleEngine:
                         # 帮助攻击者靠滞回维持攻击状态（不覆盖 smoothed，只加弱证据）
                         self._inject_raw_history(other_tid, 'bullying')
                         return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
-            # PoseC3D 已检出 fighting/bullying 时，跳过 YOLO falling，
-            # 让 step 6 走不对称检测等完整 fighting/bullying 逻辑。
+            # PoseC3D 已检出 fighting/bullying 弱信号（>=0.3）时，跳过 YOLO falling，
+            # 让 step 6 走攻击概率主导逻辑（proximity + asymmetry）。
             # YOLO falling 本意是补偿「一动不动+PoseC3D 输出 normal」的盲区，
             # 不应覆盖 PoseC3D 已有的攻击信号。
-            # fighting 需 >=0.5 才能通过 step 6 的置信度门槛。
-            if pose_label == 'fighting' and pose_conf >= 0.5:
-                logger.debug(f'  [RAW] T{track_id} YOLO躺地但PoseC3D=fighting({pose_conf:.3f}>=0.5), '
-                             f'跳过YOLO falling, 交给PoseC3D路径处理')
-            elif pose_label == 'bullying' and pose_conf >= self.pose_threshold:
-                logger.debug(f'  [RAW] T{track_id} YOLO躺地但PoseC3D=bullying({pose_conf:.3f}), '
-                             f'跳过YOLO falling, 交给PoseC3D路径处理')
+            fighting_prob_early = float(pose_probs[1])
+            bullying_prob_early = float(pose_probs[2])
+            if fighting_prob_early >= self.pose_threshold or bullying_prob_early >= self.pose_threshold:
+                logger.debug(f'  [RAW] T{track_id} YOLO躺地但PoseC3D有攻击信号 '
+                             f'(fighting={fighting_prob_early:.3f}, bullying={bullying_prob_early:.3f}), '
+                             f'跳过YOLO falling, 交给step 6攻击概率路径处理')
             else:
                 # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
                 logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
@@ -586,44 +587,75 @@ class RuleEngine:
             logger.debug(f'  [RAW] T{track_id} → vandalism (规则引擎: fighting={pose_probs[1]:.3f}, 1人)')
             return 'vandalism', vandal_conf, 'rule_vandalism'
 
-        # 6. 默认用 PoseC3D 结果（优先于徘徊检测，避免 bullying 被误判为 loitering）
-        if pose_conf >= self.pose_threshold:
-            final_label = pose_label
+        # 6. 攻击概率主导路径（fighting 或 bullying 概率 >= threshold）
+        #    不依赖 argmax —— 只要任一攻击类概率过 0.3，就进入完整的攻击判定流程。
+        #    这是为了捕获 PoseC3D 输出被 normal 分散的弱攻击信号
+        #    （例: normal=0.5, fighting=0.4, 施暴者站在躺地者上方的典型分布）。
+        #    保留 proximity + asymmetry 强约束防止误报。
+        fighting_prob = float(pose_probs[1])
+        bullying_prob = float(pose_probs[2])
+        attack_prob = max(fighting_prob, bullying_prob)
 
-            # 6a. fighting 额外置信度要求 + 近距离约束
-            if final_label == 'fighting':
-                if pose_conf < 0.5:
-                    logger.debug(f'  [RAW] T{track_id} → normal (fighting置信度不足: {pose_conf:.3f} < 0.5)')
-                    return 'normal', 1.0 - pose_conf, 'rule_fight_low_conf'
-                if all_person_kps_scores is not None:
-                    my_height = _person_height(person_kps, person_scores)
-                    nearest_dist, neighbor_height = _nearest_person_dist(
-                        person_kps, person_scores, all_person_kps_scores
-                    )
-                    # 用两人中较高者的身高，适应倒地者身高极小的情况
-                    ref_height = max(my_height or 0, neighbor_height or 0)
-                    max_fight_dist = (ref_height * 1.5) if ref_height > 0 else img_shape[0] * 0.25
-                    if nearest_dist > max_fight_dist:
-                        logger.debug(f'  [RAW] T{track_id} → normal (fighting但无人在附近: '
-                                     f'nearest={nearest_dist:.0f} > {max_fight_dist:.0f})')
-                        return 'normal', 1.0 - pose_conf, 'rule_no_proximity'
+        if attack_prob >= self.pose_threshold:
+            # 6a. proximity 必要条件：孤立个体不算攻击
+            proximity_ok = True
+            nearest_dist_log = -1.0
+            max_fight_dist_log = -1.0
+            if all_person_kps_scores is not None and len(all_person_kps_scores) >= 2:
+                my_height = _person_height(person_kps, person_scores)
+                nearest_dist, neighbor_height = _nearest_person_dist(
+                    person_kps, person_scores, all_person_kps_scores
+                )
+                ref_height = max(my_height or 0, neighbor_height or 0)
+                max_fight_dist = (ref_height * 1.5) if ref_height > 0 else img_shape[0] * 0.25
+                nearest_dist_log = nearest_dist
+                max_fight_dist_log = max_fight_dist
+                if nearest_dist > max_fight_dist:
+                    proximity_ok = False
+            else:
+                # 场景只有 1 人 → 无攻击对象
+                proximity_ok = False
 
-                # 6b. fighting → bullying 不对称性修正
+            if proximity_ok:
+                # 6b. 不对称检测：一方倒地/蜷缩 → bullying
                 is_bully, bully_conf = check_bullying_asymmetry(
                     person_kps, person_scores, all_person_kps_scores, img_shape
                 )
                 if is_bully:
-                    logger.debug(f'  [RAW] T{track_id} → bullying (fighting改判: 姿态不对称)')
-                    return 'bullying', pose_conf * 0.9, 'rule_bullying'
+                    logger.debug(f'  [RAW] T{track_id} → bullying (攻击概率'
+                                 f'f={fighting_prob:.3f},b={bullying_prob:.3f} + 姿态不对称)')
+                    return 'bullying', attack_prob * 0.9, 'rule_bullying'
 
-            # 6c. climbing 垂直位移验证：无垂直运动不算 climbing
+                # 6c. 对称攻击 → 按概率选 fighting 或 bullying
+                if bullying_prob >= fighting_prob:
+                    logger.debug(f'  [RAW] T{track_id} → bullying (攻击概率: '
+                                 f'b={bullying_prob:.3f}>=f={fighting_prob:.3f})')
+                    return 'bullying', bullying_prob, 'posec3d'
+                else:
+                    logger.debug(f'  [RAW] T{track_id} → fighting (攻击概率: '
+                                 f'f={fighting_prob:.3f}>b={bullying_prob:.3f})')
+                    return 'fighting', fighting_prob, 'posec3d'
+            else:
+                logger.debug(f'  [RAW] T{track_id} 攻击信号但proximity失败 (nearest='
+                             f'{nearest_dist_log:.0f} > {max_fight_dist_log:.0f})，落到argmax路径')
+
+        # 6d. argmax 路径（处理 normal/falling/climbing；fighting/bullying 已在上方处理）
+        if pose_conf >= self.pose_threshold:
+            final_label = pose_label
+
+            # fighting/bullying argmax 但 proximity 失败 → 降级 normal
+            if final_label in ('fighting', 'bullying'):
+                logger.debug(f'  [RAW] T{track_id} → normal (argmax={final_label}但proximity失败)')
+                return 'normal', 1.0 - pose_conf, 'rule_no_proximity'
+
+            # climbing 垂直位移验证：无垂直运动不算 climbing
             if final_label == 'climbing':
                 positions = self.track_positions.get(track_id, [])
                 if not _has_vertical_movement(positions, img_shape[0]):
                     logger.debug(f'  [RAW] T{track_id} → normal (climbing但无垂直位移, 可能坐着)')
                     return 'normal', 1.0 - pose_conf, 'rule_no_vertical'
 
-            # 6d. falling 姿态验证：躯干直立或坐姿不算 falling
+            # falling 姿态验证：躯干直立或坐姿不算 falling
             if final_label == 'falling':
                 if _is_upright_posture(person_kps, person_scores, img_shape):
                     logger.debug(f'  [RAW] T{track_id} → normal (falling但躯干直立, 可能是坐下)')
