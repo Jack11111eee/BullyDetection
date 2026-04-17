@@ -393,9 +393,11 @@ def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, i
     h = img_shape[0]
     head_hip_normalized = head_hip_diff / h if h > 0 else 0
 
-    # height_ratio < 0.6 → 一方身高不到另一方的60%（明显蜷缩）
-    # head_hip_normalized > 0.1 → 头-髋差异超过画面高度10%（明显不对称）
-    is_asymmetric = height_ratio < 0.6 or head_hip_normalized > 0.1
+    # P5 收紧（R9）：OR→AND + 阈值收紧，降低正常场景（身高差、弯腰、蹲下）误触发
+    # height_ratio < 0.5 → 一方身高不到另一方的50%（明显蜷缩/倒地）
+    # head_hip_normalized > 0.15 → 头-髋差异超过画面高度15%（明显姿态不对称）
+    # 两个条件必须同时满足，避免单一噪声触发
+    is_asymmetric = height_ratio < 0.5 and head_hip_normalized > 0.15
 
     if is_asymmetric:
         conf = max(1.0 - height_ratio, head_hip_normalized * 5)
@@ -515,6 +517,9 @@ class RuleEngine:
         # 2. YOLO 辅助 falling 检测（一动不动躺地，PoseC3D 识别不出）
         #    躺地 + 附近有被标为 fighting/bullying 的人 → bullying（被霸凌）
         #    躺地 + 附近无攻击者 → falling
+        # P7 (R9)：YOLO falling 信号若被 PoseC3D 弱攻击信号抢先跳过，需在 step 6 之后
+        # 确保被消费，避免 attack_prob 没过门槛或 proximity 失败时信号被 normal 吞掉。
+        yolo_falling_deferred = None  # (conf, bbox_horizontal) if 暂存给 step 6 后消费
         is_fallen_yolo, fallen_yolo_conf, bbox_horizontal = check_fallen_by_yolo(
             person_kps, person_scores, small_obj_detections, img_shape
         )
@@ -556,9 +561,12 @@ class RuleEngine:
             fighting_prob_early = float(pose_probs[1])
             bullying_prob_early = float(pose_probs[2])
             if fighting_prob_early >= self.pose_threshold or bullying_prob_early >= self.pose_threshold:
+                # P7 (R9)：暂存 YOLO falling 信号给 step 6 之后兜底消费，
+                # 不直接丢弃 — 否则 step 6 攻击判定失败时会被 normal argmax 吞掉。
+                yolo_falling_deferred = (fallen_yolo_conf, bbox_horizontal)
                 logger.debug(f'  [RAW] T{track_id} YOLO躺地但PoseC3D有攻击信号 '
                              f'(fighting={fighting_prob_early:.3f}, bullying={bullying_prob_early:.3f}), '
-                             f'跳过YOLO falling, 交给step 6攻击概率路径处理')
+                             f'暂存YOLO falling给step 6后兜底')
             else:
                 # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
                 logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
@@ -592,11 +600,18 @@ class RuleEngine:
         #    这是为了捕获 PoseC3D 输出被 normal 分散的弱攻击信号
         #    （例: normal=0.5, fighting=0.4, 施暴者站在躺地者上方的典型分布）。
         #    保留 proximity + asymmetry 强约束防止误报。
+        # P1 (R9)：增加相对优势判定 —— 仅在 attack_prob 不被 normal_prob 压倒时触发，
+        # 避免 [normal=0.60, fighting=0.32, ...] 这种 normal 主导分布也进入攻击路径。
         fighting_prob = float(pose_probs[1])
         bullying_prob = float(pose_probs[2])
+        normal_prob = float(pose_probs[0])
         attack_prob = max(fighting_prob, bullying_prob)
 
-        if attack_prob >= self.pose_threshold:
+        # 相对优势：attack_prob 必须至少是 normal_prob 的 70%
+        # 例: normal=0.50 要求 attack>=0.35；normal=0.40 要求 attack>=0.30（与绝对阈值一致）
+        relative_ok = attack_prob >= normal_prob * 0.7
+
+        if attack_prob >= self.pose_threshold and relative_ok:
             # 6a. proximity 必要条件：孤立个体不算攻击
             proximity_ok = True
             nearest_dist_log = -1.0
@@ -649,6 +664,18 @@ class RuleEngine:
             else:
                 logger.debug(f'  [RAW] T{track_id} 攻击信号但proximity失败 (nearest='
                              f'{nearest_dist_log:.0f} > {max_fight_dist_log:.0f})，落到argmax路径')
+        elif attack_prob >= self.pose_threshold and not relative_ok:
+            # P1 日志：被 relative_ok 阻挡的 case
+            logger.debug(f'  [RAW] T{track_id} attack_prob={attack_prob:.3f}过线但被normal压制 '
+                         f'(normal={normal_prob:.3f}, 要求attack>=normal*0.7={normal_prob*0.7:.3f})')
+
+        # P7 (R9)：step 6 攻击判定没成功返回 → 消费暂存的 YOLO falling 信号
+        # 避免 proximity 失败 / attack_prob 相对劣势 / PoseC3D argmax=normal 吞掉 YOLO 信号
+        if yolo_falling_deferred is not None:
+            conf, horizontal = yolo_falling_deferred
+            logger.debug(f'  [RAW] T{track_id} → falling (step 6未判攻击, YOLO falling兜底, '
+                         f'conf={conf:.3f}, bbox={"水平" if horizontal else "竖直"})')
+            return 'falling', conf, 'rule_yolo_falling'
 
         # 6d. argmax 路径（处理 normal/falling/climbing；fighting/bullying 已在上方处理）
         if pose_conf >= self.pose_threshold:
@@ -745,11 +772,16 @@ class RuleEngine:
         'bullying': 3,   # 交互，3次确认
         'fighting': 3,   # 最严格，3次确认（减少站立误判）
     }
+    # P2 (R9)：攻击类 HOLD_MIN 1→2，降低永锁风险。
+    # 配合 P1（attack_prob 相对优势）+ P5（asymmetry 收紧）+ pair coupling 注入，
+    # HOLD=1 在 5 窗口内只要 1 帧异常就维持，等价于进入后几乎永远退不出。
+    # 攻击类改为 2（5 窗口 2/5 维持），防止单帧噪声把异常态锁死。
+    # falling/climbing 保持 1（姿态延续性高，倒地/攀爬一旦发生很少一闪而过）。
     VOTE_HOLD_MIN = {
         'falling': 1,    # 进入后只要 1 次即维持
         'climbing': 1,
-        'bullying': 1,
-        'fighting': 1,
+        'bullying': 2,   # R9: 1→2 防永锁
+        'fighting': 2,   # R9: 1→2 防永锁
     }
 
     def _vote_smooth(self, track_id, current_label):

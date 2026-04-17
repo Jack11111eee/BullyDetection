@@ -696,6 +696,108 @@ A = fighting + B falling + overlap ≥ 10%
 
 ---
 
+### E2E Fix Round 9 — 规则引擎判定逻辑收紧（反制 R8 过矫正的系统性修复）
+
+**背景**：R8.1–R8.5 五次连续修复都在「把系统往倾向报告攻击的方向推」—— 降阈值、pair coupling、跨 track 注入、攻击概率主导、HOLD=1。叠加后进入攻击态极易、退出极难。R9 做反向收紧，目标"实事求是"，不倾向任何一边。深度审视判定逻辑找到 7 处结构性问题（P1–P7），本轮先实施 ROI 最高的 4 处：P1/P2/P5/P7（纯阈值+少量兜底逻辑，不动框架）。
+
+#### P1 — attack_prob 改为相对优势判定（绝对阈值 → 绝对+相对）
+
+**问题**：`attack_prob >= 0.3` 是绝对阈值，忽略 normal 的压制。PoseC3D 5 类 softmax + R11 仍残留 ~10% normal↔fighting 互混 → `[normal=0.60, fighting=0.32, ...]` 会触发攻击判定，但 normal 是 fighting 两倍。等价于"只要 fighting 不被完全压制就考虑"。
+
+**修改**（rule_engine.py 步骤 6）：
+```python
+normal_prob = float(pose_probs[0])
+relative_ok = attack_prob >= normal_prob * 0.7
+if attack_prob >= self.pose_threshold and relative_ok:
+    # 进入攻击判定
+```
+
+**阈值含义**：normal=0.50 要求 attack≥0.35；normal=0.40 要求 attack≥0.30（与原绝对阈值一致）；normal=0.60 要求 attack≥0.42。normal 越主导，攻击门槛越高。
+
+#### P2 — HOLD_MIN 攻击类 1→2（防永锁）
+
+**问题**：`HOLD_MIN = 1` 意味 5 窗口内只要 1 帧异常就维持。配合 P1 的原低门槛 + pair coupling + raw injection 三重放大 → 进入极易、退出几乎不可能。
+
+**修改**（rule_engine.py `VOTE_HOLD_MIN`）：
+```python
+VOTE_HOLD_MIN = {
+    'falling': 1, 'climbing': 1,
+    'bullying': 2, 'fighting': 2,  # R9: 1→2
+}
+```
+
+falling/climbing 保持 1（姿态延续性高），攻击类要求 5 窗口 2/5 维持。原本 R8 担心的"断裂"来自 ENTRY=3 太严，不是 HOLD=1 太松。
+
+#### P5 — check_bullying_asymmetry 阈值收紧 + OR→AND
+
+**问题**：
+```python
+is_asymmetric = height_ratio < 0.6 or head_hip_normalized > 0.1
+```
+身高比<0.6（真实身高差+PoseC3D 漏检下半身频繁触发）、头-髋差>10% 画面高（正常弯腰、蹲下、拾物即满足）。**OR** 让任一条件即触发 + 单帧判定 → 姿态瞬间抖动即误判 bullying。
+
+**修改**（rule_engine.py line 398）：
+```python
+is_asymmetric = height_ratio < 0.5 and head_hip_normalized > 0.15
+```
+
+两条件必须同时满足；阈值分别收紧到 50% 身高比 + 15% 画面高。
+
+#### P7 — YOLO falling 暂存 + 兜底消费（修复结构性 bug）
+
+**问题**：R8.3 的 step 2 跳过逻辑：
+```python
+if fighting_prob_early >= 0.3 or bullying_prob_early >= 0.3:
+    # 跳过 YOLO falling，交给 step 6
+```
+但 step 6 若 proximity 失败（独自躺地）→ 走 argmax 路径 → argmax=normal → 输出 normal。**YOLO 检测到的 falling bbox 被完全吞掉**。一个独自昏倒的人只要 PoseC3D 噪声输出 fighting=0.3 就不会被标 falling。
+
+**修改**（rule_engine.py）：
+1. step 2 跳过时把 YOLO falling 结果存进局部变量 `yolo_falling_deferred`（而非直接丢弃）
+2. step 6 所有分支走完后、step 6d argmax 前，若 `yolo_falling_deferred` 仍存在 → return falling
+
+```python
+# Step 2
+yolo_falling_deferred = None
+if is_fallen_yolo:
+    if ... # 优先 bullying 检查
+    if PoseC3D 有攻击信号:
+        yolo_falling_deferred = (conf, horizontal)  # 暂存
+    else:
+        return 'falling', ...  # 直接返回
+
+# Step 6 攻击判定走完
+
+# P7 兜底：step 6 未判攻击 → 消费暂存
+if yolo_falling_deferred is not None:
+    return 'falling', conf, 'rule_yolo_falling'
+```
+
+#### 未实施的 P3/P4/P6（ROI 较低或改动量大）
+
+- **P3 Pair coupling 退出机制缺失** —— 当前耦合后 `_last_smoothed[B]=攻击态` 无退出条件，需 coupling TTL + bbox 解耦判定（约 15 行）
+- **P4 Pair coupling 无次级阈值** —— B 需要自己的 attack_prob ≥ 0.15 才允许被 A 拉升，需存 last_pose_probs（约 20 行）
+- **P6 Raw injection 无弱证据标记** —— 注入应 0.5 票计数而非 full-weight（约 30 行）
+
+P1+P2+P5+P7 改动总量 ~50 行，主体是阈值+兜底路径。P3/P4/P6 视 R9 效果再决定。
+
+#### R9 配置快照
+
+| 参数 | R8.5 | R9 |
+|---|---|---|
+| attack_prob 触发 | ≥ 0.3 | ≥ 0.3 **且** ≥ normal_prob × 0.7 |
+| asymmetry 逻辑 | `ratio<0.6 OR head_hip>0.1` | `ratio<0.5 AND head_hip>0.15` |
+| VOTE_HOLD_MIN (attack) | 1 | 2 |
+| YOLO falling 被跳过 | 直接丢弃 | 暂存兜底 |
+
+**预期行为变化**：
+- 走廊并行两人（height_ratio 0.85, head_hip 5%画面）→ 不再误判 bullying（阈值拦截）
+- normal=0.55 fighting=0.35 场景 → 不再进入攻击判定（normal 压制）
+- 攻击态一旦确认，5 窗口里 2 帧异常即维持（更稳）但 4 帧 normal 将退出（不永锁）
+- 独自昏倒 + PoseC3D fighting=0.3 噪声 → 仍标 falling（YOLO 兜底）
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
