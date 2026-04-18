@@ -347,11 +347,11 @@ def check_fallen_by_yolo(person_kps, person_scores, small_obj_detections, img_sh
     Returns: (is_fallen, confidence, bbox_is_horizontal)
         bbox_is_horizontal: True 如果检测框宽>高（人是水平躺着的）
     """
-    # R14 实验：conf 下限过滤 conf > 0.52
+    # R14 实验：conf 下限过滤 conf > 0.4
     # 抛弃低置信度边界检测（laying 模型对竖直姿态频繁输出 0.3~0.4 假阳）
-    # 迭代:初版 (0.7, 0.95) → 回调到 (0.52, 0.95) → 去掉上限只留 > 0.52
+    # 迭代:初版 (0.7, 0.95) → 回调到 (0.52, 0.95) → 去掉上限只留 > 0.52 → 回调到 > 0.4（放宽以减少漏检风险）
     fallen = [d for d in small_obj_detections
-              if d['class'] == 'falling' and d['conf'] > 0.52]
+              if d['class'] == 'falling' and d['conf'] > 0.4]
     if not fallen:
         return False, 0.0, False
 

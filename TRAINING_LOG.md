@@ -1053,13 +1053,15 @@ gate_need_phone = True
 | 原始 | `class == 'falling'` |
 | R14 初版 | `class == 'falling' AND 0.7 < conf < 0.95` |
 | R14 回调 | `class == 'falling' AND 0.52 < conf < 0.95` |
-| R14 终版 | `class == 'falling' AND conf > 0.52` |
+| R14 v3 | `class == 'falling' AND conf > 0.52` |
+| R14 终版 | `class == 'falling' AND conf > 0.4` |
 
-- **下限 0.52**：拦截边界低置信度误检（初版 0.7 约束过强）
+- **下限 0.4**：黑盒评测视频分布未知，0.52 可能漏掉真实倒地场景（老人缓慢倒地等 conf 介于 0.4~0.5 的边界情况），放宽到 0.4 换取召回
 - **去掉上限 0.95**：真实倒地场景 YOLO 可能稳定输出 conf ≥ 0.95,上限可能误拦真阳
 
 **风险/回退计划**：
-- 若真实倒地场景 conf 低于 0.52 → 仍可能漏检
+- 0.4 相比 0.52 会重新放进一部分 laying YOLO 对竖直姿态的误检（日志里 T3 误检 conf 为 0.31~0.36，0.4 仍可拦截）
+- 若测试发现误检变多 → 调回 0.52 或加 PoseC3D 否决门（`normal_prob ≥ 0.9` 时不信任 laying YOLO）
 - **用户明确表示先试,不行就改回**。直接撤销 conf 条件即可恢复原状
 
 ---
