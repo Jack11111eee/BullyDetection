@@ -1042,7 +1042,7 @@ gate_need_phone = True
 
 ---
 
-### E2E Fix Round 14 — YOLO falling 置信度窗口过滤（实验，commit 待填）
+### E2E Fix Round 14 — YOLO falling 置信度窗口过滤（实验，commit `4421b26`）
 
 **背景**：R13 日志里 T3 被 laying YOLO 持续误判 falling，conf 始终在 **0.311 ~ 0.365** 之间（贴着 yolo_conf=0.3 下限），PoseC3D 同时输出 `normal=1.000, falling=0.000`。边界低置信度误检。
 
