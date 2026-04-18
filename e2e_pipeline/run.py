@@ -18,11 +18,37 @@ run.py — 校园安防视频行为感知系统 入口
 import argparse
 import logging
 import os
+import re
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pipeline import InferencePipeline
+
+
+def _derive_source_tag(source):
+    """从 --source 派生一个适合做文件名的短标签。
+    - 文件路径(mp4/jpg 等): basename 去扩展名
+    - 纯数字: cam{id}
+    - RTSP/HTTP URL: url_{host}
+    - 文件夹: 目录名
+    """
+    if source is None:
+        return 'unknown'
+    s = str(source).strip()
+    if re.fullmatch(r'\d+', s):
+        return f'cam{s}'
+    if s.startswith(('rtsp://', 'http://', 'https://', 'rtmp://')):
+        m = re.search(r'://([^/:@]+)', s)
+        return 'url_' + (m.group(1) if m else 'remote')
+    base = os.path.basename(os.path.normpath(s))
+    if not base:
+        return 'source'
+    stem = os.path.splitext(base)[0]
+    # 文件名清理: 只留字母数字/下划线/连字符/点
+    stem = re.sub(r'[^\w.\-]+', '_', stem).strip('_.')
+    return stem or 'source'
 
 
 def parse_args():
@@ -96,15 +122,20 @@ def main():
     if args.debug:
         debug_logger.setLevel(logging.DEBUG)
         fmt = logging.Formatter('%(message)s')
-        # 输出到文件
-        fh = logging.FileHandler('debug.log', mode='w', encoding='utf-8')
+        # 按视频名+时间戳命名日志,每次运行独立存档
+        log_dir = 'logs'
+        os.makedirs(log_dir, exist_ok=True)
+        tag = _derive_source_tag(args.source)
+        ts = time.strftime('%Y%m%d_%H%M%S')
+        log_path = os.path.join(log_dir, f'debug_{tag}_{ts}.log')
+        fh = logging.FileHandler(log_path, mode='w', encoding='utf-8')
         fh.setFormatter(fmt)
         debug_logger.addHandler(fh)
         # 也输出到 stderr
         sh = logging.StreamHandler()
         sh.setFormatter(fmt)
         debug_logger.addHandler(sh)
-        print('[DEBUG] Debug logging enabled → debug.log')
+        print(f'[DEBUG] Debug logging enabled → {log_path}')
     else:
         debug_logger.setLevel(logging.WARNING)
 
