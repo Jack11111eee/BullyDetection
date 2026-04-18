@@ -1042,23 +1042,25 @@ gate_need_phone = True
 
 ---
 
-### E2E Fix Round 14 — YOLO falling 置信度窗口过滤（实验，commit `4421b26`）
+### E2E Fix Round 14 — YOLO falling 置信度窗口过滤（实验，commit `4421b26` + 回调待填）
 
 **背景**：R13 日志里 T3 被 laying YOLO 持续误判 falling，conf 始终在 **0.311 ~ 0.365** 之间（贴着 yolo_conf=0.3 下限），PoseC3D 同时输出 `normal=1.000, falling=0.000`。边界低置信度误检。
 
-**改动**：`check_fallen_by_yolo` 加 conf 窗口过滤（rule_engine.py:350）
+**改动**：`check_fallen_by_yolo` 加 conf 下限过滤（rule_engine.py:350）
 
-| 参数 | 旧 | 新 |
-|---|---|---|
-| `fallen` 筛选 | `class == 'falling'` | `class == 'falling' AND 0.7 < conf < 0.95` |
+| 阶段 | 筛选条件 |
+|---|---|
+| 原始 | `class == 'falling'` |
+| R14 初版 | `class == 'falling' AND 0.7 < conf < 0.95` |
+| R14 回调 | `class == 'falling' AND 0.52 < conf < 0.95` |
+| R14 终版 | `class == 'falling' AND conf > 0.52` |
 
-- **下限 0.7**：拦截边界低置信度误检
-- **上限 0.95**：拦截可能的过拟合稳定误检
+- **下限 0.52**：拦截边界低置信度误检（初版 0.7 约束过强）
+- **去掉上限 0.95**：真实倒地场景 YOLO 可能稳定输出 conf ≥ 0.95,上限可能误拦真阳
 
 **风险/回退计划**：
-- 若真实倒地场景 conf 低于 0.7（laying 模型在某些倒地姿势也可能输出 0.5~0.7）→ 漏检
-- 若大量真实倒地 conf ≥ 0.95 → 被上限误拦
-- **用户明确表示先试,不行就改回**。直接撤销这一处 `0.7 < conf < 0.95` 条件即可恢复原状
+- 若真实倒地场景 conf 低于 0.52 → 仍可能漏检
+- **用户明确表示先试,不行就改回**。直接撤销 conf 条件即可恢复原状
 
 ---
 
