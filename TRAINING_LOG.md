@@ -1447,6 +1447,7 @@ track 被分配新 ID（重关联）
 | K-Fold Training | `train_kfold.sh` | 已建 |
 | Round Eval | `eval_round9.py` | 已建 |
 | MIL Cleaning | `mil_cleaning/*` | 已建 |
+| Per-run debug log | `e2e_pipeline/run.py` `_derive_source_tag` | `logs/debug_<source>_<ts>.log` 按运行归档(commit `5ebac76`) |
 
 ---
 
