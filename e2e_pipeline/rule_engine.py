@@ -516,7 +516,7 @@ class RuleEngine:
             scene_person_count=scene_person_count,
         )
 
-        smoothed_label = self._vote_smooth(track_id, raw_label)
+        smoothed_label = self._vote_smooth(track_id, raw_label, raw_source=source)
 
         return BehaviorResult(
             label=smoothed_label,
@@ -628,7 +628,21 @@ class RuleEngine:
                              f'(fighting={fighting_prob_early:.3f}, bullying={bullying_prob_early:.3f}), '
                              f'暂存YOLO falling给step 6后兜底')
             else:
-                # 信任 YOLO falling 检测（专门训练的检测器，不受摄像头角度影响）
+                # R15 修复 B：骨骼坐姿软否决（压误报）
+                # 条件：骨骼纵横比纵向展开 + 至少 8 个有效关键点 + PoseC3D normal >= 0.25
+                # 三重门槛是为了在"骨骼可信 + 模型交叉验证"时才否决，避免遮挡/低质骨骼导致漏检
+                valid_kp_count = int((person_scores > 0.3).sum())
+                normal_prob_here = float(pose_probs[0])
+                if (valid_kp_count >= 8 and
+                        _is_sitting_posture(person_kps, person_scores, img_shape) and
+                        normal_prob_here >= 0.25):
+                    logger.debug(
+                        f'  [RAW] T{track_id} YOLO falling 被坐姿否决 '
+                        f'(valid_kp={valid_kp_count}, normal={normal_prob_here:.3f}, '
+                        f'bbox={"水平" if bbox_horizontal else "竖直"})'
+                    )
+                    return 'normal', 1.0 - fallen_yolo_conf, 'rule_sitting_veto_yolo'
+                # 信任 YOLO falling 检测
                 logger.debug(f'  [RAW] T{track_id} → falling (YOLO辅助检测: conf={fallen_yolo_conf:.3f}, '
                              f'bbox={"水平" if bbox_horizontal else "竖直"})')
                 return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
@@ -887,12 +901,16 @@ class RuleEngine:
         window = self._window_for(label)
         return sum(1 for h in history[-window:] if h == label)
 
-    def _vote_smooth(self, track_id, current_label):
+    def _vote_smooth(self, track_id, current_label, raw_source=None):
         """异常偏向时序平滑 + 滞回阈值（R13 P17：per-label 投票窗口）
         - 进入异常：ENTRY_MIN（严格，避免误报）
         - 维持异常：HOLD_MIN（宽松，避免告警闪断）
         - 不同标签用不同窗口长度: 攻击/倒地类用 self.vote_window (=5),
           smoking/phone_call 用 7 (稀疏信号需更长观察面)
+
+        R15 修复 C：raw_source 为姿态物理规则级的 normal 时（rule_upright/
+        rule_sitting/rule_no_vertical/rule_sitting_veto_yolo），强制退出 HOLD
+        —— 姿态规则是"强证据 normal"，权重高于时序惯性。
         """
         if track_id not in self.history:
             self.history[track_id] = []
@@ -917,6 +935,21 @@ class RuleEngine:
                 return None, 0
             best = max(anomaly_counts, key=anomaly_counts.get)
             return best, anomaly_counts[best]
+
+        # R15 修复 C：强证据 normal 否决 HOLD
+        # 姿态物理规则（rule_upright / rule_sitting / rule_no_vertical /
+        # rule_sitting_veto_yolo）级别的 normal 权重高于时序惯性，强制退出 falling/climbing HOLD
+        STRONG_NORMAL_SOURCES = {
+            'rule_upright', 'rule_sitting', 'rule_no_vertical',
+            'rule_sitting_veto_yolo',
+        }
+        if (current_label == 'normal' and raw_source in STRONG_NORMAL_SOURCES
+                and last in ('falling', 'climbing')):
+            logger.debug(f'  [VOTE] T{track_id} current=normal → normal '
+                         f'(STRONG_NORMAL src={raw_source} 否决 HOLD {last}) '
+                         f'| history=[{hist_str}]')
+            self._last_smoothed[track_id] = 'normal'
+            return 'normal'
 
         # 1) 滞回维持：上次为异常 L，只要 L 在 L 的窗口内 ≥ HOLD_MIN[L] 就继续
         #    但若另一个异常(按各自窗口计数)严格多于 L，允许切换

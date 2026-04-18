@@ -1066,6 +1066,76 @@ gate_need_phone = True
 
 ---
 
+### E2E Fix Round 15 — 坐姿被误判 falling 的双路修复（压误报实验）
+
+**背景**：测试视频中坐着的人经常被识别为 falling。debug.log 分析两条关键日志：
+
+```
+[F9212] T26 PoseC3D falling=0.933
+  [RULE] 姿态直立检查: head_hip=171.4 > 32.4 → 直立(非falling)
+  [RAW] T26 → normal (rule_upright)
+  [VOTE] T26 current=normal → falling (HOLD 2>=1) | history=[f,f,f,n,f,n,n]
+  [FINAL] falling  ← rule_upright 的强证据 normal 被 HOLD 压回 falling
+
+[F9228] T26 PoseC3D falling=0.678 normal=0.307
+  [RAW] T26 → falling (YOLO辅助检测: conf=0.533, bbox=竖直)
+  [FINAL] falling  ← YOLO laying 路径完全无姿态验证，即使 PoseC3D 已怀疑也直接通过
+```
+
+两条独立病灶：
+1. **YOLO falling 路径缺姿态否决**（R7 `add2edc` 移除的历史遗留）—— 对静态误检无抵抗
+2. **`_vote_smooth` HOLD 不区分 normal 来源**—— 姿态物理规则（强证据）和 PoseC3D normal（弱证据）被同等对待，HOLD 机制盲目压制
+
+#### P18 — YOLO falling 路径加骨骼坐姿软否决
+
+**文件**：`e2e_pipeline/rule_engine.py` `_raw_judge` step 2 最后一个 return 前
+
+| 触发条件（三重门槛必须全满足） | 原因 |
+|---|---|
+| `valid_kp_count >= 8`（score>0.3 的关键点数） | 遮挡导致骨骼不可信时不否决，避免漏检真阳 |
+| `_is_sitting_posture` 返回 True（骨骼纵横比 h/w > 1.0） | 骨骼纵向展开 → 坐/站；躺地无论朝向摄像头还是侧向，关键点不会纵向展开 |
+| `pose_probs[0] >= 0.25`（PoseC3D normal 概率） | 要求第二模型交叉验证，避免 PoseC3D 也明确说 falling 时用骨骼否决 |
+
+满足则 return `'normal', rule_sitting_veto_yolo`。
+
+**设计权衡**：
+- 为什么不用 `bbox_horizontal`：用户反驳 —— 朝/背对摄像头躺地时 bbox 就是竖直的。bbox 方向判定会引入新漏检
+- 为什么用 `_is_sitting_posture`（基于骨骼）：物理语义清晰 —— 关键点纵向展开意味着身体竖直；即使遮挡也只是覆盖范围缩小，不会把坐姿变成躺姿的骨骼形态
+- 为什么要 `valid_kp >= 8` + `normal >= 0.25`：承认骨骼不 100% 可信 + PoseC3D 可能同时被骗，所以要求双重证据才否决
+
+#### P19 — `_vote_smooth` 接受姿态规则 source，强证据 normal 否决 HOLD
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+1. `judge` 把 `source` 传给 `_vote_smooth(track_id, raw_label, raw_source=source)`
+2. `_vote_smooth` 在 HOLD 分支前新增退路：若 `current_label=normal` 且 `raw_source ∈ {rule_upright, rule_sitting, rule_no_vertical, rule_sitting_veto_yolo}` 且 `last ∈ {falling, climbing}` → 强制 return `'normal'`
+
+**语义**：姿态物理规则给出的 normal 是"这个姿势在物理上不是 falling/climbing"的硬断言，不应被时序惯性压制。
+
+#### R15 配置快照
+
+| 参数 | R14 | R15 |
+|---|---|---|
+| YOLO falling 前置姿态检查 | 无 | 骨骼 h/w > 1 + valid_kp≥8 + normal≥0.25 三重门 |
+| `_vote_smooth` HOLD 退路 | 只认投票（同票数严格多则 UPGRADE） | 姿态规则 normal 直接退出 HOLD |
+
+**预期行为变化**：
+- F9212：rule_upright → 原 HOLD 压回 falling → **现在直接退出 HOLD → normal ✓**
+- F9228：YOLO falling → 原直接通过 → **现在若骨骼纵向 + normal≥0.25 → 被坐姿否决 ✓**
+- 真实缓慢倒地：骨骼从纵向变横向过程中，`valid_kp >= 8 AND h/w > 1` 只在初期满足，一旦横躺就失效 → 正常标 falling
+- 遮挡严重场景（valid_kp < 8）：不触发否决 → 回退到原行为
+
+**风险/回退计划**：
+- 风险 1：用户坐姿场景下 PoseC3D 偶发 normal < 0.25（被其它类分流）→ 否决失效，仍判 falling
+- 风险 2：`_is_sitting_posture` 的 h/w > 1 阈值对"侧身蜷缩坐地"可能返回 False → 否决失效
+- 回退：rule_engine.py 里删除 step 2 的 R15 修复 B 块 + `_vote_smooth` 里删除 STRONG_NORMAL_SOURCES 块即可
+
+**未处理（骨骼稳定性层面）**：
+- SkeletonBuffer EMA 当前已做 `score <= 0.3 时沿用前值 × 0.9 衰减`，但只能覆盖 1 帧遮挡；持续遮挡仍把低分新值 EMA 进缓存
+- 改进方案（候选 R16）：持续遮挡 > N 帧后把该关键点 score 归零，规则引擎 valid 过滤自然排除；本轮未做，优先验证 R15 效果
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
