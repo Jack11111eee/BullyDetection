@@ -1189,6 +1189,70 @@ P7 兜底路径在 `normal 压制` (relative_ok 失败) / `proximity 失败` / `
 
 ---
 
+### E2E Fix Round 17 — P8 否决门加 proximity 前置（修复孤立摔倒被 PoseC3D 噪声吞掉）
+
+**背景**：测试视频中一个孤立的摔倒场景被漏检。debug.log 关键三帧：
+
+```
+[F15228] T47 PoseC3D fighting=0.775 normal=0.158 falling=0.055
+  [RAW] T47 YOLO躺地否决 (PoseC3D fighting=0.775强主导) → 跳过rule_yolo_bullying/falling
+  [RAW] T47 攻击信号但proximity失败 (nearest=765 > 210)
+  [RAW] T47 → normal (argmax=fighting但proximity失败)
+  [FINAL] normal ← YOLO falling 信号被 P8 完全吞掉，deferred 都没设
+[F15244] T47 PoseC3D fighting=0.674 (< 0.7, 不触发 P8)
+  [RAW] T47 YOLO躺地但PoseC3D有攻击信号 → 暂存 deferred
+  [RAW] T47 → falling (step 6 未判攻击, P7 兜底)
+  [VOTE] falling 1<ENTRY=2 → normal
+[F15260] T47 PoseC3D fighting=0.624
+  [RAW] T47 → falling (P7 兜底)
+  [VOTE] ENTRY 2>=2 → falling ✓（16 帧后才入态）
+```
+
+**根因**：R10 P8 否决门 `fighting_prob >= 0.7 AND bullying_prob < f*0.3` 一刀切，不看 proximity。P8 设计初衷是对称 fighting 场景（F546-F627）中 YOLO 对交缠/倾斜姿态的误检——但那个场景 proximity 必定 ok。对于**孤立场景** fighting 信号物理上不可能成立，`fighting=0.775` 是 R11 残留的 normal↔fighting 互混噪声，此时用它否决 YOLO falling 是错的。真摔倒信号被完全吞掉（不走 P7 deferred，直接 `pass`）。
+
+#### P21 — P8 yolo_veto 加 proximity_ok_pre 前置
+
+**文件**：`e2e_pipeline/rule_engine.py` `_raw_judge` step 2
+
+修改前：
+```python
+yolo_veto = (fighting_prob_pre >= 0.7 and
+             bullying_prob_pre < fighting_prob_pre * 0.3)
+```
+
+修改后：
+```python
+# 先用 step 5 同样的公式算 proximity（两人最大身高 × 1.5，fallback img_h*0.25）
+proximity_ok_pre = (0 < nearest_dist_pre <= max_fight_dist_pre)
+yolo_veto = (proximity_ok_pre and
+             fighting_prob_pre >= 0.7 and
+             bullying_prob_pre < fighting_prob_pre * 0.3)
+```
+
+孤立场景（proximity_ok_pre=False）下即使 fighting≥0.7 也不否决 YOLO → 走 P7 deferred → step 6 attack 因 proximity 失败 → P7 兜底返回 falling。
+
+#### R17 行为矩阵
+
+| 场景 | proximity | fighting 高 | 旧 P8 | 新 P8 | 行为 |
+|---|---|---|---|---|---|
+| R10 原始自激 (F546-F627 对称对打) | ok | 0.998 | 触发 | **仍触发** | 不变 ✓ |
+| 受害者倒地 + 攻击者旁边 | ok | 0.6 | 不触发（<0.7） | 不触发 | 不变 ✓ |
+| **本案 F15228 孤立摔倒 + PoseC3D 噪声** | **失败** | 0.775 | 触发吞掉 | **不触发→P7 deferred→falling** | **修复 ✓** |
+| 真孤立 fighting（物理不可能） | 失败 | 高 | 触发 | 不触发 | 无回归风险 |
+
+#### R17 配置快照
+
+| 参数 | R16 | R17 |
+|---|---|---|
+| P8 yolo_veto 条件 | `fighting≥0.7 AND bullying<f*0.3` | **加 proximity_ok_pre 前置** |
+| 孤立场景 + fighting 高 + YOLO 躺地 | 直接吞掉 | 走 P7 deferred → 兜底 falling |
+
+**核心语义**：P8 的"PoseC3D 强主导否决 YOLO"成立的前提是 PoseC3D 的 fighting 信号语义有效；当周围无人时 fighting 必须有对象的物理约束被打破，该信号退化为噪声，不应用其否决任何东西。
+
+**回退**：删除 `proximity_ok_pre` 部分，恢复到 `yolo_veto = (fighting_prob_pre >= 0.7 and bullying_prob_pre < fighting_prob_pre * 0.3)` 即可。
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -1200,8 +1264,10 @@ P7 兜底路径在 `normal 压制` (relative_ok 失败) / `proximity 失败` / `
  │
  ├─ Step 2: YOLO 辅助 falling 检测
  │   YOLO 检测到 falling bbox + 骨骼中心重叠（20% margin）
- │     ├─ R10 P8 否决门：fighting_prob ≥ 0.7 AND bullying_prob < f*0.3
+ │     ├─ R10 P8 否决门（R17 P21 加 proximity 前置）：
+ │     │   proximity_ok AND fighting_prob ≥ 0.7 AND bullying_prob < f*0.3
  │     │   → 整个 step 2 跳过（YOLO 视为误检）
+ │     │   孤立场景（proximity 失败）即使 fighting≥0.7 也不否决（视为 PoseC3D 噪声）
  │     ├─ bbox overlap ≥ 10% 的邻居 smoothed=bullying 或最近 3 帧含 bullying
  │     │   → bullying + 向邻居注入 'bullying'（R10 P8 邻居收紧）
  │     ├─ PoseC3D fighting_prob ≥ 0.3 或 bullying_prob ≥ 0.3
@@ -1553,6 +1619,20 @@ track 被分配新 ID（重关联）
 - **状态**：已修复（待视频验证）
 - **未处理**：T3 的 laying YOLO 在竖直姿态下误判 falling（PoseC3D `normal=1.000 falling=0.000` 但 laying 持续输出 bbox conf=0.3+），本轮未动 —— 候选修复：`check_fallen_by_yolo` 加 `normal_prob ≥ 0.9` 否决门
 
+#### Problem 30: 孤立摔倒被 P8 否决门吞掉（PoseC3D fighting 噪声 + R10 一刀切）
+
+- **发现**：E2E Fix Round 17（用户报告 + debug.log F15228/F15244/F15260 分析）
+- **详情**：单人摔倒视频中 T47 PoseC3D 输出 `fighting=0.775, falling=0.055`（R11 残留 normal↔fighting 互混噪声），proximity 失败（nearest=765 > 210，画面里就一个人）。但 R10 P8 否决门只看 PoseC3D fighting 强主导，不看 proximity → 否决整个 step 2 → YOLO falling bbox 完全吞掉（连 deferred 都不设）→ FINAL=normal。下一帧 fighting 跌到 0.674 才走 P7 deferred 兜底，再隔 16 帧才达 ENTRY=2，FINAL 才变 falling
+- **证据**：
+  ```
+  F15228: fighting=0.775 → P8 否决 → step 2 跳过 → argmax=fighting + proximity失败 → normal
+  F15244: fighting=0.674 → P8 不触发 → P7 deferred → falling，但 ENTRY 1<2 → normal
+  F15260: fighting=0.624 → P7 deferred → falling，ENTRY 2>=2 → falling ✓
+  ```
+- **根因**：R10 P8 设计场景（F546-F627 对称对打自激）proximity 必定 ok，作者写规则时默认 fighting 高就一定有对象。但孤立场景下 fighting 信号物理上不可能成立，是 PoseC3D 假阳性，不该用其否决任何东西
+- **修复**：R17 P21 — `yolo_veto` 加 `proximity_ok_pre` 前置（commit `0655144`）。step 2 用 step 5 同样的公式（`max(my_h, neighbor_h) * 1.5`，fallback `img_h * 0.25`）算一次 proximity，只有 proximity_ok 时才允许 P8 否决
+- **状态**：已修复（待视频验证）
+
 ---
 
 ## 11. 辅助组件
@@ -1629,6 +1709,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+0655144 fix(e2e): R17 P8 otoriel door add proximity precondition              (R17)
 6d3af28 fix(e2e): R13 smoking detection — P15/P16/P17                          (R13)
 b4d389d fix(e2e): R12 occlusion-aware scene_person_count — P13/P14            (R12)
 074c47f feat(e2e): R11 small-object 3-way single-class + frame-level gating   (R11 E2E)
