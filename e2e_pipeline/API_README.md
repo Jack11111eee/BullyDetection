@@ -9,10 +9,17 @@
 ## 1. 服务信息
 
 - 语言栈：Python 3.10 + FastAPI + sse-starlette
-- 运行环境：AutoDL RTX 3090（conda env `dtc`）
-- 默认监听：`0.0.0.0:8000`
-- 公网地址：联调时由我方开启 AutoDL 公网自定义端口，具体 URL 在联调时给你（形如 `https://u****.autodl.app`）
+- 运行环境：学校机房服务器（3 × A6000, conda env `dtc`）
+- **Base URL**：`http://10.61.190.21:8000`
+- **访问要求**：校园网内（有线/WiFi），外网需要先挂学校 VPN
 - 模型启动需 ~10 秒加载，启动完成后 `/health` 返回 `modelLoaded: true`
+
+自测命令（校园网内任意机器）：
+
+```bash
+curl http://10.61.190.21:8000/health
+# 期望: {"status":"ok","modelLoaded":true,...}
+```
 
 ---
 
