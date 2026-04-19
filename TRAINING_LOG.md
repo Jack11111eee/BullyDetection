@@ -1253,6 +1253,115 @@ yolo_veto = (proximity_ok_pre and
 
 ---
 
+### E2E Fix Round 18 — 消灭孤立 fighting（pair inference 污染 + HOLD 锁死）（commit `0f7c1b3`）
+
+**背景**：日志 F7210 / F7215 / F7219 暴露 3-track 全部被误判 fighting 的场景：
+
+```
+[F7210] T3 (坐着) PoseC3D normal=1.000 fighting=0.000
+  [RAW] T3 → normal
+  [VOTE] T3 current=normal → fighting (HOLD 2>=2, window=5) | history=[N,F,N,F,N,F,N]
+  [FINAL] fighting ✗（T3 只是坐着）
+
+[F7215] T11 (在拽 T26) PoseC3D fighting=0.889
+  [RAW] T11 攻击信号但proximity失败 (nearest=347 > 270)
+  [VOTE] T11 current=normal → fighting (HOLD 2>=2)
+  [FINAL] fighting（但靠 HOLD 硬撑）
+
+[F7219] T26 (被拽) PoseC3D fighting=0.883
+  [RAW] T26 proximity失败同样
+  [FINAL] fighting（HOLD 硬撑）
+```
+
+**用户原则**：**fighting/bullying 是 ≥2 人行为，不存在孤立行为**。T3 作为旁观者不该被标 fighting。
+
+**根因 —— 4 条污染路径**（读 pipeline.py + rule_engine.py 梳理）：
+
+| # | 机制 | 触发时机 | 作用点 |
+|---|---|---|---|
+| P-1 | **pair inference RAW 污染** | T3 pair=T11（`_find_nearest_track` 按 500px 内最近选），PoseC3D 对 (T3_静, T11_拉扯) 2 人 tensor 输出 fighting；模型训练数据里没有"1 旁观者 + 1 施暴者"样本，对 mixed-pair 倾向 fighting | 写入 T3.history |
+| P-2 | `_inject_to_overlapping_neighbor` | T11 step 5 attack 触发时 + T3 bbox overlap ≥ 10% | 注入 fighting 到 T3.history |
+| P-3 | `couple_overlapping_pairs` | T11 smoothed=fighting + T3 overlap | 直接改 T3.label + `_last_smoothed[T3]='fighting'` 驱动下帧 HOLD |
+| P-4 | `_vote_smooth` HOLD (HOLD_MIN=2) | T3.history 窗口里还有 ≥2 fighting entries | 时序惯性锁死 fighting |
+
+P-3/P-4 是**执行点**，P-1/P-2 是**上游污染源**；单堵任一层都不够，4 条会交替起作用。
+
+#### P22 — Solution B：Strong-normal HOLD exit for fighting/bullying
+
+**文件**：`e2e_pipeline/rule_engine.py` `_vote_smooth`
+
+`judge()` 扩展传入 `pose_normal_prob=float(pose_probs[0])`。`_vote_smooth` 新增分支（与 R15 P19 STRONG_NORMAL_SOURCES 对齐、但用 PoseC3D 自身置信度作为判据）：
+
+```python
+if (current_label == 'normal'
+        and raw_source == 'posec3d'
+        and pose_normal_prob >= 0.9
+        and last in ('fighting', 'bullying')):
+    recent3 = history[-3:]  # 已含本帧
+    if len(recent3) >= 2 and recent3.count('normal') >= 2:
+        return 'normal'  # 退 HOLD
+```
+
+**三重防误退门槛**：
+- 当前 RAW='normal' + `source='posec3d'`（排除 rule_no_proximity 等被动 normal）
+- PoseC3D 自身 `normal_prob ≥ 0.9`（自身输出极度明确）
+- 最近 3 帧 raw 含 ≥ 2 frame normal（一致性，避免真施暴者单帧 PoseC3D 抖动误退）
+
+真施暴者不会连续命中（真 fighting 窗口里多数 entries 是 fighting，条件 c 必然不满足）。
+
+#### P23 — Solution E：`demote_unsupported_attacks` post-couple 闸门
+
+**文件**：`e2e_pipeline/rule_engine.py`（新增方法）+ `e2e_pipeline/pipeline.py`（在 `couple_overlapping_pairs` 之后调用）
+
+对每个 post-couple 仍为 fighting/bullying 的 track，要求**同时满足两个条件**：
+
+```
+条件 1 (partner):   ∃ 另一 track 也在攻击态 + bbox overlap ≥ 0.1
+条件 2 (self_active): 近 3 帧 raw 含攻击 OR 当前 attack_prob(max(f,b)) ≥ 0.3
+```
+
+任一失败 → 降级 normal + 写 `_last_smoothed=normal` + source=`demote_isolated` 或 `demote_bystander`。
+
+新增状态：
+- `self._last_pose_probs[tid] = pose_probs`（每次 `judge` 后缓存），供条件 2 用
+- `migrate_track` / `clear_stale_tracks` 同步清理
+
+**两阶段实现**：Pass 1 只决定降级（基于降级前的 attack_tids 集合），Pass 2 才应用 —— 避免 A 降级后 B 失去 partner 引发级联。
+
+#### T3 场景预期行为
+
+| 帧 | T3 RAW | T3 history | B 触发? | E 触发? | FINAL |
+|---|---|---|---|---|---|
+| F7210 | normal(1.000) | [N,F,N,F,N,F,N] | **是**（normal=1.0 + recent3=[F,N,N] ≥2 normal）→ 立退 HOLD | 不需要（FINAL 已 normal） | **normal ✓** |
+| 若 B 漏（normal=0.85） | normal | 同上 | 否 | **是**（T3 近 3 帧 raw=[F,N,N] 有 1 攻击但 cur_attack_prob≈0；条件 2 失败） | **normal ✓** |
+
+双层闸门：B 在 `_vote_smooth` HOLD 决策时拦截（快路径），E 在 post-couple 兜底（覆盖 B 漏的 + couple 造成的新升级）。
+
+#### R18 配置快照
+
+| 项 | R17 | R18 |
+|---|---|---|
+| `_vote_smooth` STRONG_NORMAL 覆盖 | 仅 falling/climbing (R15 P19) | **+ fighting/bullying**（posec3d normal ≥ 0.9 + recent3 一致性） |
+| post-couple 防孤立 | 无 | `demote_unsupported_attacks`（partner + self_active 双条件） |
+| `_last_pose_probs` 缓存 | 无 | 每次 `judge` 后写入，migrate/clear 同步 |
+
+**预期效果**：
+- F7210 T3：RAW=normal=1.000 → P22 立刻退 HOLD → FINAL=normal ✓
+- 孤立 PoseC3D 噪声（单 track 误判 fighting、无任何 overlap 邻居）：P23 条件 1 失败 → 降级 ✓
+- 3-track 全部 HOLD fighting（当前日志）：P23 条件 2 剔除 T3（self 不活跃），保留 T11/T26
+- 真实 fighting（两人持续对打 + 强 RAW）：两边 self_active + 互为 partner → 双条件通过，不误降级
+
+**风险/回退计划**：
+- 真施暴者若 Bug 2（proximity 连续失败）导致近 3 帧 RAW 全被打成 normal + PoseC3D 某帧输出 normal=0.9+ → 可能被 P22/P23 误降。**先修 Bug 2 再观察**（R2 回退也是直接删两段代码）
+- P22 回退：删 `_vote_smooth` 内 R18 P22 块（~12 行）
+- P23 回退：删 `pipeline.py` 里 `demote_unsupported_attacks` 调用（pipeline 侧 2 行） + rule_engine.py 新方法（整段可留待后续使用）
+
+**未处理**：
+- Bug 2（proximity `1.5×height` 对拉扯场景过紧）留待 R19
+- pair selection (`_find_nearest_track`) 语义级改进（选"最可能是交互对象"的邻居而非"最近"）—— 架构改动较大，不在本轮
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -1633,6 +1742,30 @@ track 被分配新 ID（重关联）
 - **修复**：R17 P21 — `yolo_veto` 加 `proximity_ok_pre` 前置（commit `0655144`）。step 2 用 step 5 同样的公式（`max(my_h, neighbor_h) * 1.5`，fallback `img_h * 0.25`）算一次 proximity，只有 proximity_ok 时才允许 P8 否决
 - **状态**：已修复（待视频验证）
 
+#### Problem 31: 孤立 fighting — 旁观者被 pair inference + HOLD 锁死
+
+- **发现**：E2E Fix Round 18（用户报告 + debug.log F7210/F7215/F7219 分析）
+- **详情**：拉扯场景中 T3 只是坐着旁观，但 FINAL=fighting；同帧 T11（施暴）、T26（受害）也 FINAL=fighting 但全靠 HOLD 硬撑，无一帧 RAW=fighting 进入
+- **证据**：
+  ```
+  F7210 T3 PoseC3D normal=1.000 fighting=0.000 → RAW=normal
+        history=[N,F,N,F,N,F,N] → VOTE HOLD 2>=2 → fighting ✗
+  F7215 T11 PoseC3D fighting=0.889 但 proximity失败 nearest=347>270
+        → RAW=normal → VOTE HOLD 2>=2 → fighting
+  F7219 T26 PoseC3D fighting=0.883 proximity失败 → HOLD → fighting
+  ```
+- **根因（4 条污染路径）**：
+  - **P-1 pair inference RAW 污染**：T3 被 `_find_nearest_track` 选 T11 为 pair → PoseC3D (T3, T11) 2-person tensor 被 T11 动作主导 → 输出 fighting → 写入 T3.history
+  - **P-2 `_inject_to_overlapping_neighbor`**：T11 步骤 5 攻击判定时会主动向 bbox overlap 最高的邻居（若为 T3）注入 fighting
+  - **P-3 `couple_overlapping_pairs`**：T11 smoothed=fighting + T3 overlap → couple 升级 T3 为 fighting + 写 `_last_smoothed[T3]=fighting`
+  - **P-4 VOTE HOLD 锁死**：T3.history 有 ≥ 2 fighting entries + HOLD_MIN=2 → 每帧维持 fighting，即使当前 RAW=normal=1.000 也救不回来
+  - 四条路径都违反用户原则 "fighting/bullying ≥2 人 + 无孤立行为"
+- **修复**：R18 P22 + P23（commit `0f7c1b3`）
+  - **P22 (Solution B)**：`_vote_smooth` 加 STRONG_NORMAL HOLD exit — 当 raw_source=posec3d + normal_prob≥0.9 + 最近 3 帧 raw 至少 2 帧 normal → 强制退 fighting/bullying HOLD
+  - **P23 (Solution E)**：post-couple 新方法 `demote_unsupported_attacks` — 要求 (partner: 另一 track 在攻击态且 bbox overlap≥10%) AND (self_active: 近 3 帧 raw 含攻击 OR 当前 attack_prob≥0.3)，任一失败即降级 normal
+  - 新增 `_last_pose_probs` 缓存 + migrate/clear 同步清理
+- **状态**：已修复（待视频验证）
+
 ---
 
 ## 11. 辅助组件
@@ -1709,6 +1842,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+0f7c1b3 fix(e2e): R18 P22+P23 kill single-person fighting                    (R18)
 0655144 fix(e2e): R17 P8 otoriel door add proximity precondition              (R17)
 6d3af28 fix(e2e): R13 smoking detection — P15/P16/P17                          (R13)
 b4d389d fix(e2e): R12 occlusion-aware scene_person_count — P13/P14            (R12)
