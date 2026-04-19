@@ -367,6 +367,23 @@ def check_fallen_by_yolo(person_kps, person_scores, small_obj_detections, img_sh
         margin = max(bw, bh) * 0.2
         if (x1 - margin <= person_center[0] <= x2 + margin and
                 y1 - margin <= person_center[1] <= y2 + margin):
+            # R19 P24: 下半身缺失 → 视为坐姿/画面裁切，不判 falling
+            # 物理依据：躺着的人身体横向展开，膝/踝至少一个会落入可检测范围;
+            # 坐在桌/椅后或画面边缘的人下半身（kp 13-16）常被裁掉，只剩上半身。
+            # 三重门槛防误杀：
+            #   - 下半身 4 个 kp 全缺（最严，1 个可见即不触发）
+            #   - 上半身 ≥ 5 个 kp 可信（骨骼本身质量足够，避免整体漏检时误用此规则）
+            #   - 位置内聚到 check_fallen_by_yolo 内部（一次修好，所有 YOLO falling 出口统一受益）
+            lower_kp_visible = int(sum(1 for i in [13, 14, 15, 16]
+                                       if person_scores[i] > 0.3))
+            upper_kp_visible = int(sum(1 for i in range(11)
+                                       if person_scores[i] > 0.3))
+            if lower_kp_visible == 0 and upper_kp_visible >= 5:
+                logger.debug(
+                    f'  [RULE] YOLO falling 被下半身缺失否决 '
+                    f'(上半身 {upper_kp_visible}/11 可见, 下半身 0/4) → 非倒地'
+                )
+                return False, 0.0, False
             bbox_horizontal = bw > bh  # 宽>高 → 人水平躺着
             return True, det['conf'], bbox_horizontal
 
