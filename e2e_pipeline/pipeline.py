@@ -452,7 +452,8 @@ class InferencePipeline:
                  small_obj_model=None, device='cuda:0', yolo_conf=0.3,
                  stride=16, vote_window=5, vote_ratio=0.6,
                  loiter_time=60.0, loiter_radius=100.0,
-                 falling_model=None, smoking_model=None, phone_model=None):
+                 falling_model=None, smoking_model=None, phone_model=None,
+                 on_frame_callback=None):
 
         print('[1/3] Loading YOLO Pose model...')
         self.yolo_pose = YOLO(yolo_pose_model)
@@ -497,6 +498,8 @@ class InferencePipeline:
         self._label_missing_count = {}  # 遮挡宽限：标签保留
         self._known_track_ids = set()   # 已见过的 track ID，用于检测新 track
         self.event_log = []
+        # API 联调钩子：每帧处理完成后回调，payload 见 _emit_frame_callback
+        self.on_frame_callback = on_frame_callback
 
         print(f'  clip_len={clip_len} (auto-detected from config)')
         print(f'  stride={stride}, with_kp={self.posec3d.with_kp}, with_limb={self.posec3d.with_limb}')
@@ -771,6 +774,13 @@ class InferencePipeline:
                     else:
                         draw_label(frame, bbox, 'normal', 1.0, LABEL_COLORS['normal'])
 
+        # API 联调回调：推送本帧所有活跃 track 的标签
+        if self.on_frame_callback is not None:
+            try:
+                self._emit_frame_callback(frame_idx, img_shape, current_track_ids, track_bboxes)
+            except Exception as cb_err:
+                logger.debug(f'[F{frame_idx}] on_frame_callback 失败: {cb_err}')
+
         # 清理消失的 track（带遮挡宽限期）
         self.skeleton_buf.remove_stale(current_track_ids)
         self.rule_engine.clear_stale_tracks(current_track_ids)
@@ -785,3 +795,35 @@ class InferencePipeline:
             self.track_labels.pop(tid, None)
             self._known_track_ids.discard(tid)
             del self._label_missing_count[tid]
+
+    def _emit_frame_callback(self, frame_idx, img_shape, current_track_ids, track_bboxes):
+        """构造 API 回调 payload。API 层可按需转换为 WEB frame 事件格式。"""
+        h, w = img_shape
+        tracks = []
+        for tid in current_track_ids:
+            bbox = track_bboxes.get(tid)
+            if bbox is None:
+                continue
+            info = self.track_labels.get(tid)
+            if info is None:
+                label = 'normal'
+                conf = 1.0
+                source = 'default'
+            else:
+                label = info.label
+                conf = float(info.confidence)
+                source = info.source
+            tracks.append({
+                'track_id': int(tid),
+                'label': label,
+                'confidence': conf,
+                'source': source,
+                'bbox_xyxy': [float(x) for x in bbox],
+            })
+        payload = {
+            'frame_index': int(frame_idx),
+            'img_width': int(w),
+            'img_height': int(h),
+            'tracks': tracks,
+        }
+        self.on_frame_callback(payload)

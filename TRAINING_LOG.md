@@ -1573,6 +1573,8 @@ track 被分配新 ID（重关联）
 | Round Eval | `eval_round9.py` | 已建 |
 | MIL Cleaning | `mil_cleaning/*` | 已建 |
 | Per-run debug log | `e2e_pipeline/run.py` `_derive_source_tag` | `logs/debug_<source>_<ts>.log` 按运行归档(commit `5ebac76`) |
+| API 服务（Web 联调） | `e2e_pipeline/api_server.py` + `API_README.md` | FastAPI + sse-starlette，POST mp4 → SSE 推 frame/alert 事件。对齐 WEB-HANDOFF §6.3。端口默认 8000，GPU 显存限制下串行跑 |
+| Pipeline 回调钩子 | `InferencePipeline(on_frame_callback=...)` + `_emit_frame_callback` | `_process_frame` 末尾调用回调，传每 track 的 label/conf/bbox_xyxy。API server 转换成 WEB frame 事件 |
 
 ---
 
