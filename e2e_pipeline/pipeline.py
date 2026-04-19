@@ -751,6 +751,9 @@ class InferencePipeline:
                                 for tid in current_track_ids
                                 if tid in self.track_labels}
             self.rule_engine.couple_overlapping_pairs(active_judgments, track_bboxes)
+            # R18 P23 (Solution E): 攻击态需 partner + self_active 双重支持
+            # 覆盖 pair-inference 污染 / inject / couple / HOLD 四条污染路径
+            self.rule_engine.demote_unsupported_attacks(active_judgments, track_bboxes)
 
             # 记录事件（用耦合后的标签）
             for track_id in inferred_tids:

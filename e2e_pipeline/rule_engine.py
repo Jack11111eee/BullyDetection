@@ -487,6 +487,7 @@ class RuleEngine:
         self.track_positions = {}   # {track_id: [(x, y, timestamp), ...]}
         self._missing_count = {}    # {track_id: 连续消失帧数}
         self._last_smoothed = {}    # {track_id: 上次 smoothed 输出的标签}（用于 hysteresis）
+        self._last_pose_probs = {}  # R18: {track_id: 最近一次 PoseC3D 输出} 供 demote_unsupported_attacks (E) 用
         self._scene_count_history = []  # R12 P14: 最近 N 次推理的 scene_person_count（场景级）
         self._scene_count_window = 5    # vandalism 持续性窗口
 
@@ -516,7 +517,13 @@ class RuleEngine:
             scene_person_count=scene_person_count,
         )
 
-        smoothed_label = self._vote_smooth(track_id, raw_label, raw_source=source)
+        # R18: 缓存 pose_probs 供 demote_unsupported_attacks (E) 用
+        self._last_pose_probs[track_id] = pose_probs
+
+        smoothed_label = self._vote_smooth(
+            track_id, raw_label, raw_source=source,
+            pose_normal_prob=float(pose_probs[0]),
+        )
 
         return BehaviorResult(
             label=smoothed_label,
@@ -945,7 +952,8 @@ class RuleEngine:
         window = self._window_for(label)
         return sum(1 for h in history[-window:] if h == label)
 
-    def _vote_smooth(self, track_id, current_label, raw_source=None):
+    def _vote_smooth(self, track_id, current_label, raw_source=None,
+                     pose_normal_prob=None):
         """异常偏向时序平滑 + 滞回阈值（R13 P17：per-label 投票窗口）
         - 进入异常：ENTRY_MIN（严格，避免误报）
         - 维持异常：HOLD_MIN（宽松，避免告警闪断）
@@ -955,6 +963,11 @@ class RuleEngine:
         R15 修复 C：raw_source 为姿态物理规则级的 normal 时（rule_upright/
         rule_sitting/rule_no_vertical/rule_sitting_veto_yolo），强制退出 HOLD
         —— 姿态规则是"强证据 normal"，权重高于时序惯性。
+
+        R18 P22 (Solution B)：当 PoseC3D 自身明确 normal_prob >= 0.9 且 raw_source=
+        'posec3d' 时，配合最近 3 帧 raw 至少 2 帧 normal 一致性检查，强制退出
+        fighting/bullying HOLD —— 解决 pair-inference 污染 + HOLD 锁死场景
+        （日志 F7210 T3 静坐被误判 fighting）。
         """
         if track_id not in self.history:
             self.history[track_id] = []
@@ -994,6 +1007,29 @@ class RuleEngine:
                          f'| history=[{hist_str}]')
             self._last_smoothed[track_id] = 'normal'
             return 'normal'
+
+        # R18 P22 (Solution B)：PoseC3D 强 normal 否决 fighting/bullying HOLD
+        # 场景：pair inference 污染（T_self 是旁观者但与施暴者配对 → RAW 被带偏 fighting）
+        #      或 _inject_to_overlapping_neighbor / couple_overlapping_pairs 写入攻击态
+        #      → HOLD 在 fighting 窗口里硬撑。
+        # 触发条件（三重防误退）：
+        #   a) 当前 raw label='normal' 且 raw_source='posec3d'（不是 rule_no_proximity 等）
+        #   b) PoseC3D normal_prob >= 0.9（自身输出极度明确）
+        #   c) 最近 3 帧 raw 至少 2 帧 normal（持续性，避免真施暴 1 帧抖动误退）
+        # 失败则走原 HOLD 逻辑（真施暴者窗口里本来就有多数 fighting，a/c 不会同时满足）。
+        if (current_label == 'normal'
+                and raw_source == 'posec3d'
+                and pose_normal_prob is not None
+                and pose_normal_prob >= 0.9
+                and last in ('fighting', 'bullying')):
+            recent3 = history[-3:]  # 已 append 当前 label，含本帧
+            if len(recent3) >= 2 and recent3.count('normal') >= 2:
+                logger.debug(f'  [VOTE] T{track_id} current=normal → normal '
+                             f'(STRONG_NORMAL posec3d normal={pose_normal_prob:.3f} '
+                             f'否决 HOLD {last}, recent3={recent3}) '
+                             f'| history=[{hist_str}]')
+                self._last_smoothed[track_id] = 'normal'
+                return 'normal'
 
         # 1) 滞回维持：上次为异常 L，只要 L 在 L 的窗口内 ≥ HOLD_MIN[L] 就继续
         #    但若另一个异常(按各自窗口计数)严格多于 L，允许切换
@@ -1146,6 +1182,85 @@ class RuleEngine:
                         f'(T{best_atk_tid} {best_atk_label}, overlap={best_overlap:.2f})')
         return judgments
 
+    def demote_unsupported_attacks(self, judgments, track_bboxes_dict,
+                                    min_overlap=0.1, recent_n=3):
+        """R18 P23 (Solution E): 攻击态需 partner + self_active 双重支持。
+
+        用户原则: fighting/bullying 是 ≥2 人行为，不存在孤立行为。
+        post-couple 阶段对每个被标为攻击态的 track 检查两个条件:
+          条件 1 (partner): 场景里另一 track 也在攻击态 + bbox overlap ≥ min_overlap
+          条件 2 (self_active): 近 recent_n 帧 raw 含攻击 OR 当前 attack_prob ≥ 0.3
+
+        任一失败即降级 normal。覆盖 4 条污染路径:
+          P-1 pair inference RAW pollution  (T_self 与施暴者配对 → PoseC3D 输出 fighting)
+          P-2 _inject_to_overlapping_neighbor (邻居施暴时主动注入)
+          P-3 couple_overlapping_pairs propagation (couple 升级 normal 邻居)
+          P-4 HOLD inheritance (history 残留攻击 entries 被 HOLD 锁住)
+
+        Args:
+            judgments: {track_id: BehaviorResult} couple 后的判定
+            track_bboxes_dict: {track_id: [x1,y1,x2,y2]}
+            min_overlap: bbox overlap 阈值
+            recent_n: self_active 检查的 raw history 窗口
+        Returns:
+            judgments (就地修改 label/source)
+        """
+        if not judgments:
+            return judgments
+
+        ATTACK_LABELS = ('fighting', 'bullying')
+        attack_tids = [tid for tid, j in judgments.items() if j.label in ATTACK_LABELS]
+        if not attack_tids:
+            return judgments
+
+        # Pass 1: 决定降级（基于降级前的 attack_tids 集合）
+        demote = {}  # tid → (old_label, reason)
+        for tid in attack_tids:
+            j = judgments[tid]
+            # 条件 1: partner check
+            my_bbox = track_bboxes_dict.get(tid) if track_bboxes_dict else None
+            partner_tid = None
+            best_ov = min_overlap
+            if my_bbox:
+                for other_tid in attack_tids:
+                    if other_tid == tid:
+                        continue
+                    other_bbox = track_bboxes_dict.get(other_tid)
+                    if not other_bbox:
+                        continue
+                    ov = _bbox_overlap_ratio(my_bbox, other_bbox)
+                    if ov >= best_ov:
+                        best_ov = ov
+                        partner_tid = other_tid
+            if partner_tid is None:
+                demote[tid] = (j.label, f'isolated_no_partner({j.label})')
+                continue
+
+            # 条件 2: self_active check
+            recent_raw = self.history.get(tid, [])[-recent_n:]
+            recent_attack = any(r in ATTACK_LABELS for r in recent_raw)
+            cur_probs = self._last_pose_probs.get(tid)
+            cur_attack_prob = 0.0
+            if cur_probs is not None and len(cur_probs) >= 3:
+                cur_attack_prob = max(float(cur_probs[1]), float(cur_probs[2]))
+            self_active = recent_attack or cur_attack_prob >= 0.3
+            if not self_active:
+                demote[tid] = (
+                    j.label,
+                    f'bystander({j.label}, partner=T{partner_tid} ov={best_ov:.2f}, '
+                    f'recent_raw={recent_raw}, cur_attack={cur_attack_prob:.2f})'
+                )
+
+        # Pass 2: 应用降级
+        for tid, (old_label, reason) in demote.items():
+            j = judgments[tid]
+            j.label = 'normal'
+            j.source = f'demote_{reason.split("(")[0]}'
+            j.smoothed = True
+            self._last_smoothed[tid] = 'normal'
+            logger.info(f'  [DEMOTE] T{tid} {old_label} → normal ({reason})')
+        return judgments
+
     def update_track_position(self, track_id, person_kps, person_scores):
         """在非推理帧也更新位置（更精确的徘徊检测）"""
         if (keypoint_valid(person_kps, person_scores, 11) and
@@ -1184,6 +1299,10 @@ class RuleEngine:
             old_smoothed = self._last_smoothed.pop(old_tid)
             if self._last_smoothed.get(new_tid, 'normal') == 'normal':
                 self._last_smoothed[new_tid] = old_smoothed
+        # R18: 迁移 _last_pose_probs
+        if old_tid in self._last_pose_probs:
+            old_probs = self._last_pose_probs.pop(old_tid)
+            self._last_pose_probs.setdefault(new_tid, old_probs)
         self._missing_count.pop(old_tid, None)
 
     def push_scene_count(self, scene_person_count):
@@ -1208,4 +1327,5 @@ class RuleEngine:
             self.history.pop(tid, None)
             self.track_positions.pop(tid, None)
             self._last_smoothed.pop(tid, None)
+            self._last_pose_probs.pop(tid, None)  # R18
             del self._missing_count[tid]
