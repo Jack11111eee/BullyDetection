@@ -187,51 +187,84 @@ Spring Boot (LIVE 模式 /api/monitor/start)
 }
 ```
 
-### 4.6 前端帧对齐（方案 A，重要）
+### 4.6 前端帧对齐（方案 A4，重要 — 已替换原 A 方案）
 
-**背景**：后端推理速度（~15 fps）比视频播放帧率（~30 fps）慢。如果前端 `<video>` 按原 fps 自由播放，bbox 会落后视频 2-3 秒，框停在旧位置，用户体验差。
+**背景**：后端推理速度（~15 fps）比视频播放帧率（~30 fps）慢。原 A 方案（`video.pause()` + 每帧 `video.currentTime = X`）会触发频繁 HTML5 seek，浏览器跟不上造成卡顿。
 
-**方案 A（已商定）**：前端不让 video 自由播，**跟着后端推理节奏**走。每收到一个 `frame` SSE 事件，前端主动把视频跳到对应时刻。
+**方案 A4（已商定）**：video **自由播放不 pause**，前端缓存 SSE frame 事件，用 `requestAnimationFrame` 循环每帧查 `video.currentTime`，从缓冲里取时间最接近的 bbox 叠加到 canvas。
 
-**实现方式**：
+**核心思路**：
+
+```
+video 30fps 自由流畅播 (浏览器原生解码)
+      ↕ 无耦合,不互相阻塞
+SSE 15fps 持续来 → 缓存 {videoTime: targets}
+      ↕ 查找最近
+canvas rAF 60fps 重绘 → 当前 video.currentTime 找 bbox 叠加
+```
+
+- video 完全流畅（浏览器原生播放，无 seek 抖动）
+- bbox 滞后 ≤ 1 个推理周期（~67ms），**肉眼不可分辨**
+- 网络抖动只影响 bbox 滞后程度，不影响视频
+
+**实现方式（Vue/JS 伪代码）**：
 
 ```javascript
-// 前端 Vue/JS 伪代码
-const video = document.querySelector('#monitor-video');  // 播放原视频的 <video>
-video.pause();  // 关键：禁用 video 自己的时间推进
+const video = document.querySelector('#monitor-video');
+const canvas = document.querySelector('#bbox-overlay');  // 叠加在 video 上层
+const ctx = canvas.getContext('2d');
 
-// 收到 SSE frame 事件时
+// 1. 缓冲：videoTime(秒) → targets
+const bboxBuffer = [];  // [{videoTime, targets}, ...] 按 videoTime 升序
+
 eventSource.addEventListener('frame', (e) => {
   const data = JSON.parse(e.data);
-
-  // 1. 视频跳到对应时刻（videoTime 是秒）
-  video.currentTime = data.videoTime;
-
-  // 2. 在 canvas 上画 bbox（用 data.targets）
-  drawBoxes(data.targets);
-
-  // 3. 处理 alerts（入库、推右侧面板、时间轴等）
-  handleAlerts(data.alerts);
+  bboxBuffer.push({ videoTime: data.videoTime, targets: data.targets });
+  // 丢弃已过期的(早于当前 video 时间 2 秒以上的)
+  while (bboxBuffer.length > 0 && bboxBuffer[0].videoTime < video.currentTime - 2) {
+    bboxBuffer.shift();
+  }
+  // alerts 独立处理(入库、右侧面板、时间轴)
+  handleAlerts(data.alerts, data.videoTime);
 });
+
+// 2. 渲染循环：video 播放时实时叠加最近 bbox
+function renderLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const t = video.currentTime;
+  // 二分或线性查找 videoTime <= t 的最大者
+  let latest = null;
+  for (const item of bboxBuffer) {
+    if (item.videoTime <= t) latest = item;
+    else break;
+  }
+  if (latest) drawBoxes(ctx, latest.targets);
+  requestAnimationFrame(renderLoop);
+}
+
+video.play();  // video 正常播
+renderLoop();  // 启动 bbox 叠加循环
 ```
 
 **关键字段**：
 
 | 字段 | 含义 | 前端用途 |
 |---|---|---|
-| `videoTime` | 当前帧对应的视频秒数（= frameIndex / videoFps） | `video.currentTime = videoTime` 直接跳帧 |
-| `videoFps` | 原视频帧率 | 前端可显示"处理进度 X/Y fps"等信息 |
-| `frameIndex` | 当前帧号（0-based） | 进度条 / 告警时间戳 |
-| `totalFrames` | 视频总帧数 | 进度条 / `%` 显示 |
+| `videoTime` | 当前帧对应的视频秒数（= frameIndex / videoFps） | 缓冲索引键,查最近 bbox |
+| `videoFps` | 原视频帧率 | 进度显示/告警时间戳换算 |
+| `frameIndex` | 当前帧号（0-based） | 进度条 / 告警帧号 |
+| `totalFrames` | 视频总帧数 | 进度条百分比 |
 
 **注意事项**：
 
-1. **视频必须 pause**：否则 video 会同时按 30fps 自己推进 + 被 `currentTime` 覆盖，出现闪跳
-2. **频繁 seek 可能抖动**：HTML5 video 在非关键帧位置 seek 会有小延迟。实测校园网 + mp4（h264 + GOP 约 30）应该可以接受；如果明显卡，让我方在推理端用 ffmpeg 对上传视频重编码成关键帧密集格式（每 1 秒 1 个 I 帧），但会增加启动延迟
-3. **告警时间戳用 videoTime 计算**：`clipUrl = /media/videos/{id}.mp4#t=${videoTime - 2}` 之类的片段链接，基于 videoTime 比用 wall-clock 更准
-4. **任务结束后 video 可恢复正常播放**：收到 `done` 事件后若用户想回放，调用 `video.play()` 即可
+1. **video 不要 pause**：让浏览器原生播放保证流畅
+2. **缓冲过期清理**：`bboxBuffer` 是单调增长的，必须定期 shift 掉已过期项，否则内存泄漏
+3. **启动同步**：收到第一个 frame 事件时调用一次 `video.play()`，确保 video 从 0 开始（前端收到 Spring Boot 推的 `/media/videos/xxx.mp4` 地址后就 `.load()` 但不立即 play，等 frame 事件到位才 play，让视频和 bbox 流同时启动）
+4. **告警时间戳**：每条 alert 带 `frameIndex` 和 `videoTime`(等价)，`clipUrl = /media/videos/{id}.mp4#t=${alert.videoTime - 2}` 这类跳片段链接继续好使
+5. **处理完成时**：收到 `done` 事件后 video 自然播完（如果推理比视频快）或用户已看完（如果推理慢于视频）。停止 rAF 循环或让它空转均可
 
-**调试技巧**：如果看到 bbox 位置对不上画面，在浏览器控制台执行 `video.currentTime` 看看是不是确实在对应时刻；对不上就说明 seek 还没完成（监听 `seeked` 事件再画 bbox 可解）。
+**为什么不用严格对齐**：
+推理速度 ~15 fps = 每 67ms 更新一次 bbox。video 以 30fps 显示，两帧之间是 33ms。最坏情况 bbox 对应 video 往前 2 帧（67ms），**肉眼无感**。这是监控 NVR + OSD 字幕的标准做法，工业级可靠。
 
 ---
 
