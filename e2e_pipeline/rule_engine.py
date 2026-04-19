@@ -286,12 +286,12 @@ def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
         return True  # 宽度几乎为0，人是竖直的
     aspect_ratio = bbox_h / bbox_w
 
-    # 纵横比 > 1.0 → 骨骼纵向展开 → 坐着/站着（身体竖直）
-    # 纵横比 < 1.0 → 骨骼横向展开 → 躺倒（身体水平）
-    is_upright = aspect_ratio > 1.0
+    # 纵横比 > 1.1 → 骨骼纵向展开 → 坐着/站着（身体竖直）
+    # 纵横比 < 1.1 → 骨骼横向展开 → 躺倒（身体水平）
+    is_upright = aspect_ratio > 1.1
 
     if is_upright:
-        logger.debug(f'  [RULE] 骨骼纵横比检测: h/w={aspect_ratio:.2f} > 1.0 → 非倒地(坐姿/站姿)')
+        logger.debug(f'  [RULE] 骨骼纵横比检测: h/w={aspect_ratio:.2f} > 1.1 → 非倒地(坐姿/站姿)')
     return is_upright
 
 
@@ -1118,6 +1118,10 @@ class RuleEngine:
         """向 bbox 重叠最多的邻居注入攻击标签弱证据。
         R8.5 扩展双向传播：asymmetry/对称攻击判定时同步升级邻居 ENTRY 计数，
         避免「bbox 重叠但一个 bullying 一个 normal」的结构性不合理。
+
+        R20 P26：target 若 PoseC3D 自身 normal_prob ≥ 0.9 时拒绝注入 —— 强 normal
+        证据说明 target 没在攻击，注入只会污染它的 history 误导后续 self_active 判定
+        （日志 F959：T1 误判 fighting → 向 T3(normal=1.000) 注入 fighting → 污染 E 判据）。
         """
         if not track_bboxes_dict:
             return
@@ -1132,9 +1136,21 @@ class RuleEngine:
             if ov > best_overlap:
                 best_overlap = ov
                 best_tid = other_tid
-        if best_tid is not None:
-            logger.debug(f'  [INJECT] T{track_id}→T{best_tid} (overlap={best_overlap:.2f}) {label}')
-            self._inject_raw_history(best_tid, label)
+        if best_tid is None:
+            return
+        # R20 P26：target 强 normal 守门
+        target_probs = self._last_pose_probs.get(best_tid)
+        if target_probs is not None and len(target_probs) >= 1:
+            target_normal = float(target_probs[0])
+            if target_normal >= 0.9:
+                logger.debug(
+                    f'  [INJECT-SKIP] T{track_id}→T{best_tid} '
+                    f'(overlap={best_overlap:.2f}) {label}: '
+                    f'target normal={target_normal:.3f} >= 0.9 拒绝注入'
+                )
+                return
+        logger.debug(f'  [INJECT] T{track_id}→T{best_tid} (overlap={best_overlap:.2f}) {label}')
+        self._inject_raw_history(best_tid, label)
 
     def couple_overlapping_pairs(self, judgments, track_bboxes_dict, min_overlap=0.1):
         """Pair coupling 后处理（R8.5）：
@@ -1180,6 +1196,21 @@ class RuleEngine:
                     best_atk_label = a_j.label
             if best_atk_tid is None:
                 continue
+            # R20 P25：target 强 normal 守门 —— 自身 PoseC3D normal_prob ≥ 0.9 时
+            # 拒绝被升级。场景：攻击者 PoseC3D 误判 fighting，target 却明确 normal，
+            # bbox overlap 只是摄像头角度造成 —— 不该因物理重叠就继承对方误判标签。
+            # 日志 F959：T1 误判 fighting(0.906) overlap T3(normal=1.000) → 旧行为升级 T3 为 fighting，
+            # 新行为直接跳过 → T1 失去 partner → 由 E 降级 → 单人 fighting 被消灭。
+            target_probs = self._last_pose_probs.get(tid)
+            if target_probs is not None and len(target_probs) >= 1:
+                target_normal = float(target_probs[0])
+                if target_normal >= 0.9:
+                    logger.info(
+                        f'  [COUPLE-SKIP] T{tid} normal={target_normal:.3f} >= 0.9, '
+                        f'拒绝被 T{best_atk_tid} 升级 {best_atk_label} '
+                        f'(overlap={best_overlap:.2f})'
+                    )
+                    continue
             # 应用耦合：
             #   normal / loitering / 其他轻量态 → 升级为攻击态
             #   falling → 如果攻击者是 bullying，升级为 bullying（受害者被霸凌）
