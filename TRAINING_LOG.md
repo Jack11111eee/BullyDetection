@@ -1430,6 +1430,98 @@ if lower_kp_visible == 0 and upper_kp_visible >= 5:
 
 ---
 
+### E2E Fix Round 20 — couple/inject target 强 normal 守门（堵 R18 E 被 INJECT 污染绕过的漏洞）（commit `4a69675`）
+
+**背景**：日志 F959 + 视频截图：一人 T1 从柜台前走过被 PoseC3D 误判 fighting(0.906)，摄像头俯拍角度下 T1 bbox 和后面坐在柜台后的 T2/T3 都有重叠（0.11 / 0.30）。T2、T3 PoseC3D 均输出 `normal=1.000`。但 T3 最终 FINAL=fighting（T2 正确降级 normal，T3 未降级）。
+
+```
+F959 T1 RAW=fighting(0.906) → [INJECT] T1→T3 overlap=0.30, 注入 'fighting' 到 T3.history
+     T1 VOTE ENTRY 3>=3 → fighting
+     T2 RAW=normal(1.000) → normal
+     T3 RAW=normal(1.000) → VOTE fighting 1<ENTRY3 → normal  (T3.history=[...,fighting,normal])
+couple: T2 normal → fighting (overlap=0.11)
+        T3 normal → fighting (overlap=0.30)
+demote (R18 P23 E):
+     T1: partner=T2/T3 (attack态) + self 有 RAW 攻击 → 保留 ✗（不该保留）
+     T2: partner=T1 + recent_raw=[n,n,n] + cur_attack=0 → 降级 ✓
+     T3: partner=T1 + recent_raw=[n,fighting,n] ← **INJECT 污染**
+         recent_attack=True → self_active 通过 → **未降级 ✗**
+FINAL: T1=fighting, T2=normal, T3=fighting ✗
+```
+
+**根因（R18 P23 的盲区）**：R18 P23 E 的 `self_active` 用 `recent_raw` 做证据，但 `_inject_to_overlapping_neighbor` 会往 target.history 写 INJECT 条目，E 无法区分 raw 是 PoseC3D 自推还是跨 track 注入伪造。T3 因此被 T1 单方面"栽赃"。同理 `couple_overlapping_pairs` 仅看 bbox overlap 不看 target 证据，把明显 normal 的人升级到 fighting。
+
+**用户观察**："如果 T1 高置信度 fighting 且与其他 bbox 重合部分很多，那么那个被感染的（T3）normal 置信度很高的话，则不被感染，并且也把 T1 的 fighting 给否决（单人 fighting 是不存在的行为）"。
+
+**策略选择**：不改 E 的 self_active 判据（那是**下游闸门**），而是在**上游两个污染源**（couple / inject）各加 target-strong-normal 守门 —— 源头堵水。E 被动受益：T1 失去假 partner → partner 检查正确失败 → T1 自动降级。
+
+#### P25 — `couple_overlapping_pairs` target 强 normal 守门
+
+**文件**：`e2e_pipeline/rule_engine.py` `couple_overlapping_pairs`
+
+在 `best_atk_tid` 找到之后、应用升级之前加：
+
+```python
+target_probs = self._last_pose_probs.get(tid)
+if target_probs is not None and len(target_probs) >= 1:
+    target_normal = float(target_probs[0])
+    if target_normal >= 0.9:
+        logger.info(f'  [COUPLE-SKIP] T{tid} normal={target_normal:.3f} >= 0.9, '
+                    f'拒绝被 T{best_atk_tid} 升级 {best_atk_label}')
+        continue
+```
+
+**语义**：target 自身 PoseC3D `normal_prob ≥ 0.9` 属于"强证据 target 不在攻击态"。bbox overlap 只能证明物理接近，在摄像头俯拍 / 纵深场景是常态，不等于行为上属于同一交互。当 target 强 normal 与 couple 升级冲突时，信任 target 自身证据。
+
+#### P26 — `_inject_to_overlapping_neighbor` target 强 normal 守门
+
+**文件**：`e2e_pipeline/rule_engine.py` `_inject_to_overlapping_neighbor`
+
+在 `best_tid` 找到之后、`_inject_raw_history` 调用之前加同样守门，打印 `[INJECT-SKIP]`。
+
+**语义**：跨 track 传播攻击标签本是为 R8.5 的 "ENTRY 计数同步" 服务（攻击者 / 受害者双向加速进入攻击态）。但当 target 明确 normal 时，注入只会污染它的 history 误导下游 E 判据 —— 从净资产变成净负担。
+
+#### F959 级联效果（对照）
+
+| 步骤 | R18（旧） | R20（新） |
+|---|---|---|
+| T1 step 5 inject → T3 | 注入 fighting | **P26 拒绝** (T3 normal=1.000) |
+| couple T2 | upgrade → fighting | **P25 拒绝** (T2 normal=1.000) |
+| couple T3 | upgrade → fighting | **P25 拒绝** (T3 normal=1.000) |
+| E partner check T1 | T2/T3 假 partner → 保留 | attack_tids=[T1] → partner=None → **降级 normal** ✓ |
+| FINAL T1/T2/T3 | fighting / normal / fighting ✗ | **normal / normal / normal ✓** |
+
+#### 顺带修好的日志污染
+
+R18 上线后发现 T2 没推理的帧仍然每帧打印一次 `[COUPLE] T2 → fighting` 紧接 `[DEMOTE] T2 → normal`，日志里出现 15+ 条来回传反转。
+
+**机制**：T1 HOLD fighting + T2 bbox 持续 overlap → couple 每帧无条件升级 → demote 每帧无条件降级。功能正确但 wasted work。P25 从源头截断：T2 `normal=1.000` 被 couple 跳过 → cycle 终止 → 日志干净。
+
+#### R20 配置快照
+
+| 项 | R18 | R20 |
+|---|---|---|
+| `couple_overlapping_pairs` target 守门 | 无（只看 bbox overlap） | **target `normal_prob ≥ 0.9` 跳过** |
+| `_inject_to_overlapping_neighbor` target 守门 | 无 | **target `normal_prob ≥ 0.9` 跳过** |
+| E 被 INJECT 污染 | 会（INJECT 写入 history 被 self_active 误信） | 不会（P26 从源头拦） |
+| 单人 fighting 最终结局 | 被假 partner 保住 | **E 级联降级** ✓ |
+| 每帧无效 couple/demote cycle | 有 | 无 |
+
+**阈值 0.9 的保守性**：
+- 真 symmetric fighting：双方 PoseC3D fighting_prob 高，`normal < 0.9`，守门不触发 ✓
+- 真 bullying 受害者：PoseC3D 通常输出 falling 或 fighting 混合（被拽/摔），`normal < 0.9`；且倒地受害者由 step 2 `rule_yolo_bullying` 主动判定，不依赖 couple ✓
+- 摄像头假重叠（本案）：target 强 normal → 守门触发，正确 ✓
+
+**风险/回退**：
+- 风险：如果 target PoseC3D 瞬时抖动输出 normal=0.9+ 但实际在 mild 攻击（罕见），守门会拦截一次 couple。下一帧 target 自己的 RAW 若恢复攻击信号，会正常走 judge → ENTRY 计数 → 不影响最终结论
+- 回退：删 P25（`couple_overlapping_pairs` 里 R20 块，~10 行）和 P26（`_inject_to_overlapping_neighbor` 里 R20 块，~10 行）即可
+
+**未处理**：
+- Bug 2（proximity `1.5×height` 对拉扯场景过紧）仍留待后续 Round
+- R18 P23 E 的 self_active 判据未收紧（R20 从上游堵死了主要漏洞；如果未来还发现 E 被绕过，可再加"当前 pose_normal_prob ≥ 0.9 → self_active=False"的强 normal veto）
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -1854,6 +1946,31 @@ track 被分配新 ID（重关联）
   - 位置内聚到 `check_fallen_by_yolo` 内部，一次修好所有 YOLO falling 出口（还清 R16 记录的设计债）
 - **状态**：已修复（待视频验证）
 
+#### Problem 33: 摄像头假重叠导致旁观者被误标 fighting（couple/inject 无 target 守门）
+
+- **发现**：E2E Fix Round 20（用户报告 + debug.log F959 + 视频截图分析）
+- **详情**：柜台场景 T1 走过前景被模型误判 fighting=0.906，摄像头俯拍角度使 T1 bbox 和后面坐在柜台后的 T2、T3 物理重叠（0.11 / 0.30），但 T2/T3 PoseC3D 都输出 `normal=1.000`。T3 仍被标 FINAL=fighting
+- **证据**：
+  ```
+  F959 T1 [INJECT] T1→T3 (overlap=0.30) fighting
+        T3 history=[n,n,n,n,n,n,fighting]  ← INJECT 污染
+  couple: T2/T3 都被升级 fighting
+  demote: T2 被降级（recent_raw 干净）
+          T3 未降级（recent_raw 含 INJECT 写入的 fighting）
+  FINAL: T1/T2/T3 = fighting/normal/fighting ✗
+  ```
+- **根因**：
+  - `_inject_to_overlapping_neighbor` 无条件注入（P-2 污染路径仍在）
+  - `couple_overlapping_pairs` 仅看 bbox overlap，不看 target 自身 PoseC3D 证据
+  - R18 P23 E 的 `self_active` 不区分 history 里的 raw 是 PoseC3D 自推还是 INJECT 伪造 → 被污染绕过
+  - 摄像头 3D 纵深 / 俯拍场景，bbox 物理重叠不等于行为互动
+- **修复**：R20 P25 + P26（commit `4a69675`）— 源头守门，不改 E
+  - **P25 couple**：target 自身 `normal_prob ≥ 0.9` 时跳过升级
+  - **P26 inject**：target 自身 `normal_prob ≥ 0.9` 时拒绝注入
+  - 级联：T3 既不被注入也不被升级 → attack_tids=[T1] → T1 partner=None → E 自动降级 T1 → 单人 fighting 消灭
+  - 副作用：顺带修好每帧反复 COUPLE/DEMOTE 的日志污染
+- **状态**：已修复（待视频验证）
+
 ---
 
 ## 11. 辅助组件
@@ -1930,6 +2047,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+4a69675 fix(e2e): R20 P25+P26 target strong-normal guard in couple+inject    (R20)
 67f40f4 fix(e2e): R19 P24 lower-body-missing veto in check_fallen_by_yolo    (R19)
 0f7c1b3 fix(e2e): R18 P22+P23 kill single-person fighting                    (R18)
 0655144 fix(e2e): R17 P8 otoriel door add proximity precondition              (R17)
