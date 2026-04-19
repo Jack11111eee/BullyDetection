@@ -767,6 +767,20 @@ class RuleEngine:
         # 避免 proximity 失败 / attack_prob 相对劣势 / PoseC3D argmax=normal 吞掉 YOLO 信号
         if yolo_falling_deferred is not None:
             conf, horizontal = yolo_falling_deferred
+            # R16 P20：P7 兜底路径同样加坐姿软否决（与 step 2 主路径 R15 P18 对称）
+            # 场景：PoseC3D 弱攻击信号触发 defer，但被 normal 压制失败 → 落到 P7 兜底
+            # 日志 F2575/F2591：T3 坐着被持续判 falling；R15 P18 只覆盖主路径未覆盖此处
+            valid_kp_count = int((person_scores > 0.3).sum())
+            normal_prob_here = float(pose_probs[0])
+            if (valid_kp_count >= 8 and
+                    _is_sitting_posture(person_kps, person_scores, img_shape) and
+                    normal_prob_here >= 0.25):
+                logger.debug(
+                    f'  [RAW] T{track_id} P7兜底YOLO falling 被坐姿否决 '
+                    f'(valid_kp={valid_kp_count}, normal={normal_prob_here:.3f}, '
+                    f'bbox={"水平" if horizontal else "竖直"})'
+                )
+                return 'normal', 1.0 - conf, 'rule_sitting_veto_yolo'
             logger.debug(f'  [RAW] T{track_id} → falling (step 6未判攻击, YOLO falling兜底, '
                          f'conf={conf:.3f}, bbox={"水平" if horizontal else "竖直"})')
             return 'falling', conf, 'rule_yolo_falling'

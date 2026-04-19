@@ -1136,6 +1136,59 @@ gate_need_phone = True
 
 ---
 
+### E2E Fix Round 16 — P7 兜底路径对称加坐姿否决（R15 P18 覆盖漏补）
+
+**背景**：R15 验证时发现坐姿误判仍然出现，日志定位到另一条 YOLO falling 出口：
+
+```
+[F2575] T3 PoseC3D normal=0.616 fighting=0.368
+  [RAW] T3 YOLO躺地但PoseC3D有攻击信号 → 暂存YOLO falling给step 6后兜底
+  [RAW] T3 attack_prob=0.368过线但被normal压制 (要求>=0.431)
+  [RAW] T3 → falling (step 6未判攻击, YOLO falling兜底, bbox=竖直)
+  [VOTE] T3 current=falling → normal (ENTRY不足)
+[F2591] T3 ... history=[n,n,n,n,n,falling,falling]
+  [VOTE] → falling (ENTRY 2>=2)   ← 进入 falling 态
+```
+
+**根因**：R15 P18 坐姿软否决只加在 step 2 **信任 YOLO falling 的主路径**，但 `_raw_judge` 里 YOLO falling 有**两个出口**：
+1. step 2 直接 return（PoseC3D 无攻击信号 + YOLO 躺地）→ R15 P18 已覆盖 ✓
+2. **P7 deferred 兜底路径**（PoseC3D 弱攻击信号但 step 6 未判攻击）→ R15 未覆盖 ✗
+
+P7 兜底路径在 `normal 压制` (relative_ok 失败) / `proximity 失败` / `argmax=normal` 时消费暂存的 YOLO falling 信号，**完全绕过 R15 P18 的三重门槛**。日志里 T3 就是走这条路径进的 falling。
+
+注意：R15 P19（HOLD 强证据退路）对此**无效** —— T3 是通过 VOTE ENTRY 进入 falling（非 HOLD），P19 只拦 HOLD 分支。必须在 RAW 层拦住。
+
+#### P20 — P7 兜底路径加坐姿软否决（与 P18 对称）
+
+**文件**：`e2e_pipeline/rule_engine.py` `_raw_judge` P7 兜底块
+
+门槛与 P18 完全一致：
+- `valid_kp_count >= 8`（骨骼可信）
+- `_is_sitting_posture` 返回 True（h/w > 1.0 纵向展开）
+- `pose_probs[0] >= 0.25`（PoseC3D normal 有一定置信度）
+
+满足则 return `'normal', rule_sitting_veto_yolo`；否则维持原行为返回 falling。
+
+#### R16 配置快照
+
+| 参数 | R15 | R16 |
+|---|---|---|
+| step 2 主路径 YOLO falling 前坐姿否决 | 有（P18） | 有 |
+| P7 兜底路径 YOLO falling 前坐姿否决 | **无** | **有（P20）** |
+
+**预期行为变化**：
+- F2575/F2591：P7 兜底前被 P20 否决 → `rule_sitting_veto_yolo` → normal ✓
+- 真实缓慢倒地经由 P7 兜底：同 P18，骨骼纵向时被否决但一旦横躺就生效 → 正常标 falling
+- 骨骼遮挡严重（valid_kp<8）：回退到原 P7 行为（仍判 falling）
+
+**已知局限**：
+- 这是第 3 次往同一个"坐姿 vs 躺姿"判据打补丁（R7 移除 → R15 P18 加主路径 → R16 P20 加兜底路径）。只要规则引擎有**任何新的 YOLO falling 出口**，都得重新加一次这个否决 —— 印证了之前讨论的"手工阈值规则不可收敛"的判断
+- 理想方案是把坐姿检查内聚到 `check_fallen_by_yolo` 内部（让它自己返回 False），而不是依赖每个调用点各自加防护。本次 3 天 deadline 内不做架构重构，仅打补丁
+
+**回退**：删除 P7 兜底块内的 R16 P20 段即可。
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
