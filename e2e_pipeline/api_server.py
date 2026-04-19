@@ -158,12 +158,19 @@ def adapt_pipeline_to_web_event(payload, task):
             'processStatusName': '未处理',
         })
 
+    # 方案 A 所需字段：前端用 videoTime 主动控制 video.currentTime 实现帧对齐
+    video_fps = task.video_fps if task.video_fps and task.video_fps > 0 else 30.0
+    video_time = frame_index / video_fps
+
     return {
         'sourceId': task.source_id,
         'slotIndex': task.slot_index,
         'sourceName': task.source_name,
         'timestamp': ts,
         'frameIndex': frame_index,
+        'videoFps': video_fps,
+        'videoTime': round(video_time, 4),
+        'totalFrames': task.total_frames,
         'imageWidth': img_w,
         'imageHeight': img_h,
         'targets': targets,
@@ -193,6 +200,7 @@ class AnalyzeTask:
         self.progress = 0.0
         self.total_frames = 0
         self.current_frame = 0
+        self.video_fps = 0.0  # 原视频 fps，方案 A 前端 video.currentTime 对齐用
         self.error_message = None
 
         self.stop_event = threading.Event()
@@ -234,10 +242,11 @@ def _run_task(task):
     with PIPELINE_LOCK:
         task.status = 'running'
         try:
-            # 预探视频总帧数（进度用）
+            # 预探视频总帧数 + fps（方案 A 前端对齐用）
             import cv2
             cap = cv2.VideoCapture(task.video_path)
             task.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+            task.video_fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
             cap.release()
 
             PIPELINE.on_frame_callback = on_frame

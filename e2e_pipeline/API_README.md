@@ -105,6 +105,9 @@ Spring Boot (LIVE 模式 /api/monitor/start)
   "sourceName": "Cam-01",
   "timestamp": "2026-04-19T01:35:00.123456",
   "frameIndex": 128,
+  "videoFps": 30.0,
+  "videoTime": 4.2667,
+  "totalFrames": 1800,
   "imageWidth": 1920,
   "imageHeight": 1080,
   "targets": [
@@ -141,9 +144,10 @@ Spring Boot (LIVE 模式 /api/monitor/start)
 - `bbox` 格式：`[x, y, width, height]`，**已按 640×360 基准缩放**，可直接塞进你方 `targets[].bbox`
 - 如果你方前端按别的基准渲染，改 `scale_bbox_xyxy_to_640x360_xywh()` 的 `BBOX_BASE_W/H` 即可，告诉我你要哪个
 - `imageWidth / imageHeight` 是**原视频分辨率**，备用字段
+- `videoFps / videoTime / totalFrames` —— **方案 A 关键字段**（见 §4.6 前端帧对齐）
 - `targets` 包含**所有** track（含 `behavior: "normal"` 的），前端可据此画绿框。不想要 normal target 告诉我可以过滤
 - `alerts` **每帧都会发**，去重（按 sourceId + type + trackId + 时间窗）请你方入库前处理。我方不做去重以保留完整原始判定（和 WEB 同学商定）
-- `snapshotUrl` 和 `clipUrl` **不由我方生成**。Spring Boot 侧可基于 `frameIndex + fps` 算时间戳从原视频截图/切片
+- `snapshotUrl` 和 `clipUrl` **不由我方生成**。Spring Boot 侧可基于 `frameIndex + videoFps` 算时间戳从原视频截图/切片
 
 ### 4.3 `POST /api/v1/analyze/{taskId}/stop`
 
@@ -182,6 +186,52 @@ Spring Boot (LIVE 模式 /api/monitor/start)
   "totalTasks": 42
 }
 ```
+
+### 4.6 前端帧对齐（方案 A，重要）
+
+**背景**：后端推理速度（~15 fps）比视频播放帧率（~30 fps）慢。如果前端 `<video>` 按原 fps 自由播放，bbox 会落后视频 2-3 秒，框停在旧位置，用户体验差。
+
+**方案 A（已商定）**：前端不让 video 自由播，**跟着后端推理节奏**走。每收到一个 `frame` SSE 事件，前端主动把视频跳到对应时刻。
+
+**实现方式**：
+
+```javascript
+// 前端 Vue/JS 伪代码
+const video = document.querySelector('#monitor-video');  // 播放原视频的 <video>
+video.pause();  // 关键：禁用 video 自己的时间推进
+
+// 收到 SSE frame 事件时
+eventSource.addEventListener('frame', (e) => {
+  const data = JSON.parse(e.data);
+
+  // 1. 视频跳到对应时刻（videoTime 是秒）
+  video.currentTime = data.videoTime;
+
+  // 2. 在 canvas 上画 bbox（用 data.targets）
+  drawBoxes(data.targets);
+
+  // 3. 处理 alerts（入库、推右侧面板、时间轴等）
+  handleAlerts(data.alerts);
+});
+```
+
+**关键字段**：
+
+| 字段 | 含义 | 前端用途 |
+|---|---|---|
+| `videoTime` | 当前帧对应的视频秒数（= frameIndex / videoFps） | `video.currentTime = videoTime` 直接跳帧 |
+| `videoFps` | 原视频帧率 | 前端可显示"处理进度 X/Y fps"等信息 |
+| `frameIndex` | 当前帧号（0-based） | 进度条 / 告警时间戳 |
+| `totalFrames` | 视频总帧数 | 进度条 / `%` 显示 |
+
+**注意事项**：
+
+1. **视频必须 pause**：否则 video 会同时按 30fps 自己推进 + 被 `currentTime` 覆盖，出现闪跳
+2. **频繁 seek 可能抖动**：HTML5 video 在非关键帧位置 seek 会有小延迟。实测校园网 + mp4（h264 + GOP 约 30）应该可以接受；如果明显卡，让我方在推理端用 ffmpeg 对上传视频重编码成关键帧密集格式（每 1 秒 1 个 I 帧），但会增加启动延迟
+3. **告警时间戳用 videoTime 计算**：`clipUrl = /media/videos/{id}.mp4#t=${videoTime - 2}` 之类的片段链接，基于 videoTime 比用 wall-clock 更准
+4. **任务结束后 video 可恢复正常播放**：收到 `done` 事件后若用户想回放，调用 `video.play()` 即可
+
+**调试技巧**：如果看到 bbox 位置对不上画面，在浏览器控制台执行 `video.currentTime` 看看是不是确实在对应时刻；对不上就说明 seek 还没完成（监听 `seeked` 事件再画 bbox 可解）。
 
 ---
 
