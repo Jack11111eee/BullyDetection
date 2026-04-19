@@ -575,15 +575,45 @@ class RuleEngine:
             # P8 (R10)：PoseC3D 否决门 —— fighting 强主导时 YOLO 躺地视为误检
             # 场景：fighting 中肢体交缠 / 倾斜，YOLO unified_3class 对此类姿态有误检，
             # 日志 F546–F627 显示 PoseC3D fighting=0.998 被 step 2 无视 → bullying 自激 82 帧
+            # R17：加 proximity 前置门 —— 孤立场景下 fighting 信号语义失效
+            # （fighting 必须有对象），不应用其否决 YOLO falling
+            # 日志 F15228 显示孤立摔倒者 PoseC3D fighting=0.775 噪声把真摔倒信号吞掉
             fighting_prob_pre = float(pose_probs[1])
             bullying_prob_pre = float(pose_probs[2])
-            yolo_veto = (fighting_prob_pre >= 0.7 and
+            proximity_ok_pre = False
+            nearest_dist_pre_log = -1.0
+            max_fight_dist_pre_log = -1.0
+            if all_person_kps_scores is not None and len(all_person_kps_scores) >= 2:
+                my_height_pre = _person_height(person_kps, person_scores)
+                nearest_dist_pre, neighbor_height_pre = _nearest_person_dist(
+                    person_kps, person_scores, all_person_kps_scores
+                )
+                ref_height_pre = max(my_height_pre or 0, neighbor_height_pre or 0)
+                max_fight_dist_pre = ((ref_height_pre * 1.5)
+                                      if ref_height_pre > 0
+                                      else img_shape[0] * 0.25)
+                nearest_dist_pre_log = nearest_dist_pre
+                max_fight_dist_pre_log = max_fight_dist_pre
+                proximity_ok_pre = (0 < nearest_dist_pre <= max_fight_dist_pre)
+            yolo_veto = (proximity_ok_pre and
+                         fighting_prob_pre >= 0.7 and
                          bullying_prob_pre < fighting_prob_pre * 0.3)
             if yolo_veto:
                 logger.debug(
                     f'  [RAW] T{track_id} YOLO躺地否决 '
                     f'(PoseC3D fighting={fighting_prob_pre:.3f}强主导, '
-                    f'bullying={bullying_prob_pre:.3f}) → 跳过rule_yolo_bullying/falling'
+                    f'bullying={bullying_prob_pre:.3f}, proximity_ok '
+                    f'nearest={nearest_dist_pre_log:.0f}<={max_fight_dist_pre_log:.0f}) '
+                    f'→ 跳过rule_yolo_bullying/falling'
+                )
+            elif (fighting_prob_pre >= 0.7 and
+                  bullying_prob_pre < fighting_prob_pre * 0.3 and
+                  not proximity_ok_pre):
+                logger.debug(
+                    f'  [RAW] T{track_id} YOLO躺地否决跳过 '
+                    f'(fighting={fighting_prob_pre:.3f}强主导但proximity失败 '
+                    f'nearest={nearest_dist_pre_log:.0f}>{max_fight_dist_pre_log:.0f}, '
+                    f'孤立场景视fighting为PoseC3D噪声)'
                 )
             if my_bbox and track_bboxes_dict and len(track_bboxes_dict) >= 2 and not yolo_veto:
                 for other_tid, other_bbox in track_bboxes_dict.items():
