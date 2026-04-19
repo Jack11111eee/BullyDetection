@@ -1357,8 +1357,76 @@ if (current_label == 'normal'
 - P23 回退：删 `pipeline.py` 里 `demote_unsupported_attacks` 调用（pipeline 侧 2 行） + rule_engine.py 新方法（整段可留待后续使用）
 
 **未处理**：
-- Bug 2（proximity `1.5×height` 对拉扯场景过紧）留待 R19
+- Bug 2（proximity `1.5×height` 对拉扯场景过紧）留待后续 Round
 - pair selection (`_find_nearest_track`) 语义级改进（选"最可能是交互对象"的邻居而非"最近"）—— 架构改动较大，不在本轮
+
+---
+
+### E2E Fix Round 19 — 下半身缺失否决 YOLO falling（R16 设计债还清）（commit `67f40f4`）
+
+**背景**：日志 F3385 T2 坐着手臂外展被误判 falling：
+
+```
+[F3385] T2 PoseC3D normal=0.998 fighting=0.000 falling=0.002
+  [RAW] T2 → falling (YOLO辅助检测: conf=0.746, bbox=水平)
+  [VOTE] HOLD 5>=1 → falling ✗
+```
+
+PoseC3D 极度确信 normal=0.998，但 step 2 YOLO 辅助路径抢先返回 falling。追因：
+- YOLO laying 模型因手臂外展（手肘/腕 kp 被拉开）+ 骨骼包围框宽 > 高 → 触发 falling bbox
+- R15 P18 的坐姿 veto 用 `_is_sitting_posture`（骨骼 h/w > 1）判定，**手臂外展时 w > h → 判定失效**
+- R16 P20 的 P7 兜底坐姿 veto 用同一判据 → 同样失效
+- 两条坐姿 veto 都依赖同一个纵横比度量，对"上半身大幅外展"场景完全盲
+
+**用户观察**：躺着的人身体横向展开，膝/踝至少一个会落入可检测范围；坐在桌椅后或画面边缘的人下半身常被裁掉，只剩上半身。**下半身缺失 → 非躺地**，这是独立于 h/w 的新判据。
+
+#### P24 — `check_fallen_by_yolo` 内聚下半身缺失否决
+
+**文件**：`e2e_pipeline/rule_engine.py:344`（`check_fallen_by_yolo` 内部 return True 前）
+
+```python
+# R19 P24: 下半身缺失 → 视为坐姿/画面裁切，不判 falling
+lower_kp_visible = int(sum(1 for i in [13, 14, 15, 16]
+                           if person_scores[i] > 0.3))
+upper_kp_visible = int(sum(1 for i in range(11)
+                           if person_scores[i] > 0.3))
+if lower_kp_visible == 0 and upper_kp_visible >= 5:
+    return False, 0.0, False
+```
+
+**三重门槛**：
+- `lower_kp_visible == 0`：下半身 4 个 kp（膝 13/14, 踝 15/16）**全不可信**（最严，1 个可见即不触发）
+- `upper_kp_visible >= 5`：上半身 11 个 kp（nose 0 ~ wrist 10）≥ 5 个可信（骨骼本身质量足够，避免 YOLO-Pose 整体漏检时误用此规则）
+- **位置内聚到 `check_fallen_by_yolo`**：一次修好，所有 YOLO falling 出口（step 2 主路径、P7 兜底、未来新出口）自动受益——还清 R16 记录的设计债
+
+#### R19 行为矩阵
+
+| 场景 | kp 13-16 | kp 0-10 | 旧行为 | 新行为 |
+|---|---|---|---|---|
+| **F3385 T2 坐姿 + 手臂外展** | 全缺 | ≥ 5 | falling ✗ | **非倒地 ✓** |
+| 正常躺地（身体横展） | ≥ 1 可见（膝/踝至少一个能落入画面） | 充分 | falling ✓ | falling ✓（不变） |
+| 低角度俯拍躺地 | 膝/踝压扁但仍可检（骨骼整体压缩但 kp 散布） | 充分 | falling ✓ | falling ✓（不变） |
+| 受害者被压身上 + 腿遮挡 | 可能全缺 | 充分 | falling/bullying | rule_yolo_bullying 先走（邻居 bullying → 返回 bullying），走不到 P24 |
+| YOLO-Pose 整体检测质量差 | 缺 | < 5 | falling（假检） | falling（不变）— 本规则不介入 |
+
+#### R19 配置快照
+
+| 项 | R18 | R19 |
+|---|---|---|
+| YOLO falling sitting veto | `_is_sitting_posture`(h/w > 1) 两处调用 | **+ 下半身缺失兜底否决（内聚到 check_fallen_by_yolo）** |
+| 判据轴 | 单一：骨骼纵横比 | **双轴：纵横比 + 下半身 kp 完整性** |
+| 出口覆盖 | 每个 YOLO falling 出口各加一次 sitting veto | 函数内部一次性堵住 |
+
+**核心语义**：躺着的人物理上横向展开 → 膝/踝至少一个要可见。"下半身 4 个 kp 一个都检不到"这件事本身比"骨骼形状看起来水平"更直接反驳"躺地"的假设。
+
+**风险/回退**：
+- **受害者被压身上腿被完全遮**：step 2 的 rule_yolo_bullying 在此 veto **之前**走（rule_engine.py:618），邻居 smoothed=bullying 或最近 3 帧含 bullying → 返回 bullying，不会落到本否决
+- **腿完全卷到身下（胎儿蜷缩）**：真正边缘场景，campus 几乎不出现
+- **回退**：删 `check_fallen_by_yolo` 里 R19 P24 块（约 10 行）即可
+
+**未处理**：
+- R15 P18 / R16 P20 原有的 `_is_sitting_posture` veto 继续保留作双保险（h/w 判据和 kp 完整性判据互补）；如果未来想彻底清理，可以删 P18/P20 让 check_fallen_by_yolo 一个地方负责所有否决逻辑 —— 本轮不做，等视频验证稳定后再整理
+- Bug 2（proximity `1.5×height` 对拉扯场景过紧）仍留待后续 Round
 
 ---
 
@@ -1373,6 +1441,8 @@ if (current_label == 'normal'
  │
  ├─ Step 2: YOLO 辅助 falling 检测
  │   YOLO 检测到 falling bbox + 骨骼中心重叠（20% margin）
+ │   ├─ R19 P24 内聚否决：下半身 kp 13-16 全缺 AND 上半身 kp 0-10 ≥5 可见
+ │   │   → check_fallen_by_yolo 返回 False（整个 step 2 跳过，当作无 YOLO falling 信号）
  │     ├─ R10 P8 否决门（R17 P21 加 proximity 前置）：
  │     │   proximity_ok AND fighting_prob ≥ 0.7 AND bullying_prob < f*0.3
  │     │   → 整个 step 2 跳过（YOLO 视为误检）
@@ -1766,6 +1836,24 @@ track 被分配新 ID（重关联）
   - 新增 `_last_pose_probs` 缓存 + migrate/clear 同步清理
 - **状态**：已修复（待视频验证）
 
+#### Problem 32: 坐姿手臂外展被 YOLO falling 误判（_is_sitting_posture 纵横比失效）
+
+- **发现**：E2E Fix Round 19（用户报告 + debug.log F3385 分析）
+- **详情**：T2 坐着手臂外展 → YOLO laying 模型触发 falling bbox + bbox=水平 → 规则引擎返回 falling。但 PoseC3D `normal=0.998` 明确说 normal
+- **证据**：
+  ```
+  F3385 T2 PoseC3D normal=0.998 fighting=0.000 falling=0.002
+        RAW → falling (YOLO辅助检测, conf=0.746, bbox=水平)
+        VOTE HOLD 5>=1 → falling ✗
+  ```
+- **根因**：R15 P18 / R16 P20 两处坐姿 veto 都只用 `_is_sitting_posture`（骨骼 h/w > 1）一个判据。手臂外展时 w 被肘/腕 kp 拉开 → h/w < 1 → 判据失效。没有第二道独立判据兜底
+- **修复**：R19 P24 `check_fallen_by_yolo` 内部加**下半身缺失否决**（commit `67f40f4`）
+  - 躺地的人身体横向展开 → 膝/踝（kp 13-16）至少一个落入可检测范围
+  - 坐在桌/椅后或画面边缘的人下半身被裁 → 只剩上半身
+  - 条件：`lower_kp_visible==0 AND upper_kp_visible>=5` → 返回 `is_fallen=False`
+  - 位置内聚到 `check_fallen_by_yolo` 内部，一次修好所有 YOLO falling 出口（还清 R16 记录的设计债）
+- **状态**：已修复（待视频验证）
+
 ---
 
 ## 11. 辅助组件
@@ -1842,6 +1930,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+67f40f4 fix(e2e): R19 P24 lower-body-missing veto in check_fallen_by_yolo    (R19)
 0f7c1b3 fix(e2e): R18 P22+P23 kill single-person fighting                    (R18)
 0655144 fix(e2e): R17 P8 otoriel door add proximity precondition              (R17)
 6d3af28 fix(e2e): R13 smoking detection — P15/P16/P17                          (R13)
