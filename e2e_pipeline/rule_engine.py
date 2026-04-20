@@ -32,16 +32,17 @@ logger = logging.getLogger('e2e_debug')
 POSE_CLASSES = ['normal', 'fighting', 'bullying', 'falling', 'climbing']
 
 FINAL_CLASSES = [
-    'normal',       # 0 正常
-    'fighting',     # 1 打架
-    'bullying',     # 2 霸凌
-    'falling',      # 3 摔倒
-    'climbing',     # 4 攀爬
-    'vandalism',    # 5 破坏公物（规则引擎判定）
-    'smoking',      # 6 吸烟（YOLO小物体 + 规则）
-    'phone_call',   # 7 打电话（YOLO小物体 + 规则）
-    'loitering',    # 8 徘徊（轨迹分析）
-    'self_harm',    # 9 R25 自伤（撞墙/扶墙撞头，规则引擎 skeleton 速度判定）
+    'normal',           # 0 正常
+    'fighting',         # 1 打架
+    'bullying',         # 2 霸凌
+    'falling',          # 3 摔倒
+    'climbing',         # 4 攀爬
+    'vandalism',        # 5 破坏公物（规则引擎判定）
+    'smoking',          # 6 吸烟（YOLO小物体 + 规则）
+    'phone_call',       # 7 打电话（YOLO小物体 + 规则）
+    'loitering',        # 8 徘徊（轨迹分析）
+    'self_harm',        # 9 R25 自伤（撞墙/扶墙撞头，规则引擎 skeleton 速度判定）
+    'camera_tampering', # 10 R26 镜头遮挡/黑屏/失焦（scene-level，短路下游推理，track_id=-1）
 ]
 
 

@@ -33,6 +33,7 @@ from ultralytics import YOLO
 
 from input_source import InputSource
 from rule_engine import RuleEngine, BehaviorResult, POSE_CLASSES, FINAL_CLASSES
+from scene_event_detector import CameraTamperingDetector, render_tamper_overlay
 
 
 # ============================================================
@@ -56,6 +57,7 @@ LABEL_COLORS = {
     'phone_call': (255, 200, 0),
     'loitering':  (200, 200, 0),
     'self_harm':  (180, 0, 100),  # R25 深品红，与 vandalism 品红区分
+    'camera_tampering': (0, 0, 255),  # R26 纯红（scene-level，整帧泛红由 render_tamper_overlay 处理）
 }
 
 
@@ -582,6 +584,10 @@ class InferencePipeline:
         # API 联调钩子：每帧处理完成后回调，payload 见 _emit_frame_callback
         self.on_frame_callback = on_frame_callback
 
+        # R26 P37: 镜头遮挡/黑屏/失焦 scene-level 检测器
+        # 触发即短路 _process_frame，跳过 YOLO/PoseC3D/规则，避免下游全部误判
+        self.tamper_detector = CameraTamperingDetector()
+
         print(f'  clip_len={clip_len} (auto-detected from config)')
         print(f'  stride={stride}, with_kp={self.posec3d.with_kp}, with_limb={self.posec3d.with_limb}')
 
@@ -613,6 +619,9 @@ class InferencePipeline:
             print(f'Total frames: {total_frames}')
         print(f'PoseC3D: {self.posec3d.num_classes} classes')
         print('Press Q to quit.\n')
+
+        # R26 P37: 每段视频独立基准，避免跨视频首帧差异导致误报
+        self.tamper_detector.reset()
 
         frame_idx = 0
         t_start = time.time()
@@ -679,6 +688,42 @@ class InferencePipeline:
 
     def _process_frame(self, frame, frame_idx, img_shape):
         """处理单帧"""
+
+        # R26 P37: Step 0 — 镜头遮挡/黑屏/失焦 scene-level 检测（最高优先级）
+        # 镜头被干扰时 YOLO/PoseC3D/ByteTrack 全部不可靠 → 短路下游推理
+        # track 状态由 SkeletonBuffer.grace_frames=90 自然保留；短暂遮挡（<3s）恢复后延续
+        is_tamper, tamper_alarms = self.tamper_detector.update(frame)
+        if is_tamper:
+            render_tamper_overlay(frame, tamper_alarms)
+            logger.info(f'[F{frame_idx}] SCENE camera_tampering: {tamper_alarms}')
+            # scene 事件：track_id=-1 标记非 per-track，reason 带 alarm 详情
+            self.event_log.append({
+                'frame': int(frame_idx),
+                'track_id': -1,
+                'label': 'camera_tampering',
+                'confidence': 1.0,
+                'source': 'scene_tamper',
+                'smoothed': False,
+                'timestamp': time.time(),
+                'reason': list(tamper_alarms),
+            })
+            if self.on_frame_callback is not None:
+                try:
+                    h, w = img_shape
+                    self.on_frame_callback({
+                        'frame_index': int(frame_idx),
+                        'img_width': int(w),
+                        'img_height': int(h),
+                        'tracks': [],
+                        'scene_event': {
+                            'label': 'camera_tampering',
+                            'source': 'scene_tamper',
+                            'reason': list(tamper_alarms),
+                        },
+                    })
+                except Exception as cb_err:
+                    logger.debug(f'[F{frame_idx}] tamper on_frame_callback 失败: {cb_err}')
+            return  # 短路：不跑 YOLO/PoseC3D/规则/coupling/清理
 
         # Step 1: YOLO Pose + ByteTrack
         results = self.yolo_pose.track(

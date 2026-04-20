@@ -2004,6 +2004,107 @@ rule_engine.judge(..., head_vel_hist=head_hist, hip_vel_hist=hip_hist)
 
 ---
 
+### E2E Fix Round 26 — camera_tampering · scene-level 镜头遮挡/黑屏/失焦检测
+
+**背景**：用户提供根目录 `step5_camera_tampering.py`（独立 CLI 脚本：Canny EDR + 亮度 + 拉普拉斯方差三通道），要求集成到 pipeline。镜头被干扰时 YOLO/PoseC3D/ByteTrack 全部不可靠 —— 不是 per-track 噪声，是 scene-level 信号污染。需要在最高优先级短路下游推理，避免残留 track 状态误判。
+
+**设计决策（用户确认默认推荐）**：
+- **触发行为**：短路 —— tamper 期间跳过 YOLO/PoseC3D/规则，只出 scene 事件
+- **类别定义**：进 FINAL_CLASSES 第 10 类 `camera_tampering`，track_id=-1 标记 scene 事件
+- **Ref 刷新**：每次 `run()` 开始 `reset()`；运行中无报警每 75 帧（~3s@25fps）静默刷新基准
+- **文件位置**：新建 `e2e_pipeline/scene_event_detector.py`，只 import 不改原脚本
+
+#### P37 — CameraTamperingDetector（scene_event_detector.py）
+
+**文件**：`e2e_pipeline/scene_event_detector.py`（新）
+
+三通道判据（与原脚本一致）：
+| 通道 | 触发条件 |
+|---|---|
+| blackout | `brightness < 20` 或 `brightness < ref * 0.5` |
+| defocus | `ref_focus > 50`（基准本身清晰）且 `focus < ref * 0.5` |
+| occlusion | `ref_edge_count > 100` 且 `EDR = 1 - common/ref > 0.83` |
+
+- 首帧作为基准（首帧就被挡住的区域视为"正常背景"，不会因此误报）
+- 无报警时每 `refresh_interval=75` 帧刷新基准，适应光照变化
+- 报警时不刷新（防止遮挡物被误采为基准）
+- `update(frame) → (is_tamper: bool, alarms: list[str])` 纯函数接口
+- `render_tamper_overlay(frame, alarms)` 渲染整帧泛红 + "CAMERA TAMPER ALERT!" 文字
+
+#### P38 — pipeline.py 短路集成
+
+**文件**：`e2e_pipeline/pipeline.py`
+
+- `__init__`：实例化 `self.tamper_detector = CameraTamperingDetector()`
+- `run()`：视频流开始处调 `tamper_detector.reset()`，每段视频独立基准
+- `_process_frame` 最开头新增 **Step 0**：
+  ```python
+  is_tamper, alarms = self.tamper_detector.update(frame)
+  if is_tamper:
+      render_tamper_overlay(frame, alarms)
+      self.event_log.append({'frame': ..., 'track_id': -1,
+                             'label': 'camera_tampering',
+                             'source': 'scene_tamper', ...,
+                             'reason': list(alarms)})
+      if self.on_frame_callback:
+          self.on_frame_callback({..., 'tracks': [],
+                                  'scene_event': {'label': 'camera_tampering', ...}})
+      return  # 短路：跳过 YOLO/PoseC3D/规则/coupling/清理
+  ```
+- `LABEL_COLORS['camera_tampering'] = (0, 0, 255)`（纯红；整帧泛红由 overlay 处理）
+
+#### P39 — rule_engine.py
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+- `FINAL_CLASSES` 追加 `'camera_tampering'` 为第 10 类
+- 无 VOTE 配置 —— scene-level 短路在 pipeline 层完成，不走 per-track VOTE 机制
+
+#### 状态维护约定
+
+- tamper 期间**不清理** `skeleton_buf` / `rule_engine` state —— 短暂遮挡（<grace_frames=90）恢复后 track 状态延续
+- 长时遮挡（>3s）时 track 通过 grace 机制自然过期；镜头恢复后 YOLO 会分配新 ID，`try_reassociate` 按位置匹配恢复状态
+- tamper 不进入 pair coupling / inject / HOLD 机制 —— 完全独立于 per-track 判定链
+
+#### R26 配置快照
+
+| 参数 | 值 | 依据 |
+|---|---|---|
+| `edr_threshold` | 0.83 | 原脚本默认，丢失 83% 基准边缘算突发遮挡 |
+| `drop_ratio` | 0.5 | 亮度/清晰度降到基准 50% 以下算异常 |
+| `refresh_interval` | 75 帧 (~3s@25fps) | 适应光照缓慢变化 |
+| `brightness_floor` | 20 | 绝对黑屏阈值（独立于相对 drop） |
+| `ref_focus_min` | 50 | 基准清晰度下限，避免基准本身模糊时误报 defocus |
+| `ref_edge_count_min` | 100 | 纯色墙防除零 |
+
+#### 预期效果
+
+| 场景 | 触发 | 备注 |
+|---|---|---|
+| 手遮镜头 | occlusion | EDR 突增 |
+| 贴纸 / 黑布覆盖 | blackout + occlusion | 亮度骤降 |
+| 散焦 / 雾化 | defocus | 清晰度骤降 |
+| 太阳光变化（日出日落） | 不触发 | 3s 静默刷新吸收缓慢变化 |
+| 闪光灯 / 车灯扫过 | 可能误触发 blackout | 短暂脉冲，由 VOTE 层外延缓 — 当前未加 |
+
+#### 已知局限
+
+1. **scene-level 检测无 VOTE 平滑** —— 单帧误触发即发事件。若实测抖动多，加帧级滑窗（N 帧内 tamper ≥ K 才正式触发）
+2. **长时 tamper 状态残留**：grace 期内 track state 保留，恢复后延续；超过 grace_frames=90 后 track 丢失状态，需靠 `try_reassociate` 按位置匹配
+3. **ref 刷新窗口固定 75 帧**（硬编码 25fps × 3s）：若视频 fps 远离 25，刷新节奏偏离 3s 物理间隔 —— 未来可改为按 `fps_video * 3` 动态设置
+4. **API callback 新增 `scene_event` 字段**：API server 和前端需更新协议处理 scene_event 或忽略之
+
+**回退**：
+- `pipeline.py` 删 Step 0 短路块 + `__init__` tamper_detector 实例 + `run()` reset 调用 + LABEL_COLORS / import
+- `rule_engine.py` FINAL_CLASSES 删 `'camera_tampering'`
+- 删除 `e2e_pipeline/scene_event_detector.py`
+
+**未处理**：
+- 未做视频实测；默认阈值来自原脚本（`edr_threshold=0.83, drop_ratio=0.5`）
+- 单帧误触发抑制 / 连续性校验未加，视实测再补 scene-level VOTE
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -2538,6 +2639,7 @@ track 被分配新 ID（重关联）
 | API 服务（Web 联调） | `e2e_pipeline/api_server.py` + `API_README.md` | FastAPI + sse-starlette，POST mp4 → SSE 推 frame/alert 事件。对齐 WEB-HANDOFF §6.3。端口默认 8000，GPU 显存限制下串行跑 |
 | Pipeline 回调钩子 | `InferencePipeline(on_frame_callback=...)` + `_emit_frame_callback` | `_process_frame` 末尾调用回调，传每 track 的 label/conf/bbox_xyxy。API server 转换成 WEB frame 事件 |
 | 撞墙 / 头撞墙探查 | `probe_wall_impact.py` | R24 Probe：YOLO-Pose+ByteTrack 跑给定样本，输出速度 / 滑窗 std / 自相关 / 姿态 / 场景上下文时序 + 跨视频叠加图，用于数据驱动定阈值。`--with-posec3d` 可选叠加 5 类概率对照 |
+| 镜头遮挡 / 黑屏 / 失焦 | `e2e_pipeline/scene_event_detector.py` | R26 P37：scene-level Canny EDR + 亮度 + 拉普拉斯方差三通道检测。pipeline `_process_frame` Step 0 短路调用，触发即跳过 YOLO/PoseC3D/规则。逻辑源自根目录 `step5_camera_tampering.py`（保留为独立 CLI 参考实现） |
 
 ---
 
@@ -2592,6 +2694,10 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+c054b92 feat(e2e): R26 P37-P39 camera_tampering scene-level 检测             (R26)
+da4e546 feat(e2e): R25 self_harm 落地 — 撞墙/扶墙撞头 skeleton 速度双路径       (R25)
+8b3c749 fix+feat(probe): R24 二轮 · 修 self-exclusion bug + 加新指标            (R24)
+f056547 feat(probe): R24 probe_wall_impact.py for self-harm feature exploration (R24)
 2648bc5 revert(e2e): R23 P31 (oversuppressed real lying via PoseC3D static-pose blind spot)
 165a0c4 fix(e2e): R23 P31 PoseC3D strong-normal reverse-veto YOLO conf bypass (R23, reverted)
 442331b fix(e2e): R22 P30 extend P22 STRONG_NORMAL posec3d HOLD exit to falling/climbing (R22)
