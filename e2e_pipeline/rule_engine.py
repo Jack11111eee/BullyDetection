@@ -487,7 +487,9 @@ def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, i
 def check_self_harm(head_vel_hist, hip_vel_hist,
                     exceed_thr=0.08, exceed_window=60,
                     exceed_min_count=2, exceed_max_gap=5,
-                    ratio_thr=3.5, ratio_window=60, eps=1e-6):
+                    ratio_thr=3.5, ratio_window=60,
+                    ratio_head_max_min=0.06, ratio_hip_max_min=0.02,
+                    eps=1e-6):
     """R25 撞墙/扶墙撞头自伤判定（基于 skeleton 速度滑窗）。
 
     输入:
@@ -527,16 +529,33 @@ def check_self_harm(head_vel_hist, hip_vel_hist,
                      f'in last {exceed_window}f → conf={conf:.2f}')
         return True, conf, 'rule_self_harm_vel'
 
-    # B) 补强路径
+    # B) 补强路径 —— R28 P46：加双绝对下限
+    #   问题（F637 T10 坐姿误判）：坐姿身体不动 → hip_max≈0.011 → 任何 head
+    #   微抖(0.05) ÷ 0.011 = ratio 飙升。分母接近 0 使 ratio 失控，不是因为
+    #   head 真在快速运动。R25 探查 sample bias：normal 样本(走路) hip 持续
+    #   移动 → ratio max=2.62 看似安全；坐姿未覆盖，hip 极小时 ratio 无上限。
+    #   双门槛物理语义：
+    #     head_max ≥ 0.06  —— head 必须达撞击量级（< A 路径 0.08,留余量给 B 补强）
+    #     hip_max  ≥ 0.02  —— 身体必须有基本动作(扶墙撞头时身体会跟着微晃)
     hip_recent = hip_vel_hist[-ratio_window:]
     head_max = max((v for v in head_recent if v is not None), default=0.0)
     hip_max = max((v for v in hip_recent if v is not None), default=0.0)
-    ratio = head_max / (hip_max + eps)
-    if ratio >= ratio_thr:
-        conf = min(1.0, 0.4 + 0.05 * (ratio - ratio_thr))
-        logger.debug(f'  [RULE] self_harm B路径: head_max/hip_max={ratio:.2f} '
-                     f'>= {ratio_thr} → conf={conf:.2f}')
-        return True, conf, 'rule_self_harm_ratio'
+    if head_max < ratio_head_max_min:
+        logger.debug(f'  [RULE] self_harm B路径门槛失败: '
+                     f'head_max={head_max:.3f}<{ratio_head_max_min} (head 未达撞击量级)')
+    elif hip_max < ratio_hip_max_min:
+        ratio_noisy = head_max / (hip_max + eps)
+        logger.debug(f'  [RULE] self_harm B路径门槛失败: '
+                     f'hip_max={hip_max:.3f}<{ratio_hip_max_min} '
+                     f'(身体静止, ratio={ratio_noisy:.2f} 分母不可信)')
+    else:
+        ratio = head_max / hip_max
+        if ratio >= ratio_thr:
+            conf = min(1.0, 0.4 + 0.05 * (ratio - ratio_thr))
+            logger.debug(f'  [RULE] self_harm B路径: head_max/hip_max={ratio:.2f} '
+                         f'>= {ratio_thr} (head_max={head_max:.3f}, '
+                         f'hip_max={hip_max:.3f}) → conf={conf:.2f}')
+            return True, conf, 'rule_self_harm_ratio'
 
     return False, 0.0, None
 

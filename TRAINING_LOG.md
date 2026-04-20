@@ -2232,6 +2232,70 @@ hip 门槛保持 0.3（髋 kp 稳，不是主要噪声源）。
 **未处理**（留给 P3 轮次）：
 - 归一化基准仍是 bbox_h（问题 #2），坐/站姿放大不对称未解决 —— 待换为"肩到髋 × 1.6"后重跑探查重标阈值
 - B 路径 ratio 判据未改，与 A 路径簇发不对称（B 路径任意 1 帧 max 即可）—— 实测再看
+  → **R28 P46 已补**（见下）
+
+---
+
+### E2E Fix Round 28 — self_harm B 路径双绝对下限（hip_max 分母失控修复）
+
+**背景**：R27 落地后 F637 T10 坐着看手机仍被判 self_harm。R27 只改了 A 路径（簇发），B 路径（head/hip ratio）未动，风险已兑现。
+```
+[F637] T10 PoseC3D: argmax=normal(0.494) fighting=0.459  ← 未到 P42 veto 的 0.9 门槛
+  [RULE] self_harm B路径: head_max/hip_max=4.59 >= 3.5 → conf=0.45
+  [RAW] T10 → self_harm (rule_self_harm_ratio)
+  [VOTE] ENTRY 1>=1 window=3 → self_harm ✗
+```
+
+**根因**：B 路径 `ratio = head_max / (hip_max + eps)` 在坐姿 / 身体静止场景 hip_max ≈ 0.011（接近 0）→ 任何 head 微抖（0.05）÷ 0.011 → ratio ≈ 4.6 爆炸。**不是因为 head 真在快速运动，是分母接近 0 使 ratio 失控**。
+
+R25 探查的 normal 样本（走路）hip 持续移动 → ratio max=2.62 看似安全；坐姿 / 静止 / 阅读等未覆盖，hip 极小时 ratio 物理上无意义。
+
+#### P46 — check_self_harm B 路径加双绝对下限
+
+**文件**：`e2e_pipeline/rule_engine.py` `check_self_harm`
+
+```python
+ratio_head_max_min = 0.06  # head 必须达撞击量级（< A 路径 0.08，留余量给 B 补强）
+ratio_hip_max_min  = 0.02  # hip 必须有基本动作（扶墙撞头时身体也会微晃）
+
+if head_max < ratio_head_max_min:
+    # head 未达撞击量级 —— 不走 B 路径
+elif hip_max < ratio_hip_max_min:
+    # 身体静止 —— ratio 分母不可信，不走 B 路径
+else:
+    ratio = head_max / hip_max
+    if ratio >= ratio_thr:
+        return True, conf, 'rule_self_harm_ratio'
+```
+
+**物理语义**：
+- `head_max ≥ 0.06`：头必须真动起来。坐姿头微抖 head_max ≈ 0.04–0.05 被挡
+- `hip_max ≥ 0.02`：身体也必须有基本动作。完全静止 → ratio 无物理意义（分母问题，不是头动问题）
+
+**两个门槛都是绝对下限，不替代 ratio_thr**。真 headbang：head_max 通常 > 0.1，hip_max > 0.02，双门槛都通过，ratio ≥ 3.5 照常触发。
+
+#### R28 配置快照
+
+| 参数 | R27 | R28 |
+|---|---|---|
+| B 路径 `ratio_head_max_min` | — | **0.06** |
+| B 路径 `ratio_hip_max_min`  | — | **0.02** |
+| 其余 B 路径参数 | 不变 | 不变 |
+
+#### 预期效果
+
+| 场景 | R27 B 路径 | R28 B 路径 |
+|---|---|---|
+| F637 坐姿看手机（hip 静止）| ratio=4.59 → self_harm ✗ | hip_max<0.02 门槛失败 → normal ✓ |
+| 真 headbang（身体也晃）| ratio ≥ 3.5 → self_harm ✓ | 双门槛通过 → self_harm ✓（不变）|
+| 走路（探查 ratio max=2.62）| 不到阈值 → normal ✓ | 不到阈值 → normal ✓（不变）|
+| head_max < 0.06 的任何场景 | 可能被 ratio 放大触发 | 直接挡住 |
+
+**回退**：删掉函数签名 `ratio_head_max_min / ratio_hip_max_min` 两个参数 + B 路径里的 if/elif 分支，恢复原 `ratio = head_max / (hip_max + eps)` 单行判据。
+
+**未处理**：
+- 归一化基准换肩髋×1.6 仍留 P3 轮次
+- B 路径 `ratio_thr=3.5` 保持不变（只加门槛，不动主阈值），实测后看是否需收紧
 
 ---
 
@@ -2824,6 +2888,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+??????? fix(e2e): R28 P46 self_harm B 路径双绝对下限 (hip_max 分母失控修复)   (R28)
 ff91a5b fix(e2e): R27 P41-P45 self_harm 误报压制 (坐姿头转动 / 簇发 / kp门槛)  (R27)
 4ced812 fix(e2e): R26 P40 draw_label 自适应位置                                (R26)
 a319fe4 feat(e2e): R26 P37-P39 camera_tampering scene-level 检测             (R26)
