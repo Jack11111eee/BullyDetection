@@ -2299,6 +2299,77 @@ else:
 
 ---
 
+### E2E Fix Round 29 — _is_upright_posture 二维投影盲区修复（真摔倒被"直立"弱证据否决）
+
+**背景**：F175 T3 侧身躺地（图像里身体横跨画面：头右上、髋中间、脚左下），PoseC3D `falling=0.977` 极度确信，但被 `rule_upright` 降级为 normal。
+```
+[F175] T3 PoseC3D: argmax=falling(0.977) | normal=0.011 falling=0.977
+  [RULE] 姿态直立检查: head_hip=159.2 > 32.4 → 直立(非falling)
+  [RAW] T3 → normal (高置信度falling但躯干直立, 可能是坐下)
+  FINAL → normal ✗
+```
+
+**根因**：`_is_upright_posture` 只用 **Y 差**判定直立（`hip_y - head_y > h * 0.03`），图像坐标与重力方向不对齐时彻底失效。本 case：
+- 图像 dy = 160px（头在图像上方 160px）
+- 图像 dx = ≈ 400px（头-髋水平跨度更大）
+- 身体轴**图像里就是横的**，但单看 Y 差会觉得"头在上方 = 直立"
+
+**教训**：R7 经验 #20（像素坐标姿态检查受摄像头角度影响）再次复刻。同类盲区：R21 P27-P28 的 `_is_sitting_posture`（h/w > 1 判坐姿）在"头朝相机躺地"下被 P27 head-vs-hip 二层校验 + P28 YOLO conf 豁免救回。本轮是对应的直立判据版本。
+
+**讨论中的误判修正**：我最初说"躺地向量必然横向主导 → `dy > dx * 1.2` 够了"。用户反驳：头朝相机躺 + 身体沿图像 Y 轴对齐 → dy 主导、dx ≈ 0，该判据失效。**`dy > dx` 只救横躺，救不了纵躺**。
+
+#### P47 — _is_upright_posture 双层防御
+
+**文件**：`e2e_pipeline/rule_engine.py` `_is_upright_posture`
+
+新签名：`_is_upright_posture(kps, scores, img_shape, pose_falling_prob=0.0, threshold=0.3)`
+
+判定流程（全部满足才返回 True）：
+1. `dy > h * 0.03`（原有基础门槛）
+2. **(A) `dy > dx * 1.2`** —— 向量竖直主导，挡横躺（本 case）
+3. **(B) `pose_falling_prob < 0.95`** —— PoseC3D 极度确信时豁免几何启发式，挡纵躺（头朝相机盲区）
+
+语义：PoseC3D 看 64 帧时序骨骼动态判的 falling 是**强证据**；rule_upright 只看单帧 2D 投影是**弱证据**。强压弱，与 R24 教训 #24（规则引擎优先级语义对齐）一致。
+
+两条 return False 都带 `logger.debug` 打印触发原因，便于实测后调参。
+
+**调用点**：`_raw_judge` 里两处 —— step 1（高置信 falling > 0.7）+ step 6（final_label == falling argmax），都改为传 `pose_falling_prob=float(pose_probs[3])`。
+
+#### R29 配置快照
+
+| 参数 | R28 | R29 |
+|---|---|---|
+| `_is_upright_posture` 基础门槛 | `dy > h*0.03` | `dy > h*0.03`（不变）|
+| dy/dx 比值下限 | — | **dy > dx*1.2** |
+| PoseC3D falling 豁免门 | — | **pose_falling_prob >= 0.95** |
+| 函数签名 | 3 参 | 4 参（新增 pose_falling_prob）|
+
+#### 预期效果
+
+| 场景 | R28 | R29 |
+|---|---|---|
+| F175 侧身横躺（本 case）dy=160 dx=400 | 误判直立 ✗ | 挡在 (A) dy<dx*1.2 → 非直立 ✓ |
+| 头朝相机躺（纵躺盲区）dy 主导 dx≈0 PoseC3D falling>0.95 | 误判直立 ✗ | 挡在 (B) 豁免 → 非直立 ✓ |
+| 头朝相机躺 PoseC3D falling∈[0.7, 0.95] | 误判直立 | 仍误判直立（灰度带保守）|
+| 真坐姿 PoseC3D falling 低置信（argmax=normal）| 走不到此函数 | 走不到此函数 |
+| 真坐姿 PoseC3D falling≥0.95（罕见假阳）| 被 rule_upright 救回 | 信 PoseC3D 判 falling（罕见假阳代价）|
+
+#### 副作用评估
+
+- 真坐姿但 PoseC3D 假阳 falling≥0.95 的 case：从"rule_upright 救回"变"信 PoseC3D 判 falling"。PoseC3D ≥0.95 属极强信号，真坐姿触发此置信度的数据应极少
+- 若实测暴露此类误报 → 收紧豁免门到 0.98 或增加时序一致性（近 3 帧 >= 2 帧 raw=falling）
+- `_is_sitting_posture` 路径（kp 7 行）未改，仍作 rule_upright 之后的第二道骨骼纵横比 veto
+
+**回退**：
+- `_is_upright_posture` 恢复 3 参签名 + 只算 Y 差
+- 两处 caller 回退为 `_is_upright_posture(person_kps, person_scores, img_shape)`
+
+**未处理**：
+- P3 轮次仍挂着：self_harm 归一化基准换肩髋×1.6
+- 实测 R29 + R28 + R27 三轮叠加后 falling / self_harm 的召回/误报总和
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -2888,6 +2959,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+??????? fix(e2e): R29 P47 _is_upright_posture 二维投影盲区双层防御            (R29)
 54c7d8c fix(e2e): R28 P46 self_harm B 路径双绝对下限 (hip_max 分母失控修复)   (R28)
 ff91a5b fix(e2e): R27 P41-P45 self_harm 误报压制 (坐姿头转动 / 簇发 / kp门槛)  (R27)
 4ced812 fix(e2e): R26 P40 draw_label 自适应位置                                (R26)

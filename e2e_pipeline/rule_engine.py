@@ -249,24 +249,54 @@ def _nearest_person_dist(person_kps, person_scores, all_person_kps_scores, thres
     return best_dist, best_height
 
 
-def _is_upright_posture(kps, scores, img_shape, threshold=0.3):
+def _is_upright_posture(kps, scores, img_shape, pose_falling_prob=0.0, threshold=0.3):
     """检查当前姿态是否为直立/坐姿（躯干竖直）— 用于排除 falling 误判。
     返回 True 表示躯干直立，不应判为 falling。
+
+    R29 P47: 加两层防御，避免 2D 投影盲区误否决真摔倒：
+      (A) dy > |dx| * 1.2：头-髋向量必须以竖直为主（身体横跨画面的侧横躺直接挡）
+      (B) pose_falling_prob >= 0.95：PoseC3D 极度确信 falling 时不信任 2D 几何启发式
+          —— PoseC3D 看 64 帧时序骨骼动态是强证据，rule_upright 只看单帧 2D 投影是弱证据
     """
-    head_hip = _head_above_hip_ratio(kps, scores, threshold)
-    if head_hip is None:
+    # 收集 head / hip 坐标（与 _head_above_hip_ratio 一致的 kp 选择）
+    head_xy = None
+    for idx in [0, 1, 2]:
+        if keypoint_valid(kps, scores, idx, threshold):
+            head_xy = kps[idx]
+            break
+    hip_pts = []
+    for idx in [11, 12]:
+        if keypoint_valid(kps, scores, idx, threshold):
+            hip_pts.append(kps[idx])
+    if head_xy is None or not hip_pts:
         return False  # 无法判断，不阻止
+    hip_xy = np.mean(hip_pts, axis=0) if len(hip_pts) == 2 else hip_pts[0]
 
+    dy = float(hip_xy[1] - head_xy[1])  # >0 = 头在髋上方（图像 Y 更小）
+    dx_abs = float(abs(hip_xy[0] - head_xy[0]))
     h = img_shape[0]
-    # head_hip 是 hip_y - head_y，正值越大=头越高于髋=越直立
-    # 正常站立/坐着时，head_hip > 画面高度的 8%（头明显在髋之上）
-    # 摔倒时，head_hip 接近 0 或为负（头和髋同高甚至头更低）
     upright_threshold = h * 0.03
-    is_upright = head_hip > upright_threshold
 
-    if is_upright:
-        logger.debug(f'  [RULE] 姿态直立检查: head_hip={head_hip:.1f} > {upright_threshold:.1f} → 直立(非falling)')
-    return is_upright
+    # (1) 基础 dy 门槛
+    if dy <= upright_threshold:
+        return False
+
+    # (A) 向量横向主导 → 身体横跨画面，不是直立
+    if dy <= dx_abs * 1.2:
+        logger.debug(f'  [RULE] 姿态直立检查失败: dy={dy:.1f} <= dx={dx_abs:.1f}*1.2 '
+                     f'(身体横向主导, 躺地而非直立)')
+        return False
+
+    # (B) PoseC3D 极度确信 falling 时豁免（救 2D 盲区: 头朝相机躺, dy 主导但非直立）
+    if pose_falling_prob >= 0.95:
+        logger.debug(f'  [RULE] 姿态直立检查豁免: PoseC3D falling={pose_falling_prob:.3f}>=0.95 '
+                     f'信任 PoseC3D 时序证据 (即使 dy={dy:.1f} 看似直立)')
+        return False
+
+    logger.debug(f'  [RULE] 姿态直立检查: dy={dy:.1f} > {upright_threshold:.1f} '
+                 f'且 > dx={dx_abs:.1f}*1.2, PoseC3D falling={pose_falling_prob:.3f}<0.95 '
+                 f'→ 直立(非falling)')
+    return True
 
 
 def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
@@ -674,7 +704,8 @@ class RuleEngine:
                 logger.debug(f'  [RAW] T{track_id} → normal (climbing但无垂直位移, 可能坐着)')
                 return 'normal', 1.0 - pose_conf, 'rule_no_vertical'
         if pose_label == 'falling' and pose_conf > 0.7:
-            if _is_upright_posture(person_kps, person_scores, img_shape):
+            if _is_upright_posture(person_kps, person_scores, img_shape,
+                                   pose_falling_prob=float(pose_probs[3])):
                 logger.debug(f'  [RAW] T{track_id} → normal (高置信度falling但躯干直立, 可能是坐下)')
                 return 'normal', 1.0 - pose_conf, 'rule_upright'
             if _is_sitting_posture(person_kps, person_scores, img_shape):
@@ -996,7 +1027,8 @@ class RuleEngine:
 
             # falling 姿态验证：躯干直立或坐姿不算 falling
             if final_label == 'falling':
-                if _is_upright_posture(person_kps, person_scores, img_shape):
+                if _is_upright_posture(person_kps, person_scores, img_shape,
+                                       pose_falling_prob=float(pose_probs[3])):
                     logger.debug(f'  [RAW] T{track_id} → normal (falling但躯干直立, 可能是坐下)')
                     return 'normal', 1.0 - pose_conf, 'rule_upright'
                 if _is_sitting_posture(person_kps, person_scores, img_shape):
