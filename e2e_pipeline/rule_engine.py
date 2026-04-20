@@ -41,6 +41,7 @@ FINAL_CLASSES = [
     'smoking',      # 6 吸烟（YOLO小物体 + 规则）
     'phone_call',   # 7 打电话（YOLO小物体 + 规则）
     'loitering',    # 8 徘徊（轨迹分析）
+    'self_harm',    # 9 R25 自伤（撞墙/扶墙撞头，规则引擎 skeleton 速度判定）
 ]
 
 
@@ -482,6 +483,50 @@ def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, i
     return False, 0.0
 
 
+def check_self_harm(head_vel_hist, hip_vel_hist,
+                    exceed_thr=0.08, exceed_window=60, exceed_min_count=1,
+                    ratio_thr=3.5, ratio_window=60, eps=1e-6):
+    """R25 撞墙/扶墙撞头自伤判定（基于 skeleton 速度滑窗）。
+
+    输入:
+        head_vel_hist: (T,) 归一化 head kp 速度历史（最新 push 在末尾）
+        hip_vel_hist:  (T,) 归一化 hip 中心速度历史
+
+    判据（OR，任一满足即 True）:
+        A) 最近 exceed_window 帧内 head_vel > exceed_thr 的帧数 >= exceed_min_count
+           → 主路径：探查 normal 0/7 触发，impact 4/4 触发，headbang ~44% 触发
+        B) 最近 ratio_window 帧内 max(head_vel) / max(hip_vel) >= ratio_thr
+           → 补强路径：headbang 大多数 ratio >= 5，normal max=2.62、impact max=3.29
+
+    返回 (triggered: bool, conf: float, source: str).
+    source 用于区分两条路径，便于后续调阈。
+    """
+    if not head_vel_hist or not hip_vel_hist:
+        return False, 0.0, None
+
+    # A) 主路径
+    head_recent = head_vel_hist[-exceed_window:]
+    exceed_count = sum(1 for v in head_recent if v is not None and v > exceed_thr)
+    if exceed_count >= exceed_min_count:
+        conf = min(1.0, 0.5 + 0.1 * exceed_count)
+        logger.debug(f'  [RULE] self_harm A路径: head_vel>{exceed_thr} '
+                     f'count={exceed_count} in last {exceed_window}f → conf={conf:.2f}')
+        return True, conf, 'rule_self_harm_vel'
+
+    # B) 补强路径
+    hip_recent = hip_vel_hist[-ratio_window:]
+    head_max = max((v for v in head_recent if v is not None), default=0.0)
+    hip_max = max((v for v in hip_recent if v is not None), default=0.0)
+    ratio = head_max / (hip_max + eps)
+    if ratio >= ratio_thr:
+        conf = min(1.0, 0.4 + 0.05 * (ratio - ratio_thr))
+        logger.debug(f'  [RULE] self_harm B路径: head_max/hip_max={ratio:.2f} '
+                     f'>= {ratio_thr} → conf={conf:.2f}')
+        return True, conf, 'rule_self_harm_ratio'
+
+    return False, 0.0, None
+
+
 # ============================================================
 # 主判定引擎
 # ============================================================
@@ -529,7 +574,8 @@ class RuleEngine:
     def judge(self, track_id, pose_probs, person_kps, person_scores,
               all_person_kps, small_obj_detections, img_shape,
               all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None,
-              scene_person_count=None):
+              scene_person_count=None,
+              head_vel_hist=None, hip_vel_hist=None):
         """
         对单个人物做最终行为判定。
 
@@ -549,6 +595,8 @@ class RuleEngine:
             all_person_kps_scores=all_person_kps_scores,
             track_kps_dict=track_kps_dict,
             track_bboxes_dict=track_bboxes_dict,
+            head_vel_hist=head_vel_hist,
+            hip_vel_hist=hip_vel_hist,
             scene_person_count=scene_person_count,
         )
 
@@ -572,7 +620,8 @@ class RuleEngine:
     def _raw_judge(self, track_id, pose_probs, person_kps, person_scores,
                    all_person_kps, small_obj_detections, img_shape,
                    all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None,
-                   scene_person_count=None):
+                   scene_person_count=None,
+                   head_vel_hist=None, hip_vel_hist=None):
         """原始判定（不含时序平滑）"""
 
         pose_label_idx = int(np.argmax(pose_probs))
@@ -600,6 +649,23 @@ class RuleEngine:
                 return 'normal', 1.0 - pose_conf, 'rule_sitting'
             logger.debug(f'  [RAW] T{track_id} → falling (高置信度+非直立+非坐姿)')
             return 'falling', pose_conf, 'posec3d'
+
+        # 1.5 R25 自伤（撞墙 / 扶墙撞头）
+        # 位置理由：
+        #   - step 1 高置信 falling/climbing (> 0.7) 被判定后直接 return，不会走到这里；
+        #     真摔倒 / 真攀爬不会被自伤抢走
+        #   - step 1 的退出分支（rule_no_vertical / rule_upright / rule_sitting）后继续
+        #     走 self_harm —— 那些是"PoseC3D 误判的 normal"，若 head 速度高仍可能是撞墙
+        #   - 放 step 2 之前：撞墙时 YOLO laying 可能误触发 falling bbox，
+        #     self_harm 比 rule_yolo_falling 更准确
+        # 探查数据支持（probe R24 二轮，见 TRAINING_LOG R25）：
+        #   head_vel_exceed_008_w60 ≥ 1: normal 0/7, impact 4/4, headbang 7/16
+        #   head_to_hip_peak_ratio_w60 ≥ 3.5: normal max=2.62, impact max=3.29, headbang p50=5.9
+        if head_vel_hist is not None and hip_vel_hist is not None:
+            triggered, conf_sh, src_sh = check_self_harm(head_vel_hist, hip_vel_hist)
+            if triggered:
+                logger.debug(f'  [RAW] T{track_id} → self_harm ({src_sh}, conf={conf_sh:.2f})')
+                return 'self_harm', conf_sh, src_sh
 
         # 2. YOLO 辅助 falling 检测（一动不动躺地，PoseC3D 识别不出）
         #    躺地 + 附近有被标为 fighting/bullying 的人 → bullying（被霸凌）
@@ -966,6 +1032,7 @@ class RuleEngine:
         'fighting': 3,   # 最严格，3次确认（减少站立误判）
         'smoking': 2,    # R13 P17: 稀疏信号(烟小+间歇遮挡),2次确认
         'phone_call': 2,
+        'self_harm': 1,  # R25: 判据本身已内嵌 60 帧窗口持续性,单次 RAW 即可入态
     }
     # P2 (R9)：攻击类 HOLD_MIN 1→2，降低永锁风险。
     # 配合 P1（attack_prob 相对优势）+ P5（asymmetry 收紧）+ pair coupling 注入，
@@ -979,6 +1046,7 @@ class RuleEngine:
         'fighting': 2,   # R9: 1→2 防永锁
         'smoking': 2,    # R13 P17: 小物体检测稀疏,2次维持防闪断
         'phone_call': 2,
+        'self_harm': 2,  # R25: 撞墙事件短,HOLD=2 防闪断,但不至于永锁
     }
     # R13 P17：per-label 投票窗口 —— smoking 等稀疏信号用更长窗口累积证据
     # 默认所有标签用 self.vote_window (=5),此处 override

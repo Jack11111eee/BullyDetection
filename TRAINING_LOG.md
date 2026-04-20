@@ -1865,6 +1865,145 @@ python probe_wall_impact.py \
 
 ---
 
+### E2E Fix Round 25 — self_harm 落地（基于 R24 探查数据定阈值）
+
+**背景**：R24 二轮探查（见该节）给出三类完全可用的分离指标。按数据结论落地 `self_harm` 分类为 FINAL_CLASSES 第 9 类。
+
+**探查阶段两次迭代**：
+1. 一轮：预设的三大指标（head_hip_std_ratio、head autocorr 周期性、衰减比）全部失效或分离度不足
+2. 二轮：修 self-exclusion bug + 加新指标，**`head_vel_exceed_008_w60` 和 `head_to_hip_peak_ratio_w60` 成为金指标**
+
+#### 二轮分布（全样本: headbang n=17, impact n=4, normal n=7）
+
+| 指标 | normal | impact | headbang |
+|---|---|---|---|
+| `head_vel_exceed_008_w60_max` | **全部 =0** | 全部 ≥1 (max=17) | 7/16 ≥ 1 (max=2) |
+| `head_to_hip_peak_ratio_w60.peak` | max=2.62 | 1.97–3.29 | p50=5.88, max=21.41 |
+| `active_track_count_max` | 5/7=0, 2/7=1 | 全部 ≥1 | 16/17=0 |
+| `max_overlap_max` | p50=0 | 0/0.4/1/1 | p50=0 |
+
+**关键观察**：
+- impact 场景全部多人 + bbox overlap 高（撞墙样本里有旁观者/摄影师）→ 不能把"无 partner"作为 self_harm 必要条件
+- `head_vel_exceed_008_w60 ≥ 1` 对 normal 零误报但只召回 44% headbang → 要双路径
+- `head_to_hip_peak_ratio_w60 ≥ 3.5` 补上漏检 headbang（normal max 2.62 < 阈值 < impact 下限 3.3，边界安全）
+
+#### P32 — FINAL_CLASSES 扩 + VOTE 配置
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+```python
+FINAL_CLASSES = [..., 'self_harm']  # 第 9 类
+
+VOTE_ENTRY_MIN = {..., 'self_harm': 1}  # 判据本身内嵌 60 帧窗口持续性，单次 RAW 即入
+VOTE_HOLD_MIN  = {..., 'self_harm': 2}  # 防闪断但不至于永锁（默认 vote_window=5）
+```
+
+入态阈值 1 的理由：判据 A 要求 60 帧窗口内 head_vel > 0.08 至少 1 次 → 本身已经是跨时间窗的持续性检查，不需要 VOTE 层再叠加 3 次确认。HOLD=2 防止单帧遮挡瞬间退出。
+
+#### P33 — check_self_harm 函数（纯函数）
+
+**文件**：`e2e_pipeline/rule_engine.py` 在 RuleEngine 类之前
+
+```python
+def check_self_harm(head_vel_hist, hip_vel_hist,
+                    exceed_thr=0.08, exceed_window=60, exceed_min_count=1,
+                    ratio_thr=3.5, ratio_window=60):
+    # A 路径（主）
+    exceed_count = sum(1 for v in head_vel_hist[-exceed_window:] if v > exceed_thr)
+    if exceed_count >= exceed_min_count:
+        return True, conf, 'rule_self_harm_vel'
+    # B 路径（补）
+    ratio = max(head_vel_hist[-ratio_window:]) / (max(hip_vel_hist[-ratio_window:]) + eps)
+    if ratio >= ratio_thr:
+        return True, conf, 'rule_self_harm_ratio'
+    return False, 0.0, None
+```
+
+**两条 source 分开**便于 debug.log 后续调阈：上线一段时间后可以看哪条路径触发多 / 误报多。
+
+#### P34 — _raw_judge 加 step 1.5
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+位置：step 1（高置信 PoseC3D falling/climbing）之后、step 2（YOLO 辅助 falling）之前。
+
+**位置理由**：
+- 放 step 1 之后：高置信 PoseC3D falling>0.7 或 climbing>0.7 仍优先 → 真摔倒 / 真攀爬不会被 self_harm 抢走
+- 放 step 2 之前：撞墙瞬间 YOLO laying 可能误触发 falling bbox → self_harm 比 rule_yolo_falling 更准确
+- step 1 的退出分支（rule_no_vertical / rule_upright / rule_sitting）后继续走 self_harm —— 那些本质是"PoseC3D 误判的 normal"，head 速度高时仍可能是撞墙
+
+#### P35 — pipeline SkeletonBuffer 速度滑窗
+
+**文件**：`e2e_pipeline/pipeline.py`
+
+SkeletonBuffer 新增状态：
+- `self._vel_hist = defaultdict(lambda: {'head': [], 'hip': []})`
+- `self._prev_head / self._prev_hip`：EMA 后上一帧的 head / hip 位置
+- `self._last_bbox_h`：最近一次有效 bbox 高度（归一化基准）
+- `self.vel_window = 90` 帧（~3s @ 30fps，判据取后 60 帧）
+
+`update(..., bbox_xyxy)` 新增内部调用 `_update_vel_history`：
+- 以 `bbox_h = max(10, bbox[3]-bbox[1])` 归一化，消除摄像头距离 / 身高差
+- 仅当 head kp 和至少一侧 hip kp score > 0.3 才 push（低置信骨骼不入窗口）
+- 速度异常值保护：归一化速度 ≥ 2.0（一帧移 2 倍身高）判为 ID 切换跳变 → 不 push
+
+`get_vel_histories(tid)` 返回 `(head_list, hip_list)` 供 judge 读取。
+
+`migrate(old, new)` / `remove_stale()` 同步搬迁 / 清理 `_vel_hist` + `_prev_head` + `_prev_hip` + `_last_bbox_h`。
+
+`_process_frame` 调用链：
+```
+skeleton_buf.update(tid, kps, sc, bbox_xyxy=track_bboxes[tid])
+  ...
+head_hist, hip_hist = skeleton_buf.get_vel_histories(tid)
+rule_engine.judge(..., head_vel_hist=head_hist, hip_vel_hist=hip_hist)
+```
+
+#### P36 — LABEL_COLORS
+
+`pipeline.py`：`'self_harm': (180, 0, 100)` 深品红，与 vandalism 纯品红 (255, 0, 255) 视觉区分。
+
+#### R25 配置快照
+
+| 参数 | 值 | 依据 |
+|---|---|---|
+| `head_vel_exceed_thr` | 0.08 | 探查：normal max=0.072（p99=0.068），阈值 0.08 对 normal 零触发 |
+| `head_vel_exceed_window` | 60 帧 (~2s) | 探查 w60 分布；与 w90 类似效果但响应更快 |
+| `head_vel_exceed_min_count` | 1 | 主路径 impact 100% 召回所需最低门槛 |
+| `head_to_hip_peak_ratio_thr` | 3.5 | normal max=2.62，headbang p50=5.88 → 阈值留 0.9 安全边界 |
+| `head_to_hip_peak_ratio_window` | 60 帧 | 与 A 路径对齐 |
+| `vel_window` (滑窗) | 90 帧 | 两路径需 60 帧窗口，90 帧留冗余防边界 |
+| `VOTE_ENTRY_MIN` | 1 | 判据本身已含持续性 |
+| `VOTE_HOLD_MIN` | 2 | 防闪断 |
+| `归一化基准` | bbox 高度 | 消除摄像头距离 / 身高差 |
+
+#### 预期效果（基于探查数据外推）
+
+| 场景 | 预期触发路径 | 置信度 |
+|---|---|---|
+| 整身撞墙 | A 路径（head_vel 远超 0.08） | 高（impact 4/4 触发，count=17 最高） |
+| 扶墙撞头（峰高） | A+B 都触发 | 高（headbang p50 ratio 5.88） |
+| 扶墙撞头（峰低） | B 路径单独触发 | 中（A 漏但 B 救） |
+| 正常走路 / 坐下 / 蹲 | 都不触发 | 0% 误报 |
+| 真摔倒（PoseC3D falling>0.7） | step 1 接管，不走 step 1.5 | 不影响 |
+| 撞墙后立刻倒地 | 撞墙瞬间 self_harm → 倒地后 PoseC3D 接管 falling → VOTE 切换 | 两阶段都能报 |
+
+#### 已知局限（必须报）
+
+1. **normal 样本仅 7 个（走路类）**，没覆盖跑跳 / 快速摇头 / 挥手。真实场景若有这类动作让 head_vel > 0.08 → 误报风险未压测
+2. **headbang 漏检 3-4 个**（骨骼质量太差或动作幅度太小）—— 接受
+3. **impact 场景有他人**，不能加"无 partner"约束（原 R24 讨论里砍了这个维度）
+4. **没有 pair coupling / inject 影响 self_harm**：R8.5/R18 的 coupling 机制只作用于 fighting/bullying，self_harm 不在其中，自然不冲突
+5. **没有 STRONG_NORMAL_SOURCES 退 self_harm HOLD**：当前实现里 self_harm HOLD 只靠自然 VOTE 退出（窗口内 self_harm < HOLD_MIN=2）。若视频测试出现永锁问题，再加 posec3d normal≥0.9 的退出门
+
+**回退**：删 FINAL_CLASSES / VOTE 配置里 `self_harm` 条目 + _raw_judge 里 step 1.5 块 + pipeline.py 里速度滑窗相关代码块（`_update_vel_history` / `get_vel_histories` / migrate/remove_stale 的同步段）。
+
+**未处理**：
+- 真实视频的误报上限需要在更广泛 normal 场景压测
+- 若误报多：先提高 `exceed_thr` 从 0.08 到 0.10（参考探查 thr_010 依然 normal=0）
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```

@@ -55,6 +55,7 @@ LABEL_COLORS = {
     'smoking':    (255, 100, 0),
     'phone_call': (255, 200, 0),
     'loitering':  (200, 200, 0),
+    'self_harm':  (180, 0, 100),  # R25 深品红，与 vandalism 品红区分
 }
 
 
@@ -79,8 +80,16 @@ class SkeletonBuffer:
         self._smooth_scores = {}  # {track_id: np.array(17,)} EMA平滑置信度
         self.smooth_alpha = 0.5   # EMA系数：0.5=新旧各半
 
-    def update(self, track_id, keypoints_17x2, scores_17):
+        # R25: 头/髋归一化速度滑窗，供 check_self_harm 判定撞墙/扶墙撞头
+        self.vel_window = 90  # 保留 90 帧 (~3s@30fps)，判据窗口取其后 60 帧
+        self._vel_hist = defaultdict(lambda: {'head': [], 'hip': []})
+        self._prev_head = {}   # {tid: np.array(2,)} EMA 后 head(nose) 上一帧位置
+        self._prev_hip = {}    # {tid: np.array(2,)} EMA 后 hip 中心上一帧位置
+        self._last_bbox_h = {} # {tid: float} 最近一次有效 bbox 高度（归一化基准）
+
+    def update(self, track_id, keypoints_17x2, scores_17, bbox_xyxy=None):
         """更新骨骼缓冲区，返回平滑后的关键点用于可视化。
+        R25: 新增 bbox_xyxy 参数用于计算归一化 head/hip 速度（check_self_harm 用）。
         Returns: (smoothed_kps, smoothed_scores)
         """
         kps = keypoints_17x2.copy()
@@ -118,7 +127,65 @@ class SkeletonBuffer:
         if valid.sum() > 0:
             self._last_positions[track_id] = kps[valid].mean(axis=0)
 
+        # R25: 头/髋归一化速度滑窗
+        self._update_vel_history(track_id, kps, sc, bbox_xyxy)
+
         return kps, sc
+
+    def _update_vel_history(self, track_id, kps, sc, bbox_xyxy):
+        """计算本帧 head/hip 归一化速度并 push 进滑窗。
+        归一化：以 bbox 高度作为参考（消除摄像头距离 / 身高差影响）。
+        低置信关键点直接跳过本帧，不 push 到窗口（避免抖动噪声）。
+        """
+        # 确定 bbox_h
+        bbox_h = None
+        if bbox_xyxy is not None:
+            h = float(bbox_xyxy[3] - bbox_xyxy[1])
+            if h > 10:
+                bbox_h = h
+                self._last_bbox_h[track_id] = h
+        if bbox_h is None:
+            bbox_h = self._last_bbox_h.get(track_id)
+        if bbox_h is None or bbox_h <= 10:
+            return
+
+        # 当前 head / hip
+        head_ok = sc[0] > 0.3
+        hip_ok = (sc[11] > 0.3) or (sc[12] > 0.3)
+        if not (head_ok and hip_ok):
+            return
+        head_now = kps[0].astype(np.float32)
+        if sc[11] > 0.3 and sc[12] > 0.3:
+            hip_now = ((kps[11] + kps[12]) / 2).astype(np.float32)
+        elif sc[11] > 0.3:
+            hip_now = kps[11].astype(np.float32)
+        else:
+            hip_now = kps[12].astype(np.float32)
+
+        # 需要上一帧才能算速度
+        if track_id in self._prev_head and track_id in self._prev_hip:
+            prev_head = self._prev_head[track_id]
+            prev_hip = self._prev_hip[track_id]
+            head_vel = float(np.linalg.norm(head_now - prev_head) / bbox_h)
+            hip_vel = float(np.linalg.norm(hip_now - prev_hip) / bbox_h)
+            # 异常值保护（EMA 初始帧或跳变）
+            if 0 <= head_vel < 2.0 and 0 <= hip_vel < 2.0:
+                hist = self._vel_hist[track_id]
+                hist['head'].append(head_vel)
+                hist['hip'].append(hip_vel)
+                if len(hist['head']) > self.vel_window:
+                    hist['head'] = hist['head'][-self.vel_window:]
+                    hist['hip'] = hist['hip'][-self.vel_window:]
+
+        self._prev_head[track_id] = head_now
+        self._prev_hip[track_id] = hip_now
+
+    def get_vel_histories(self, track_id):
+        """R25: 返回 (head_vel_list, hip_vel_list)（最新在末尾）。空则返回 ([], [])."""
+        hist = self._vel_hist.get(track_id)
+        if not hist:
+            return [], []
+        return list(hist['head']), list(hist['hip'])
 
     def should_infer(self, track_id):
         buf = self.tracks[track_id]
@@ -212,6 +279,15 @@ class SkeletonBuffer:
             if old_tid in self._smooth_kps:
                 self._smooth_kps[new_tid] = self._smooth_kps.pop(old_tid)
                 self._smooth_scores[new_tid] = self._smooth_scores.pop(old_tid)
+            # R25: 迁移速度滑窗 + 上一帧位置 + bbox_h
+            if old_tid in self._vel_hist:
+                self._vel_hist[new_tid] = self._vel_hist.pop(old_tid)
+            if old_tid in self._prev_head:
+                self._prev_head[new_tid] = self._prev_head.pop(old_tid)
+            if old_tid in self._prev_hip:
+                self._prev_hip[new_tid] = self._prev_hip.pop(old_tid)
+            if old_tid in self._last_bbox_h:
+                self._last_bbox_h[new_tid] = self._last_bbox_h.pop(old_tid)
             logger.info(f'[REASSOC] SkeletonBuffer: T{old_tid} → T{new_tid} '
                         f'(migrated {len(old_buf["kps"])} frames)')
 
@@ -228,6 +304,11 @@ class SkeletonBuffer:
             self.tracks.pop(tid, None)
             self._smooth_kps.pop(tid, None)
             self._smooth_scores.pop(tid, None)
+            # R25: 清理速度相关状态
+            self._vel_hist.pop(tid, None)
+            self._prev_head.pop(tid, None)
+            self._prev_hip.pop(tid, None)
+            self._last_bbox_h.pop(tid, None)
             del self._missing_count[tid]
 
 
@@ -630,8 +711,9 @@ class InferencePipeline:
 
                 track_bboxes[track_id] = box.xyxy[0].tolist()
 
-                # 平滑关键点（减少抖动）
-                smooth_kps, smooth_sc = self.skeleton_buf.update(track_id, kps_xy, kps_sc)
+                # 平滑关键点（减少抖动）+ R25 更新 head/hip 归一化速度滑窗
+                smooth_kps, smooth_sc = self.skeleton_buf.update(
+                    track_id, kps_xy, kps_sc, bbox_xyxy=track_bboxes[track_id])
 
                 frame_persons_kps.append(smooth_kps)
                 track_kps[track_id] = (smooth_kps, smooth_sc)
@@ -724,6 +806,7 @@ class InferencePipeline:
 
                     # Step 4: 规则引擎
                     all_kps_scores = [(kps, sc) for kps, sc in track_kps.values()]
+                    head_hist, hip_hist = self.skeleton_buf.get_vel_histories(track_id)
                     judgment = self.rule_engine.judge(
                         track_id=track_id,
                         pose_probs=pose_probs,
@@ -736,6 +819,8 @@ class InferencePipeline:
                         track_kps_dict=track_kps,
                         track_bboxes_dict=track_bboxes,
                         scene_person_count=scene_person_count,
+                        head_vel_hist=head_hist,
+                        hip_vel_hist=hip_hist,
                     )
                     self.track_labels[track_id] = judgment
                     inferred_tids.append(track_id)
