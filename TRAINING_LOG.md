@@ -1629,6 +1629,73 @@ elif (valid_kp_count >= 8 and
 
 ---
 
+### E2E Fix Round 22 — PoseC3D 强 normal 退出 falling/climbing HOLD（R18 P22 漏补洞）（commit `442331b`）
+
+**背景**：日志 F1439 T1 站起来后 PoseC3D 明确输出 `normal=0.934`，但 FINAL 仍 falling：
+
+```
+[F1439] T1 PoseC3D argmax=normal(0.934) | normal=0.934 falling=0.015
+  [RAW] T1 → normal (conf=0.934 >= threshold=0.3, source=posec3d)
+  [VOTE] T1 current=normal → falling (HOLD 1>=1, window=5)
+         history=[falling,normal,normal,normal,falling,normal,normal]
+  [FINAL] falling ✗
+```
+
+**根因**：两套 STRONG_NORMAL HOLD exit 机制之间有缺口：
+
+| 机制 | last ∈ | raw_source 接受 | 防误退 |
+|---|---|---|---|
+| R15 P19 | falling, climbing | `rule_upright/rule_sitting/rule_no_vertical/rule_sitting_veto_yolo`（不接 posec3d）| 无（rule 级强证据即时退） |
+| R18 P22 | **fighting, bullying**（不接 falling/climbing） | posec3d | recent3 ≥2 normal |
+
+F1439 场景：`last=falling + raw_source=posec3d`
+- P19 不开门（source 不匹配）
+- P22 不开门（last 不匹配）
+- 落到原 HOLD 逻辑 → 锁住 falling
+
+R18 P22 写的时候只针对 pair-inference 污染攻击态场景，没考虑 falling/climbing 被 posec3d 强 normal 反向覆盖的需求。属于漏补洞。
+
+#### P30 — P22 的 last 集合扩到所有异常类
+
+**文件**：`e2e_pipeline/rule_engine.py` `_vote_smooth`
+
+```python
+# R18 P22 原始
+last in ('fighting', 'bullying')
+# R22 P30 扩展
+last in ('fighting', 'bullying', 'falling', 'climbing')
+```
+
+其他条件（`raw_source='posec3d'` + `pose_normal_prob >= 0.9` + `recent3 ≥ 2 normal`）全部保留。recent3 防误退对 falling/climbing 同样必要 —— 真摔倒/攀爬中 1 帧 PoseC3D normal 噪声不该把状态打飞。
+
+#### F1439 验证
+
+| 条件 | 值 | 是否满足 |
+|---|---|---|
+| current_label = 'normal' | normal | ✓ |
+| raw_source = 'posec3d' | posec3d | ✓ |
+| pose_normal_prob >= 0.9 | 0.934 | ✓ |
+| last ∈ {F/B/Fa/Cl} | falling | ✓ |
+| recent3 = history[-3:] normal 计数 ≥ 2 | [falling,normal,normal] → 2 | ✓ |
+
+→ 退 HOLD → FINAL=normal ✓
+
+#### R22 配置快照
+
+| 项 | R21 | R22 |
+|---|---|---|
+| P22 last 接受集 | (fighting, bullying) | (fighting, bullying, **falling, climbing**) |
+| P19 STRONG_NORMAL_SOURCES | 覆盖 rule_* + last ∈ (falling, climbing) | 同左（不变） |
+| 两机制覆盖矩阵 | 有交集缺口 | **完全覆盖**（rule 级走 P19 即时退，posec3d 级走 P22 + recent3） |
+
+**风险/回退**：
+- 风险：真摔倒过程中 PoseC3D 偶发 2 帧 normal > 0.9（非常罕见 —— 躺地者 PoseC3D 普遍输出 normal，但 ≥0.9 是强约束）→ 可能提前退出 falling。若视频测试暴露，可把 `recent3.count('normal') >= 2` 收紧到 `>= 3`（窗口扩大到 history[-4:]）
+- 回退：改回 `last in ('fighting', 'bullying')` 即可
+
+**历史教训记账**：R18 写 P22 时只盯着 F7210 pair-inference 污染场景，没把逻辑扩到所有"异常态 HOLD"。P19 和 P22 本质上是同一类机制（强 normal 退 HOLD）的两个互补分支（source 不同、防误退策略不同），分头写就会漏跨交集 case。以后新增 HOLD exit 逻辑应先穷举 (raw_source, last) 两维组合表，避免这类漏补。
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -2098,6 +2165,26 @@ track 被分配新 ID（重关联）
   - 日志：3 处 sitting_veto 路径日志补 `conf={x:.3f}`
 - **状态**：已修复（待视频验证）
 
+#### Problem 35: 站起后 PoseC3D normal=0.934 被 falling HOLD 锁死（R18 P22 漏补 falling/climbing）
+
+- **发现**：E2E Fix Round 22（用户报告 + debug.log F1439 分析）
+- **详情**：T1 站起来，PoseC3D 极度明确 `normal=0.934`，但 VOTE HOLD 把状态保留在 falling
+- **证据**：
+  ```
+  F1439 T1 PoseC3D argmax=normal(0.934)
+        [RAW] T1 → normal (source=posec3d)
+        [VOTE] T1 current=normal → falling (HOLD 1>=1)
+               history=[falling,normal,normal,normal,falling,normal,normal]
+        [FINAL] falling ✗
+  ```
+- **根因**：两套 STRONG_NORMAL HOLD exit 有覆盖缺口
+  - R15 P19：接 last ∈ (falling, climbing) 但只认 `rule_*` source（rule_upright 等），不接 `posec3d`
+  - R18 P22：接 `posec3d` source 但 last 只 (fighting, bullying)，不含 falling/climbing
+  - F1439 正好落在交集外：last=falling + source=posec3d，两层都不开门 → 锁住
+- **修复**：R22 P30（commit `442331b`）— 把 P22 的 last 接受集从 `(fighting, bullying)` 扩到 `(fighting, bullying, falling, climbing)`；其他三重防误退条件（`pose_normal_prob≥0.9` + `recent3≥2 normal`）全部保留
+- **状态**：已修复（待视频验证）
+- **教训**：R18 写 P22 时只针对 F7210 pair-inference 污染攻击态场景，没有扩到所有"异常态 HOLD"。P19 和 P22 本质上是同一类机制（强 normal 退 HOLD）的两个互补分支（source 不同、防误退策略不同），分头写就漏跨交集 case。以后新增 HOLD exit 应先穷举 (raw_source, last) 两维组合表
+
 ---
 
 ## 11. 辅助组件
@@ -2174,6 +2261,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+442331b fix(e2e): R22 P30 extend P22 STRONG_NORMAL posec3d HOLD exit to falling/climbing (R22)
 5c18eac fix(e2e): R21 P27+P28 head-vs-hip + YOLO-conf bypass for lying-toward-camera (R21)
 4a69675 fix(e2e): R20 P25+P26 target strong-normal guard in couple+inject    (R20)
 67f40f4 fix(e2e): R19 P24 lower-body-missing veto in check_fallen_by_yolo    (R19)
