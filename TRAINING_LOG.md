@@ -2534,6 +2534,76 @@ if any(j.source.startswith(p) for p in PAIR_BASED_SOURCES_PREFIX):
 
 ---
 
+### E2E Fix Round 32 — self_harm 判定逻辑整体禁用（误报过多）（commit `16d7a99`）
+
+**背景**：R25 落地 self_harm 后连续打补丁 R27 / R28 / R30 仍压不住误报：
+- F1130 T9 坐姿头转动 → rule_self_harm_vel
+- F637 T10 坐姿看手机 → rule_self_harm_ratio（hip_max 分母失控）
+- F1247 T1 写字 → PoseC3D 灰度带 normal=0.756 漏网
+
+根本矛盾：self_harm 判据基于 skeleton 速度，但 YOLO-Pose 的 nose kp 在侧脸 / 低分辨率下单帧能跳 8–15px，归一化后恰好过 0.08 阈；而 ratio 判据的分母（hip_max）在坐姿场景接近 0 直接失控。R25 探查阶段的 normal 样本只有 7 个走路视频，对坐姿 / 写字 / 看屏幕等日常场景的分布没覆盖 —— 阈值本身就是在 biased 样本上拟合的。
+
+**决策**：继续打补丁会变成"每见一个误报加一个 veto"的无底洞（R27 P42 → R30 P48 已经打了两轮灰度带扩展）。暂时整体禁用 self_harm 判定，等后续补全 normal 样本分布后重新跑 probe 定阈值再启用。
+
+#### P51 — check_self_harm 函数体短路
+
+**文件**：`e2e_pipeline/rule_engine.py:540`
+
+函数顶部直接 `return False, 0.0, None`，原 A/B 路径逻辑保留作注释：
+
+```python
+def check_self_harm(...):
+    # R32: 判定逻辑整体禁用（误报过多，待数据重新标定阈值）。
+    return False, 0.0, None
+    # --- 以下原判定逻辑暂时禁用 ---
+    # if not head_vel_hist or not hip_vel_hist:
+    # ...（A 路径簇发 + B 路径双下限 ratio 全部注释保留）
+```
+
+#### P52 — `_raw_judge` step 1.5 调用块注释
+
+**文件**：`e2e_pipeline/rule_engine.py` step 1 之后、step 2 之前
+
+整个 `if head_vel_hist is not None and hip_vel_hist is not None:` 块及内部 P42 / P48 veto + check_self_harm 调用注释掉。探查数据注释保留作 probe 结果参考。
+
+#### 保留不动（无副作用）
+
+故意不动以降低回归风险 + 方便未来恢复：
+
+| 模块 | 位置 | 状态 |
+|---|---|---|
+| `FINAL_CLASSES` | rule_engine.py:44 | 保留 `'self_harm'` |
+| `VOTE_ENTRY_MIN` / `VOTE_HOLD_MIN` / `VOTE_WINDOW_LABEL` | rule_engine.py:1129/1143/1150 | 保留 self_harm 条目 |
+| `_vote_smooth` STRONG_NORMAL HOLD exit `last in (...)` | rule_engine.py:1239 | 保留 `'self_harm'` |
+| `SkeletonBuffer` head/hip 速度滑窗 | pipeline.py:85–146 | 保留（每帧仍计算，消耗忽略） |
+| `judge(head_vel_hist=..., hip_vel_hist=...)` | pipeline.py:943 | 保留调用（judge 内部直接忽略） |
+| `LABEL_COLORS['self_harm']` | pipeline.py:59 | 保留深品红配色 |
+
+结果：nothing emits `self_harm` label → VOTE / COUPLE / DEMOTE / 可视化全链路对 self_harm 无感，等价于"这个类从未触发过"。
+
+#### 恢复步骤（未来重新启用时）
+
+1. 删 `check_self_harm` 顶部的 R32 `return False, 0.0, None`
+2. 解注释 `_raw_judge` step 1.5 块的 `if head_vel_hist is not None...`
+
+外围不需要动，配置全部已就位。
+
+#### R32 配置快照
+
+| 项 | R31 | R32 |
+|---|---|---|
+| `check_self_harm` 函数体 | A/B 双路径判定 | **短路 return False** |
+| `_raw_judge` step 1.5 调用 | 有 P42/P48 veto + check_self_harm | **整段注释** |
+| FINAL_CLASSES / VOTE 配置 / pipeline 速度滑窗 | 有 | 保留不动 |
+
+**未处理 / 未来方向**：
+- normal 样本补充：坐姿看屏 / 写字 / 快速摇头 / 挥手 / 跑跳等日常场景需各 ≥ 5 个
+- 归一化基准从 bbox_h 换成"肩-髋距离 × 1.6"（R27 未处理项）—— bbox_h 对坐姿 / 站姿不对称放大
+- A 路径簇发阈值可能需要上调到 0.10（R27 探查 thr_010 仍 normal=0）
+- B 路径 hip_max 下限可能需要上调到 0.03 或完全依赖 hip 位移标准差而非速度峰值
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -3123,6 +3193,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+16d7a99 fix(e2e): R32 暂时禁用 self_harm 判定逻辑 (误报过多)                     (R32)
 d84e572 fix(e2e): R31 P49+P50 demote 放宽 partner + pair-based source 白名单 (R31)
 e8b1f77 fix(e2e): R30 P48 self_harm raw normal 显著主导 veto (P42 灰度带扩展)  (R30)
 a55d5d2 fix(e2e): R29 P47 _is_upright_posture 二维投影盲区双层防御            (R29)
