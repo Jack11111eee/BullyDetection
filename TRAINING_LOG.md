@@ -1696,7 +1696,18 @@ last in ('fighting', 'bullying', 'falling', 'climbing')
 
 ---
 
-### E2E Fix Round 23 — PoseC3D 强 normal 反向 veto YOLO 高 conf 豁免（R21 P28 风险兑现）（commit `165a0c4`）
+### E2E Fix Round 23 — PoseC3D 强 normal 反向 veto YOLO 高 conf 豁免 **[已回退 `2648bc5`]**（commit `165a0c4`）
+
+> **⚠️ 回退理由**：R23 把 Problem 11 原设计前提当成误检。PoseC3D 对静态躺地有已知盲区（一动不动躺地无时序特征 → 输出 normal 甚至 normal≥0.9），这正是当初加 YOLO falling 的全部理由（R6 引入）。R23 反向 veto 把真倒地+PoseC3D 静态盲区的合法信号当成 YOLO 误检吞掉 → 正常倒地被识别为 normal 漏检。
+>
+> 真正该解的是 F1679/F1695 的"边缘 bbox YOLO 误检"，而不是"PoseC3D normal 高就否决 YOLO"。后续 Round 需重新设计，候选方向：
+> 1. YOLO 高 conf + 骨骼在画面边缘（bbox 触边 / 关键点越界）→ 降 YOLO 可信度
+> 2. YOLO 高 conf + 骨骼总体 score 均值低（边缘 bbox 通常 keypoint 不稳）→ 降 YOLO 可信度
+> 3. 跨帧连续性：YOLO 高 conf 但最近 N 帧没持续输出 → 边缘抖动，不触发
+>
+> 以下 R23 原始文档保留作历史记录与教训。
+
+
 
 **背景**：日志 F1679 / F1695 T3 在视频边缘，骨骼 noisy 但 YOLO laying 高 conf 误检 →  被 R21 P28 豁免门放过：
 
@@ -2299,11 +2310,13 @@ track 被分配新 ID（重关联）
         history=[n,n,n,n,n,falling,falling] ENTRY 2>=2 → falling ✗
   ```
 - **根因**：R21 P28 的 YOLO 高 conf 豁免无仲裁逻辑。风险笔记预判到了 —— "若视频测试暴露，可调高阈值到 0.7 或加 normal_prob ≥ 0.9 反向门"。F1679 / F1695 直接把这条风险兑现
-- **修复**：R23 P31（commit `165a0c4`）
-  - P18 主路径 + P20 P7 兜底对称加：YOLO conf≥0.6 豁免分支内再查 PoseC3D `normal_prob ≥ 0.9`，满足即反向 veto 返回 normal，新 source `rule_strong_normal_veto_yolo`
-  - 新 source 加入 `STRONG_NORMAL_SOURCES`，VOTE 层即时退出 falling/climbing HOLD（与其他 rule_* 强证据同级）
-- **状态**：已修复（待视频验证）
-- **教训**：两个子模型（YOLO 边缘 bbox vs PoseC3D 全骨骼时序）高置信冲突时需要明确的仲裁规则。YOLO 看的是框的形状和像素特征，容易被截断/遮挡的边缘 bbox 欺骗；PoseC3D 看的是 17 个关键点在 64 帧里的时序模式，对噪声 keypoint 有鲁棒性。两者高置信冲突时应优先信任时序信息。P28 原始设计"高 conf 就信"过于一刀切，必须给反向证据开一道门
+- **修复尝试**：R23 P31（commit `165a0c4`）— **已回退 `2648bc5`**
+  - 改动：P18 主路径 + P20 P7 兜底对称加 YOLO conf≥0.6 豁免内嵌 PoseC3D `normal_prob ≥ 0.9` 反向 veto；新 source `rule_strong_normal_veto_yolo` 加入 `STRONG_NORMAL_SOURCES`
+  - **回退原因**：视频验证发现正常倒地被识别为 normal。R23 假设"PoseC3D normal≥0.9 = 真 normal" 与 Problem 11 的设计前提冲突 —— PoseC3D 对静态躺地有结构性盲区（无时序变化 → 输出 normal 甚至 ≥0.9），这正是 R6 引入 YOLO falling 的全部理由。R23 把"PoseC3D 静态盲区"当成"YOLO 误检"反向 veto，把真倒地的合法 YOLO 信号给吞了
+- **状态**：未修复（R23 尝试已回退，等待新方案）
+- **教训 1**：两个子模型高置信冲突的仲裁规则不能一刀切给某一方。R23 的"信任 PoseC3D 时序"思路忽略了 PoseC3D 的已知盲区 —— Problem 11 的存在本身就证明 PoseC3D 在某些 case 下不可信，反向 veto 不能拿它当裁判
+- **教训 2**：解 F1679/F1695 应该针对"边缘 bbox YOLO 误检"特征而非"PoseC3D 强 normal"全局判据。候选方向：YOLO bbox 触边检测、骨骼总分均值低 → 降 YOLO 可信度、跨帧连续性检查
+- **未处理**：F1679/F1695 仍是开问题，下一 Round 重新设计
 
 ---
 
@@ -2381,7 +2394,8 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
-165a0c4 fix(e2e): R23 P31 PoseC3D strong-normal reverse-veto YOLO conf bypass (R23)
+2648bc5 revert(e2e): R23 P31 (oversuppressed real lying via PoseC3D static-pose blind spot)
+165a0c4 fix(e2e): R23 P31 PoseC3D strong-normal reverse-veto YOLO conf bypass (R23, reverted)
 442331b fix(e2e): R22 P30 extend P22 STRONG_NORMAL posec3d HOLD exit to falling/climbing (R22)
 5c18eac fix(e2e): R21 P27+P28 head-vs-hip + YOLO-conf bypass for lying-toward-camera (R21)
 4a69675 fix(e2e): R20 P25+P26 target strong-normal guard in couple+inject    (R20)
