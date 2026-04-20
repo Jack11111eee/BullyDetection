@@ -537,57 +537,62 @@ def check_self_harm(head_vel_hist, hip_vel_hist,
     返回 (triggered: bool, conf: float, source: str).
     source 用于区分两条路径，便于后续调阈。
     """
-    if not head_vel_hist or not hip_vel_hist:
-        return False, 0.0, None
-
-    # A) 主路径 — 簇发判据
-    head_recent = head_vel_hist[-exceed_window:]
-    exceed_idx = [i for i, v in enumerate(head_recent)
-                  if v is not None and v > exceed_thr]
-    burst = False
-    if len(exceed_idx) >= exceed_min_count:
-        # 检查是否存在两次过阈索引差 ≤ exceed_max_gap
-        for i in range(len(exceed_idx) - 1):
-            if exceed_idx[i + 1] - exceed_idx[i] <= exceed_max_gap:
-                burst = True
-                break
-    if burst:
-        exceed_count = len(exceed_idx)
-        conf = min(1.0, 0.5 + 0.1 * exceed_count)
-        logger.debug(f'  [RULE] self_harm A路径簇发: head_vel>{exceed_thr} '
-                     f'count={exceed_count} (gap≤{exceed_max_gap}) '
-                     f'in last {exceed_window}f → conf={conf:.2f}')
-        return True, conf, 'rule_self_harm_vel'
-
-    # B) 补强路径 —— R28 P46：加双绝对下限
-    #   问题（F637 T10 坐姿误判）：坐姿身体不动 → hip_max≈0.011 → 任何 head
-    #   微抖(0.05) ÷ 0.011 = ratio 飙升。分母接近 0 使 ratio 失控，不是因为
-    #   head 真在快速运动。R25 探查 sample bias：normal 样本(走路) hip 持续
-    #   移动 → ratio max=2.62 看似安全；坐姿未覆盖，hip 极小时 ratio 无上限。
-    #   双门槛物理语义：
-    #     head_max ≥ 0.06  —— head 必须达撞击量级（< A 路径 0.08,留余量给 B 补强）
-    #     hip_max  ≥ 0.02  —— 身体必须有基本动作(扶墙撞头时身体会跟着微晃)
-    hip_recent = hip_vel_hist[-ratio_window:]
-    head_max = max((v for v in head_recent if v is not None), default=0.0)
-    hip_max = max((v for v in hip_recent if v is not None), default=0.0)
-    if head_max < ratio_head_max_min:
-        logger.debug(f'  [RULE] self_harm B路径门槛失败: '
-                     f'head_max={head_max:.3f}<{ratio_head_max_min} (head 未达撞击量级)')
-    elif hip_max < ratio_hip_max_min:
-        ratio_noisy = head_max / (hip_max + eps)
-        logger.debug(f'  [RULE] self_harm B路径门槛失败: '
-                     f'hip_max={hip_max:.3f}<{ratio_hip_max_min} '
-                     f'(身体静止, ratio={ratio_noisy:.2f} 分母不可信)')
-    else:
-        ratio = head_max / hip_max
-        if ratio >= ratio_thr:
-            conf = min(1.0, 0.4 + 0.05 * (ratio - ratio_thr))
-            logger.debug(f'  [RULE] self_harm B路径: head_max/hip_max={ratio:.2f} '
-                         f'>= {ratio_thr} (head_max={head_max:.3f}, '
-                         f'hip_max={hip_max:.3f}) → conf={conf:.2f}')
-            return True, conf, 'rule_self_harm_ratio'
-
+    # R32: self_harm 判定逻辑整体禁用（误报过多，待数据重新标定阈值）。
+    # 保留函数签名与调用点，直接返回 False —— 不影响 FINAL_CLASSES / VOTE /
+    # pipeline 速度滑窗等外围结构；需要恢复时把下面 return 删掉即可。
     return False, 0.0, None
+    # --- 以下原判定逻辑暂时禁用 ---
+    # if not head_vel_hist or not hip_vel_hist:
+    #     return False, 0.0, None
+    #
+    # # A) 主路径 — 簇发判据
+    # head_recent = head_vel_hist[-exceed_window:]
+    # exceed_idx = [i for i, v in enumerate(head_recent)
+    #               if v is not None and v > exceed_thr]
+    # burst = False
+    # if len(exceed_idx) >= exceed_min_count:
+    #     # 检查是否存在两次过阈索引差 ≤ exceed_max_gap
+    #     for i in range(len(exceed_idx) - 1):
+    #         if exceed_idx[i + 1] - exceed_idx[i] <= exceed_max_gap:
+    #             burst = True
+    #             break
+    # if burst:
+    #     exceed_count = len(exceed_idx)
+    #     conf = min(1.0, 0.5 + 0.1 * exceed_count)
+    #     logger.debug(f'  [RULE] self_harm A路径簇发: head_vel>{exceed_thr} '
+    #                  f'count={exceed_count} (gap≤{exceed_max_gap}) '
+    #                  f'in last {exceed_window}f → conf={conf:.2f}')
+    #     return True, conf, 'rule_self_harm_vel'
+    #
+    # # B) 补强路径 —— R28 P46：加双绝对下限
+    # #   问题（F637 T10 坐姿误判）：坐姿身体不动 → hip_max≈0.011 → 任何 head
+    # #   微抖(0.05) ÷ 0.011 = ratio 飙升。分母接近 0 使 ratio 失控，不是因为
+    # #   head 真在快速运动。R25 探查 sample bias：normal 样本(走路) hip 持续
+    # #   移动 → ratio max=2.62 看似安全；坐姿未覆盖，hip 极小时 ratio 无上限。
+    # #   双门槛物理语义：
+    # #     head_max ≥ 0.06  —— head 必须达撞击量级（< A 路径 0.08,留余量给 B 补强）
+    # #     hip_max  ≥ 0.02  —— 身体必须有基本动作(扶墙撞头时身体会跟着微晃)
+    # hip_recent = hip_vel_hist[-ratio_window:]
+    # head_max = max((v for v in head_recent if v is not None), default=0.0)
+    # hip_max = max((v for v in hip_recent if v is not None), default=0.0)
+    # if head_max < ratio_head_max_min:
+    #     logger.debug(f'  [RULE] self_harm B路径门槛失败: '
+    #                  f'head_max={head_max:.3f}<{ratio_head_max_min} (head 未达撞击量级)')
+    # elif hip_max < ratio_hip_max_min:
+    #     ratio_noisy = head_max / (hip_max + eps)
+    #     logger.debug(f'  [RULE] self_harm B路径门槛失败: '
+    #                  f'hip_max={hip_max:.3f}<{ratio_hip_max_min} '
+    #                  f'(身体静止, ratio={ratio_noisy:.2f} 分母不可信)')
+    # else:
+    #     ratio = head_max / hip_max
+    #     if ratio >= ratio_thr:
+    #         conf = min(1.0, 0.4 + 0.05 * (ratio - ratio_thr))
+    #         logger.debug(f'  [RULE] self_harm B路径: head_max/hip_max={ratio:.2f} '
+    #                      f'>= {ratio_thr} (head_max={head_max:.3f}, '
+    #                      f'hip_max={hip_max:.3f}) → conf={conf:.2f}')
+    #         return True, conf, 'rule_self_harm_ratio'
+    #
+    # return False, 0.0, None
 
 
 # ============================================================
@@ -723,7 +728,10 @@ class RuleEngine:
             logger.debug(f'  [RAW] T{track_id} → falling (高置信度+非直立+非坐姿)')
             return 'falling', pose_conf, 'posec3d'
 
-        # 1.5 R25 自伤（撞墙 / 扶墙撞头）
+        # 1.5 R25 自伤（撞墙 / 扶墙撞头）—— R32 禁用
+        # 误报过多（坐姿头转动 / 写字 / PoseC3D 灰度带均会触发），暂时整块注释。
+        # 函数 check_self_harm 已短路 return False；外围 FINAL_CLASSES / VOTE /
+        # pipeline 速度滑窗保留不动，恢复只需把下面块解注释即可。
         # 位置理由：
         #   - step 1 高置信 falling/climbing (> 0.7) 被判定后直接 return，不会走到这里；
         #     真摔倒 / 真攀爬不会被自伤抢走
@@ -734,31 +742,31 @@ class RuleEngine:
         # 探查数据支持（probe R24 二轮，见 TRAINING_LOG R25）：
         #   head_vel_exceed_008_w60 ≥ 1: normal 0/7, impact 4/4, headbang 7/16
         #   head_to_hip_peak_ratio_w60 ≥ 3.5: normal max=2.62, impact max=3.29, headbang p50=5.9
-        if head_vel_hist is not None and hip_vel_hist is not None:
-            # R27 P42: PoseC3D normal_prob >= 0.9 强 normal 前置 veto
-            # 探查 normal 样本仅 7 个走路视频，未覆盖坐姿头部转动 / 看屏幕等场景
-            # （F1130 T9 坐姿被 self_harm 误判 = R25 已知局限 #1 兑现）。
-            # PoseC3D 极度确信 normal 时不入态，比事后退 HOLD 更根本。
-            # R30 P48: 扩展灰度带 —— normal 显著主导（>= 0.7 且 >= 2× 异常类最大值）
-            # F1247 T1 坐桌前写字：normal=0.756 fighting=0.240 → P42 不触发但 A 路径误判。
-            # PoseC3D 说 normal 主语义明确时（即使不到 0.9），skeleton 速度应让路。
-            normal_prob_sh = float(pose_probs[0])
-            attack_max_sh = max(float(pose_probs[i]) for i in (1, 2, 3, 4))
-            strong_normal = normal_prob_sh >= 0.9
-            dominant_normal = (normal_prob_sh >= 0.7 and
-                               normal_prob_sh >= attack_max_sh * 2)
-            if strong_normal:
-                logger.debug(f'  [RAW] T{track_id} self_harm 前置veto (P42 强normal): '
-                             f'PoseC3D normal={normal_prob_sh:.3f}>=0.9 → 跳过 self_harm 判据')
-            elif dominant_normal:
-                logger.debug(f'  [RAW] T{track_id} self_harm 前置veto (P48 normal主导): '
-                             f'PoseC3D normal={normal_prob_sh:.3f}>=0.7 且 '
-                             f'>=2*异常类max({attack_max_sh:.3f}) → 跳过 self_harm 判据')
-            else:
-                triggered, conf_sh, src_sh = check_self_harm(head_vel_hist, hip_vel_hist)
-                if triggered:
-                    logger.debug(f'  [RAW] T{track_id} → self_harm ({src_sh}, conf={conf_sh:.2f})')
-                    return 'self_harm', conf_sh, src_sh
+        # if head_vel_hist is not None and hip_vel_hist is not None:
+        #     # R27 P42: PoseC3D normal_prob >= 0.9 强 normal 前置 veto
+        #     # 探查 normal 样本仅 7 个走路视频，未覆盖坐姿头部转动 / 看屏幕等场景
+        #     # （F1130 T9 坐姿被 self_harm 误判 = R25 已知局限 #1 兑现）。
+        #     # PoseC3D 极度确信 normal 时不入态，比事后退 HOLD 更根本。
+        #     # R30 P48: 扩展灰度带 —— normal 显著主导（>= 0.7 且 >= 2× 异常类最大值）
+        #     # F1247 T1 坐桌前写字：normal=0.756 fighting=0.240 → P42 不触发但 A 路径误判。
+        #     # PoseC3D 说 normal 主语义明确时（即使不到 0.9），skeleton 速度应让路。
+        #     normal_prob_sh = float(pose_probs[0])
+        #     attack_max_sh = max(float(pose_probs[i]) for i in (1, 2, 3, 4))
+        #     strong_normal = normal_prob_sh >= 0.9
+        #     dominant_normal = (normal_prob_sh >= 0.7 and
+        #                        normal_prob_sh >= attack_max_sh * 2)
+        #     if strong_normal:
+        #         logger.debug(f'  [RAW] T{track_id} self_harm 前置veto (P42 强normal): '
+        #                      f'PoseC3D normal={normal_prob_sh:.3f}>=0.9 → 跳过 self_harm 判据')
+        #     elif dominant_normal:
+        #         logger.debug(f'  [RAW] T{track_id} self_harm 前置veto (P48 normal主导): '
+        #                      f'PoseC3D normal={normal_prob_sh:.3f}>=0.7 且 '
+        #                      f'>=2*异常类max({attack_max_sh:.3f}) → 跳过 self_harm 判据')
+        #     else:
+        #         triggered, conf_sh, src_sh = check_self_harm(head_vel_hist, hip_vel_hist)
+        #         if triggered:
+        #             logger.debug(f'  [RAW] T{track_id} → self_harm ({src_sh}, conf={conf_sh:.2f})')
+        #             return 'self_harm', conf_sh, src_sh
 
         # 2. YOLO 辅助 falling 检测（一动不动躺地，PoseC3D 识别不出）
         #    躺地 + 附近有被标为 fighting/bullying 的人 → bullying（被霸凌）
