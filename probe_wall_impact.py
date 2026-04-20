@@ -226,6 +226,42 @@ def rolling_std(x, window):
     return out
 
 
+def rolling_max(x, window):
+    """1D 滑窗最大值（NaN 安全）。前 window-1 为 NaN。"""
+    T = len(x)
+    out = np.full(T, np.nan)
+    for t in range(window - 1, T):
+        seg = x[t - window + 1:t + 1]
+        valid = ~np.isnan(seg)
+        if valid.any():
+            out[t] = seg[valid].max()
+    return out
+
+
+def rolling_count_exceed(x, thr, window):
+    """1D 滑窗内 > thr 的帧数（NaN 视为不超）。前 window-1 为 NaN。"""
+    T = len(x)
+    out = np.full(T, np.nan)
+    for t in range(window - 1, T):
+        seg = x[t - window + 1:t + 1]
+        valid = ~np.isnan(seg)
+        if valid.sum() >= window // 2:
+            out[t] = int(((seg > thr) & valid).sum())
+    return out
+
+
+def count_peaks_exceeding(x, thr, min_gap=5):
+    """数序列里 >thr 且与邻居局部最大的"独立"峰数（min_gap 帧内去重）。"""
+    peaks = []
+    for t in range(1, len(x) - 1):
+        if np.isnan(x[t]) or x[t] <= thr:
+            continue
+        if x[t] >= x[t - 1] and x[t] >= x[t + 1]:
+            if not peaks or t - peaks[-1] >= min_gap:
+                peaks.append(t)
+    return len(peaks), peaks
+
+
 def rolling_autocorr_peak(x, window, min_lag=10, max_lag=60):
     """对序列滑窗做自相关，返回每个 t 的 (峰值, 峰值对应 lag)。
     min_lag=10 (0.33s@30fps), max_lag=60 (2s@30fps) → 对应 0.5~3Hz 撞头频率。
@@ -259,9 +295,11 @@ def rolling_autocorr_peak(x, window, min_lag=10, max_lag=60):
     return peak_val, peak_lag
 
 
-def compute_features(frame_ids, bboxes, kps_ema, scores_ema, all_tracks_dense):
+def compute_features(frame_ids, bboxes, kps_ema, scores_ema, all_tracks_dense,
+                     main_tid=None):
     """计算所有衍生特征。all_tracks_dense: {tid: (bboxes, kps_ema, scores_ema)}
     用于场景上下文特征（nearest dist, overlap, active count）。
+    main_tid 用于在场景上下文计算里排除 self。
     """
     T = len(frame_ids)
 
@@ -350,7 +388,21 @@ def compute_features(frame_ids, bboxes, kps_ema, scores_ema, all_tracks_dense):
         wrist_head_dist = np.fmin(d_lw, d_rw)
         wrist_head_dist_norm = wrist_head_dist / bbox_h
 
-    # 场景上下文：最近他 track 距离 + 最大 bbox overlap
+    # 新指标 A: 多阈值下 head_vel 超阈计数（滑窗 w60 / w90）
+    head_vel_thrs = [0.05, 0.08, 0.10, 0.12, 0.15]
+    head_vel_exceed_w60 = {}
+    head_vel_exceed_w90 = {}
+    for thr in head_vel_thrs:
+        head_vel_exceed_w60[thr] = rolling_count_exceed(head_vel_mag_norm, thr, 60)
+        head_vel_exceed_w90[thr] = rolling_count_exceed(head_vel_mag_norm, thr, 90)
+
+    # 新指标 B: 滑窗内 head_vel / hip_vel 峰值比（>>1 → 扶墙撞头；~1 → 整身撞击；低 → normal）
+    head_vel_max_w60 = rolling_max(head_vel_mag_norm, 60)
+    hip_vel_max_w60 = rolling_max(hip_vel_mag_norm, 60)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        head_to_hip_peak_ratio_w60 = head_vel_max_w60 / (hip_vel_max_w60 + eps)
+
+    # 场景上下文：最近他 track 距离 + 最大 bbox overlap（排除 self）
     nearest_dist_norm = np.full(T, np.nan)
     max_overlap = np.full(T, np.nan)
     active_count = np.zeros(T, dtype=int)
@@ -362,6 +414,8 @@ def compute_features(frame_ids, bboxes, kps_ema, scores_ema, all_tracks_dense):
         best_d = np.inf
         best_ov = 0.0
         for other_tid, (other_bboxes, _, _) in all_tracks_dense.items():
+            if other_tid == main_tid:
+                continue  # 排除 self
             other_b = other_bboxes[t]
             if np.any(np.isnan(other_b)):
                 continue
@@ -376,11 +430,13 @@ def compute_features(frame_ids, bboxes, kps_ema, scores_ema, all_tracks_dense):
             ov = _bbox_overlap(my_b, other_b)
             if ov > best_ov:
                 best_ov = ov
-        active_count[t] = n_active  # 不含 self
+        active_count[t] = n_active  # 他 track 数（不含 self）
         if not np.isnan(bbox_h[t]) and best_d < np.inf:
             nearest_dist_norm[t] = best_d / bbox_h[t]
         if n_active > 0:
             max_overlap[t] = best_ov
+        else:
+            max_overlap[t] = 0.0  # 单人场景显式 0 而非 NaN
 
     return dict(
         frame_ids=frame_ids,
@@ -414,6 +470,13 @@ def compute_features(frame_ids, bboxes, kps_ema, scores_ema, all_tracks_dense):
         nearest_dist_norm=nearest_dist_norm,
         max_overlap=max_overlap,
         active_track_count=active_count,
+        head_vel_max_w60=head_vel_max_w60,
+        hip_vel_max_w60=hip_vel_max_w60,
+        head_to_hip_peak_ratio_w60=head_to_hip_peak_ratio_w60,
+        **{f'head_vel_exceed_{int(thr*100):03d}_w60': head_vel_exceed_w60[thr]
+           for thr in head_vel_thrs},
+        **{f'head_vel_exceed_{int(thr*100):03d}_w90': head_vel_exceed_w90[thr]
+           for thr in head_vel_thrs},
     )
 
 
@@ -504,10 +567,10 @@ def maybe_run_posec3d(kps_ema_main, scores_ema_main, img_shape, config, ckpt,
 # 每视频作图
 # ============================================================
 def plot_trace(feat, out_path, title, posec3d_frames=None, posec3d_probs=None):
-    """12 行共享 x 轴的特征时序图"""
+    """14 行共享 x 轴的特征时序图（R24 二轮加了 head_vel 超阈计数 + head/hip 比）"""
     T = len(feat['frame_ids'])
     x = feat['frame_ids']
-    fig, axes = plt.subplots(12, 1, figsize=(14, 22), sharex=True)
+    fig, axes = plt.subplots(14, 1, figsize=(14, 26), sharex=True)
 
     ax = axes[0]
     ax.plot(x, feat['hip_vel_mag_norm'], label='hip', color='C0', lw=1)
@@ -600,10 +663,30 @@ def plot_trace(feat, out_path, title, posec3d_frames=None, posec3d_probs=None):
     ax = axes[10]
     ax.plot(x, feat['active_track_count'], color='C5')
     ax.set_ylabel('# other tracks')
-    ax.set_title('[11] 同帧其他 track 数量')
+    ax.set_title('[11] 同帧其他 track 数量（已排除 self）')
     ax.grid(alpha=0.3)
 
+    # [12] 新指标 A — head_vel 多阈值超阈计数（w90 窗口）
     ax = axes[11]
+    for thr, color in [(0.05, 'C0'), (0.08, 'C1'), (0.10, 'C3'), (0.12, 'C5'), (0.15, 'C4')]:
+        key = f'head_vel_exceed_{int(thr*100):03d}_w90'
+        if key in feat:
+            ax.plot(x, feat[key], label=f'>{thr:.2f}', color=color, lw=1)
+    ax.set_ylabel('# frames > thr in w=90')
+    ax.set_title('[12] head_vel 多阈值累计超阈数 — 反复撞头关键')
+    ax.legend(loc='upper right', fontsize=8, ncol=5)
+    ax.grid(alpha=0.3)
+
+    # [13] 新指标 B — head/hip peak ratio (w60)
+    ax = axes[12]
+    ax.plot(x, feat['head_to_hip_peak_ratio_w60'], color='C6', lw=1)
+    ax.set_ylabel('head_max / hip_max (w60)')
+    ax.set_title('[13] 头/髋峰值速度比 — 扶墙撞头 >> 1，整身撞击 ~1，normal 低')
+    ax.set_ylim(0, min(40, np.nanmax(feat['head_to_hip_peak_ratio_w60']) + 2
+                       if np.any(~np.isnan(feat['head_to_hip_peak_ratio_w60'])) else 40))
+    ax.grid(alpha=0.3)
+
+    ax = axes[13]
     if posec3d_frames is not None and len(posec3d_frames) > 0:
         labels = ['normal', 'fighting', 'bullying', 'falling', 'climbing']
         for i, lbl in enumerate(labels):
@@ -611,7 +694,7 @@ def plot_trace(feat, out_path, title, posec3d_frames=None, posec3d_probs=None):
         ax.set_ylim(0, 1)
         ax.legend(loc='upper right', fontsize=8, ncol=5)
     ax.set_ylabel('PoseC3D prob')
-    ax.set_title('[12] PoseC3D 5 类概率（若跑了）')
+    ax.set_title('[14] PoseC3D 5 类概率（若跑了）')
     ax.set_xlabel('frame index')
     ax.grid(alpha=0.3)
 
@@ -635,6 +718,10 @@ def compute_summary(feat, meta, video_path, class_name, main_tid, main_frames):
             return {'peak': None, 'peak_frame': None}
         idx = int(np.nanargmax(arr))
         return {'peak': float(arr[idx]), 'peak_frame': int(feat['frame_ids'][idx])}
+
+    def pct(arr, q):
+        a = arr[~np.isnan(arr)]
+        return float(np.percentile(a, q)) if len(a) else None
 
     # 撞击候选：hip_vel 峰 + 其后 3 帧衰减
     impact_events = []
@@ -690,6 +777,24 @@ def compute_summary(feat, meta, video_path, class_name, main_tid, main_frames):
         nearest_dist_norm_median=safe(feat['nearest_dist_norm'], np.median),
         max_overlap_max=safe(feat['max_overlap'], np.max),
         active_track_count_median=safe(feat['active_track_count'], np.median),
+        active_track_count_max=safe(feat['active_track_count'], np.max),
+
+        # 新指标：分位数（比 peak 稳健）
+        hip_vel_p95=pct(feat['hip_vel_mag_norm'], 95),
+        hip_vel_p99=pct(feat['hip_vel_mag_norm'], 99),
+        head_vel_p95=pct(feat['head_vel_mag_norm'], 95),
+        head_vel_p99=pct(feat['head_vel_mag_norm'], 99),
+
+        # 新指标：多阈值下 head_vel 超阈最大计数（在 w60/w90 滑窗里）
+        head_vel_exceed_max={
+            f'thr_{int(thr*100):03d}': {
+                'w60': safe(feat[f'head_vel_exceed_{int(thr*100):03d}_w60'], np.max),
+                'w90': safe(feat[f'head_vel_exceed_{int(thr*100):03d}_w90'], np.max),
+            } for thr in [0.05, 0.08, 0.10, 0.12, 0.15]
+        },
+
+        # 新指标：head/hip peak 比（滑窗 w60）
+        head_to_hip_peak_ratio_w60=peak_info(feat['head_to_hip_peak_ratio_w60']),
 
         impact_event_candidates=impact_events,
         headbang_score_peak=hb_peak,
@@ -759,7 +864,22 @@ def plot_cross_class_comparison(all_summaries, out_dir):
         ('max_overlap_max', None),
         ('nearest_dist_norm_median', None),
         ('wrist_head_dist_norm_median', None),
+        ('active_track_count_max', None),
+        # 新指标
+        ('hip_vel_p95', None),
+        ('hip_vel_p99', None),
+        ('head_vel_p95', None),
+        ('head_vel_p99', None),
+        ('head_to_hip_peak_ratio_w60', 'peak'),
     ]
+
+    def get_val(s, name, sub):
+        v = s.get(name)
+        if v is None:
+            return None
+        if sub is None:
+            return v
+        return v.get(sub) if isinstance(v, dict) else None
 
     for feat_name, sub in features_to_compare:
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -768,7 +888,7 @@ def plot_cross_class_comparison(all_summaries, out_dir):
             for s in all_summaries:
                 if s['class_name'] != cls:
                     continue
-                v = s[feat_name][sub] if sub else s[feat_name]
+                v = get_val(s, feat_name, sub)
                 if v is not None:
                     vals.append(v)
             if vals:
@@ -783,39 +903,93 @@ def plot_cross_class_comparison(all_summaries, out_dir):
         fig.savefig(out_dir / f'comparison_{feat_name}.png', dpi=90)
         plt.close(fig)
 
+    # head_vel 多阈值超阈计数对比（每个阈值一张 w90 图）
+    for thr_key in ('thr_005', 'thr_008', 'thr_010', 'thr_012', 'thr_015'):
+        for win in ('w60', 'w90'):
+            fig, ax = plt.subplots(figsize=(8, 5))
+            for cls in classes:
+                vals = []
+                for s in all_summaries:
+                    if s['class_name'] != cls:
+                        continue
+                    em = s.get('head_vel_exceed_max')
+                    if em and thr_key in em and em[thr_key].get(win) is not None:
+                        vals.append(em[thr_key][win])
+                if vals:
+                    ax.hist(vals, bins=min(20, max(5, len(vals))),
+                            alpha=0.5, label=f'{cls} (n={len(vals)})')
+            ax.set_title(f'head_vel_exceed_{thr_key}_{win} (max count)')
+            ax.set_xlabel('max frames exceeding in window')
+            ax.set_ylabel('count')
+            ax.legend()
+            ax.grid(alpha=0.3)
+            fig.tight_layout()
+            fig.savefig(out_dir / f'comparison_head_vel_exceed_{thr_key}_{win}.png', dpi=90)
+            plt.close(fig)
+
 
 def write_distribution_stats(all_summaries, out_path):
     """把各类特征的 p5/p50/p95 写进 json，方便直接定阈值"""
     classes = sorted(set(s['class_name'] for s in all_summaries))
+
+    def get_val(s, key, sub):
+        v = s.get(key)
+        if v is None:
+            return None
+        if sub is None:
+            return v
+        return v.get(sub) if isinstance(v, dict) else None
+
+    def describe(vals):
+        return {
+            'n': len(vals),
+            'mean': float(np.mean(vals)),
+            'std': float(np.std(vals)),
+            'p5': float(np.percentile(vals, 5)),
+            'p50': float(np.percentile(vals, 50)),
+            'p95': float(np.percentile(vals, 95)),
+            'min': float(np.min(vals)),
+            'max': float(np.max(vals)),
+        }
+
     stats = {}
+    base_keys = [
+        ('hip_vel_mag_norm', 'peak'),
+        ('head_vel_mag_norm', 'peak'),
+        ('head_hip_std_ratio_w60', 'peak'),
+        ('head_hip_std_ratio_w90', 'peak'),
+        ('head_y_autocorr_val', 'peak'),
+        ('head_x_autocorr_val', 'peak'),
+        ('max_overlap_max', None),
+        ('nearest_dist_norm_median', None),
+        ('wrist_head_dist_norm_median', None),
+        ('active_track_count_median', None),
+        ('active_track_count_max', None),
+        # R24 二轮新指标
+        ('hip_vel_p95', None),
+        ('hip_vel_p99', None),
+        ('head_vel_p95', None),
+        ('head_vel_p99', None),
+        ('head_to_hip_peak_ratio_w60', 'peak'),
+    ]
     for cls in classes:
         subset = [s for s in all_summaries if s['class_name'] == cls]
         cls_stats = {}
-        for key, sub in [
-            ('hip_vel_mag_norm', 'peak'),
-            ('head_vel_mag_norm', 'peak'),
-            ('head_hip_std_ratio_w60', 'peak'),
-            ('head_hip_std_ratio_w90', 'peak'),
-            ('head_y_autocorr_val', 'peak'),
-            ('head_x_autocorr_val', 'peak'),
-            ('max_overlap_max', None),
-            ('nearest_dist_norm_median', None),
-            ('wrist_head_dist_norm_median', None),
-            ('active_track_count_median', None),
-        ]:
-            vals = [s[key][sub] if sub else s[key] for s in subset]
+        for key, sub in base_keys:
+            vals = [get_val(s, key, sub) for s in subset]
             vals = [v for v in vals if v is not None]
             if vals:
-                cls_stats[f'{key}.{sub}' if sub else key] = {
-                    'n': len(vals),
-                    'mean': float(np.mean(vals)),
-                    'std': float(np.std(vals)),
-                    'p5': float(np.percentile(vals, 5)),
-                    'p50': float(np.percentile(vals, 50)),
-                    'p95': float(np.percentile(vals, 95)),
-                    'min': float(np.min(vals)),
-                    'max': float(np.max(vals)),
-                }
+                cls_stats[f'{key}.{sub}' if sub else key] = describe(vals)
+        # head_vel 超阈最大计数
+        for thr_key in ('thr_005', 'thr_008', 'thr_010', 'thr_012', 'thr_015'):
+            for win in ('w60', 'w90'):
+                vals = []
+                for s in subset:
+                    em = s.get('head_vel_exceed_max')
+                    if em and thr_key in em and em[thr_key].get(win) is not None:
+                        vals.append(em[thr_key][win])
+                if vals:
+                    cls_stats[f'head_vel_exceed_{thr_key}_{win}_max'] = describe(vals)
         stats[cls] = {'sample_count': len(subset), 'features': cls_stats}
     with open(out_path, 'w') as f:
         json.dump(stats, f, indent=2)
@@ -853,7 +1027,7 @@ def process_one_video(video_path, class_name, yolo_model, args, out_root):
     main_frame_ids = np.arange(g_start, g_end + 1)
 
     feat = compute_features(main_frame_ids, main_bboxes, main_kps_ema, main_scores_ema,
-                            all_tracks_dense)
+                            all_tracks_dense, main_tid=main_tid)
 
     # PoseC3D（可选）
     pc_frames, pc_probs = None, None
