@@ -2431,6 +2431,109 @@ else:
 
 ---
 
+### E2E Fix Round 31 — demote_unsupported_attacks 放宽 partner + pair-based source 白名单（bullying 间歇期掉态修复）
+
+**背景**：F490 T4 倒地受害者被正确判 bullying（YOLO 躺地 + asymmetry + ENTRY 4>=3），紧接着被 `demote_unsupported_attacks` 降级为 normal：
+
+```
+[F490] T4 PoseC3D: argmax=fighting(0.542) | normal=0.420 fighting=0.542
+  [RULE] bullying不对称检测: height_ratio=-0.21, head_hip_norm=0.308 → bullying
+  [RAW] T4 → bullying (攻击概率f=0.542,b=0.001 + 姿态不对称)
+  [VOTE] T4 current=bullying → bullying (ENTRY 4>=3) | history=[fa,fa,n,b,b,b,b]
+  [DEMOTE] T4 bullying → normal (isolated_no_partner(bullying))
+[F495] T1 PoseC3D: argmax=normal(0.623) fighting=0.328   ← 施暴者间歇期 PoseC3D 输出 normal
+  [RAW] T1 attack_prob=0.328过线但被normal压制 → normal
+  [VOTE] T1 → normal
+```
+
+**根因**：R18 P23 的 partner 判据 `另一 track 也在 judgments[tid].label ∈ {fighting, bullying}` 要求**同一帧同步攻击**，但攻击行为物理上**间歇性** —— 拳头收回、踢腿停顿、喘气的 2-3 秒内施暴者 PoseC3D 常输出 normal。间歇时：
+- T4（倒地）VOTE HOLD 维持 bullying ✓（时序正确）
+- T1（施暴者间歇）RAW=normal → 不在 `attack_tids`
+- T4 partner=None → 降级 ✗
+
+等价于 R8.0 前的"告警闪断"老问题换了一个机制（从 VOTE 打到 DEMOTE）。
+
+另外 T4 本身的 source 是 `rule_bullying`（基于 asymmetry + proximity + inject 的 pair-based 判定），再让 demote 从"当前帧 partner"角度审一次等价于**双重惩罚** —— 判定时已经用了邻居证据，demote 时又因邻居本帧不同步把它推翻。
+
+#### P49 — partner 候选池扩展（修复 1）
+
+**文件**：`e2e_pipeline/rule_engine.py` `demote_unsupported_attacks`
+
+`partner_candidate_tids` 从 `set(attack_tids)` 扩到：
+```
+partner_candidate_tids = {
+  当前帧攻击态 tid                          # 原有
+  ∪ 近 3 帧 raw history 含攻击 的 tid       # 新：施暴者 PoseC3D 间歇
+  ∪ _last_smoothed ∈ {fighting, bullying} 的 tid  # 新：施暴者 HOLD 中但本帧 VOTE 刚退出
+}
+```
+
+覆盖源：`judgments.keys() ∪ track_bboxes_dict.keys() ∪ history.keys() ∪ _last_smoothed.keys()` —— 含未推理帧的 track。
+
+**语义**：partner 不要求"本帧同步攻击"，只要求"最近处于攻击上下文"。允许 ≤3 帧（~1s）的间歇窗口，覆盖正常攻击节奏。
+
+#### P50 — pair-based source 白名单豁免（修复 2）
+
+**文件**：同上
+
+在 partner/self_active 检查之前加白名单短路：
+
+```python
+PAIR_BASED_SOURCES_PREFIX = ('rule_yolo_bullying', 'rule_bullying', 'pair_couple')
+if any(j.source.startswith(p) for p in PAIR_BASED_SOURCES_PREFIX):
+    continue  # 跳过 demote，直接保留
+```
+
+**语义**：三类 source 判定时本身已经使用了多人证据：
+- `rule_yolo_bullying`: 躺地 + 邻居 smoothed=bullying / 近 3 帧含 bullying
+- `rule_bullying`: proximity_ok + asymmetry + `_inject_to_overlapping_neighbor`
+- `pair_couple(*)`: bbox overlap ≥ 10% 的 pair 直接升级
+
+再让 demote 审 partner 等于双重惩罚，源头和下游冲突时下游胜 → 吞掉合法判定。
+
+保留 demote 对这些 source 的唯一场景是"R18 P23 描述的 P-1/P-2/P-3/P-4 污染路径"，但这些路径产生的判定 source 是 `posec3d`（P-1 pair inference）、各种攻击路径被 inject 污染后的 raw 标签 —— 不在白名单内。
+
+#### R31 配置快照
+
+| 项 | R30 | R31 |
+|---|---|---|
+| partner 候选池 | `set(attack_tids)`（仅当前帧攻击态） | **+ 近 3 帧 raw 含攻击 + `_last_smoothed` ∈ 攻击态** |
+| pair-based source 豁免 | 无（所有攻击态 tid 均参与 demote 检查） | **rule_yolo_bullying / rule_bullying / pair_couple(*) 跳过 demote** |
+| demote 日志 | `[DEMOTE]` | + `[DEMOTE-SKIP]` debug 日志 |
+
+#### F490 验证
+
+| 条件 | 值 | 结果 |
+|---|---|---|
+| T4.source | `rule_bullying` | **P50 命中 → 跳过 demote** ✓ |
+| fallback：若 source 走 `posec3d` | T1 近 3 帧 raw 含 fighting/bullying | **P49 命中 → T1 入 partner 候选池** ✓ |
+
+#### 行为矩阵
+
+| 场景 | R30 | R31 |
+|---|---|---|
+| F490 倒地受害者 source=rule_bullying + 施暴者间歇 normal | 降级 ✗ | P50 豁免 → 保留 bullying ✓ |
+| F490 若 source=posec3d + 施暴者近 3 帧有 fighting | 降级 | P49 → T1 入候选 → partner ok → 保留 ✓ |
+| F7210 T3 旁观者 source=posec3d + 施暴者 T11 攻击中 + T3 无历史攻击 | 降级 ✓ | T3 self_active 失败 → 降级 ✓（R18 P23 原意） |
+| 完全孤立个体 source=posec3d + 无任何邻居攻击上下文 | 降级 ✓ | 降级 ✓（P49 候选池空 → partner=None） |
+| R20 F959 柜台假重叠 T1 fighting source=posec3d + T2/T3 normal=1.0 | P25/P26 先挡（normal≥0.9 不升级）→ T1 孤立 → 降级 ✓ | 不变（P50 只豁免 pair-based source，T1 走 posec3d）✓ |
+
+#### 风险/回退
+
+**风险 1**：真单人异常 + 最近有其他 track 误判过攻击（极罕见）—— P49 会让 partner 候选池出现假成员。但还需 bbox overlap ≥ 10% 才成为 partner，加上该 tid 自己的 self_active 检查，三重条件共同失败概率极低。
+
+**风险 2**：pair-based source 判定本身若错（如 rule_bullying asymmetry 被拉开的手臂误触发）—— P50 让其永久保留。但 R9 P5 已经把 asymmetry 阈值收到 `<0.5 AND >0.15`；rule_yolo_bullying 在 R10 P8 + R17 P21 + R19 P24 三轮后对姿态/遮挡已有多重护栏；pair_couple 在 R20 P25 有 target 强 normal 守门 —— 上游已经很严。
+
+**回退**：
+- P49：`partner_candidate_tids = set(attack_tids)` 恢复单行 + 删候选池扩展段（~20 行）
+- P50：删 `PAIR_BASED_SOURCES_PREFIX` + 白名单分支（~10 行）
+
+**未处理**：
+- self_active 的 recent_raw 检查仍可能被 INJECT 污染（R20 只从源头挡了 target normal≥0.9 的注入，灰度带仍会写入）—— 本轮不改，等实测
+- pair-based source 的"攻击者一侧"现在也不走 demote，若施暴者 source 走到 rule_bullying 但实际并非合法 pair（极端 case）—— 留观察
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```

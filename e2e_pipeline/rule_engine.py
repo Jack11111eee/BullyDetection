@@ -1434,7 +1434,9 @@ class RuleEngine:
 
         用户原则: fighting/bullying 是 ≥2 人行为，不存在孤立行为。
         post-couple 阶段对每个被标为攻击态的 track 检查两个条件:
-          条件 1 (partner): 场景里另一 track 也在攻击态 + bbox overlap ≥ min_overlap
+          条件 1 (partner): 场景里另一 track 处于攻击上下文 + bbox overlap ≥ min_overlap
+            R31 修复 (1): partner 候选扩到"当前攻击态 ∪ 近 recent_n 帧 raw 含攻击
+                         ∪ _last_smoothed ∈ 攻击态" —— 覆盖施暴者 PoseC3D 间歇期
           条件 2 (self_active): 近 recent_n 帧 raw 含攻击 OR 当前 attack_prob ≥ 0.3
 
         任一失败即降级 normal。覆盖 4 条污染路径:
@@ -1442,6 +1444,10 @@ class RuleEngine:
           P-2 _inject_to_overlapping_neighbor (邻居施暴时主动注入)
           P-3 couple_overlapping_pairs propagation (couple 升级 normal 邻居)
           P-4 HOLD inheritance (history 残留攻击 entries 被 HOLD 锁住)
+
+        R31 修复 (2): pair-based source 白名单 —— rule_yolo_bullying / rule_bullying /
+        pair_couple(*) 这些判定本身就基于邻居证据形成，再做 partner 检查重复且危险
+        （间歇期被打成 normal 会反过来吞掉合法判定）。
 
         Args:
             judgments: {track_id: BehaviorResult} couple 后的判定
@@ -1455,20 +1461,53 @@ class RuleEngine:
             return judgments
 
         ATTACK_LABELS = ('fighting', 'bullying')
+        PAIR_BASED_SOURCES_PREFIX = ('rule_yolo_bullying', 'rule_bullying', 'pair_couple')
         attack_tids = [tid for tid, j in judgments.items() if j.label in ATTACK_LABELS]
         if not attack_tids:
             return judgments
+
+        # R31 修复 (1): partner 候选池扩展 —— 不限于"当前攻击态"，也接受
+        #   - 近 recent_n 帧 raw history 含攻击（施暴者 PoseC3D 刚打过、当前 PoseC3D 噪声输出 normal）
+        #   - _last_smoothed ∈ 攻击态（施暴者 HOLD 中但本帧 VOTE 刚退出）
+        # 涵盖 judgments 以外的所有活跃 track（未推理帧也算）
+        partner_candidate_tids = set(attack_tids)
+        all_tids = set(judgments.keys())
+        if track_bboxes_dict:
+            all_tids |= set(track_bboxes_dict.keys())
+        all_tids |= set(self.history.keys())
+        all_tids |= set(self._last_smoothed.keys())
+        for other_tid in all_tids:
+            if other_tid in partner_candidate_tids:
+                continue
+            recent_raw = self.history.get(other_tid, [])[-recent_n:]
+            if any(r in ATTACK_LABELS for r in recent_raw):
+                partner_candidate_tids.add(other_tid)
+                continue
+            if self._last_smoothed.get(other_tid) in ATTACK_LABELS:
+                partner_candidate_tids.add(other_tid)
 
         # Pass 1: 决定降级（基于降级前的 attack_tids 集合）
         demote = {}  # tid → (old_label, reason)
         for tid in attack_tids:
             j = judgments[tid]
-            # 条件 1: partner check
+
+            # R31 修复 (2): pair-based source 白名单豁免
+            #   rule_yolo_bullying: YOLO 躺地 + 邻居 smoothed=bullying / 近 3 帧含 bullying
+            #   rule_bullying:      proximity_ok + asymmetry + 双向 inject
+            #   pair_couple(*):     couple_overlapping_pairs 基于 overlap 对的升级
+            # 三者本身就是基于多人证据形成的判定，再让 demote 审一次 partner 等价于双重惩罚
+            src = j.source or ''
+            if any(src.startswith(p) for p in PAIR_BASED_SOURCES_PREFIX):
+                logger.debug(f'  [DEMOTE-SKIP] T{tid} {j.label} source={src} '
+                             f'属 pair-based 判定，跳过 partner/self_active 检查')
+                continue
+
+            # 条件 1: partner check（从扩展后的候选池找）
             my_bbox = track_bboxes_dict.get(tid) if track_bboxes_dict else None
             partner_tid = None
             best_ov = min_overlap
             if my_bbox:
-                for other_tid in attack_tids:
+                for other_tid in partner_candidate_tids:
                     if other_tid == tid:
                         continue
                     other_bbox = track_bboxes_dict.get(other_tid)
