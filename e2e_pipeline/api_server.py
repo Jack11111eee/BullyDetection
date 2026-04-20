@@ -529,6 +529,71 @@ def build_pipeline(args):
     )
 
 
+def _warmup_pipeline():
+    """R18: CUDA 预热 —— 用 dummy 输入触发 PoseC3D/YOLO/YOLO-Pose 的首次前向,
+    完成 CUDA kernel JIT + cuDNN benchmark + 显存池分配。
+    把原本在首次真实 task 推理里发生的 ~9s 空窗转移到服务启动期。
+
+    失败不中断启动(只打 warning),真正 task 跑时会重复 warmup 一次。
+    """
+    import numpy as np
+
+    logger.info('[WARMUP] 开始预热 pipeline (首次 CUDA 推理 JIT 可能耗时 5-15s)...')
+    t_all = time.time()
+
+    # 1. YOLO-Pose warmup (纯单帧预测,不走 tracker 避免污染状态)
+    try:
+        dummy_frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        t0 = time.time()
+        for _ in range(2):
+            _ = PIPELINE.yolo_pose.predict(dummy_frame, conf=0.3, verbose=False)
+        logger.info(f'[WARMUP] YOLO-Pose 完成 {time.time()-t0:.2f}s')
+    except Exception as e:
+        logger.warning(f'[WARMUP] YOLO-Pose 失败: {e}')
+
+    # 2. 3 路小物体 YOLO warmup
+    try:
+        dummy_frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        if PIPELINE.multi_detector is not None:
+            t0 = time.time()
+            for _ in range(2):
+                _ = PIPELINE.multi_detector.detect(
+                    dummy_frame, need_falling=True,
+                    need_smoking=True, need_phone=True,
+                )
+            logger.info(f'[WARMUP] 3 路小物体 YOLO 完成 {time.time()-t0:.2f}s')
+        elif PIPELINE.small_obj_detector is not None:
+            t0 = time.time()
+            for _ in range(2):
+                _ = PIPELINE.small_obj_detector.detect(dummy_frame)
+            logger.info(f'[WARMUP] legacy SmallObjectDetector 完成 {time.time()-t0:.2f}s')
+    except Exception as e:
+        logger.warning(f'[WARMUP] 小物体 YOLO 失败: {e}')
+
+    # 3. PoseC3D warmup —— 最关键,F31 8.8s 空窗就是它
+    try:
+        clip_len = PIPELINE.posec3d.clip_len
+        # 构造两个人的合理骨骼 —— 关键点散布在 1920x1080 范围内
+        dummy_kps = np.random.rand(2, clip_len, 17, 2).astype(np.float32)
+        dummy_kps[..., 0] *= 1920
+        dummy_kps[..., 1] *= 1080
+        dummy_scores = np.full((2, clip_len, 17), 0.8, dtype=np.float32)
+        t0 = time.time()
+        for _ in range(2):
+            _ = PIPELINE.posec3d.infer(dummy_kps, dummy_scores, img_shape=(1080, 1920))
+        logger.info(f'[WARMUP] PoseC3D 完成 {time.time()-t0:.2f}s')
+    except Exception as e:
+        logger.warning(f'[WARMUP] PoseC3D 失败: {e}')
+
+    # 清空 warmup 期间产生的 pipeline 状态
+    try:
+        PIPELINE.reset()
+    except Exception:
+        pass
+
+    logger.info(f'[WARMUP] 全部完成 total={time.time()-t_all:.2f}s')
+
+
 def parse_args():
     p = argparse.ArgumentParser(description='Campus Safety Inference API Server')
     # 模型（必选 / 默认）
@@ -569,6 +634,12 @@ def main():
     print('Loading pipeline (this takes a few seconds)...')
     PIPELINE = build_pipeline(args)
     print('Pipeline ready.')
+
+    # R18: CUDA warmup
+    # MODEL-SSE-ISSUE-REPORT §5 的 9.4s 空窗根因是 PoseC3D 首次推理的
+    # kernel JIT + cuDNN benchmark + 显存分配(实测 F31 cost=8848ms)
+    # 启动时喂 dummy 输入预热,把这个一次性成本转移到 Pipeline ready 之前
+    _warmup_pipeline()
 
     # R17 修 D: 启动看门狗后台线程
     _start_watchdog()
