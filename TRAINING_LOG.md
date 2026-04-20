@@ -2824,7 +2824,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
-??????? fix(e2e): R27 P41-P45 self_harm 误报压制 (坐姿头转动 / 簇发 / kp门槛)  (R27)
+ff91a5b fix(e2e): R27 P41-P45 self_harm 误报压制 (坐姿头转动 / 簇发 / kp门槛)  (R27)
 4ced812 fix(e2e): R26 P40 draw_label 自适应位置                                (R26)
 a319fe4 feat(e2e): R26 P37-P39 camera_tampering scene-level 检测             (R26)
 da4e546 feat(e2e): R25 self_harm 落地 — 撞墙/扶墙撞头 skeleton 速度双路径       (R25)
