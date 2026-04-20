@@ -2370,6 +2370,67 @@ else:
 
 ---
 
+### E2E Fix Round 30 — self_harm raw 层 normal 显著主导 veto（P42 灰度带扩展）
+
+**背景**：F1247 T1 坐桌前写字/操作设备，PoseC3D `normal=0.756 fighting=0.240`，A 路径簇发 `count=2 gap≤5` 触发 self_harm。
+```
+[F1247] T1 PoseC3D: argmax=normal(0.756) fighting=0.240 falling=0.000
+  [RULE] self_harm A路径簇发: head_vel>0.08 count=2 (gap≤5) → conf=0.70
+  [RAW] T1 → self_harm (rule_self_harm_vel)
+```
+
+**根因**：R27 P42 只防 `normal_prob >= 0.9` 的极强 normal，**灰度带（0.7–0.9）是盲区**。PoseC3D 说"normal 主语义明确（0.756 远大于任何异常类 0.24）"时，skeleton 2 帧速度应让路。F1247 正好卡在 0.756 这个盲区。
+
+#### P48 — 加 "normal 显著主导" 二层 veto
+
+**文件**：`e2e_pipeline/rule_engine.py` `_raw_judge` step 1.5
+
+原 P42 单层判据扩为两层：
+```python
+normal_prob_sh = float(pose_probs[0])
+attack_max_sh = max(float(pose_probs[i]) for i in (1, 2, 3, 4))
+strong_normal   = normal_prob_sh >= 0.9                           # P42 原有
+dominant_normal = normal_prob_sh >= 0.7 and normal_prob_sh >= attack_max_sh * 2  # P48 新
+
+if strong_normal:   skip ...        # log: [P42 强normal]
+elif dominant_normal: skip ...      # log: [P48 normal主导]
+else:
+    check_self_harm(...)
+```
+
+**F1247 命中**：`0.756 >= 0.7 ✓` 且 `0.756 >= 2 × 0.24 = 0.48 ✓` → P48 veto ✓
+
+**物理语义**：PoseC3D 64 帧时序看出 "normal 且任何异常类都很弱（不到 normal 的一半）" 是较强证据。skeleton 2 帧速度是弱证据。强压弱，延续 R24 教训 #24。
+
+#### R30 配置快照
+
+| 参数 | R29 | R30 |
+|---|---|---|
+| P42 强 normal veto | `normal >= 0.9` | 保持不变 |
+| P48 normal 主导 veto | — | **`normal >= 0.7 AND normal >= 2 × max(异常类)`** |
+| A/B 路径阈值 | 不变 | 不变 |
+
+#### 预期效果
+
+| 场景 | R29 | R30 |
+|---|---|---|
+| F1247 写字 normal=0.76 fighting=0.24 | self_harm ✗ | P48 veto → normal ✓ |
+| F1130 坐姿看屏 normal=0.996 | P42 veto | P42 veto（不变）|
+| 真撞墙 impact 假设 PoseC3D 分散 normal=0.4 fighting=0.3 | self_harm ✓ | 0.4 < 0.7 不 veto, 0.4 < 0.6 不主导 → self_harm ✓ |
+| 真 headbang PoseC3D 可能输出 fighting 高 | 不 veto | 不 veto（不变）|
+| PoseC3D normal=0.8 fighting=0.2 写字 | self_harm ✗ | 0.8>=0.7 且 0.8>=0.4 → veto ✓ |
+| PoseC3D normal=0.65 fighting=0.3 灰度 | self_harm | 仍 self_harm（0.65<0.7）|
+
+**副作用**：真 impact / headbang 场景若 PoseC3D 给 normal ≥ 0.7 且显著压倒异常类，会被 veto 漏检。但 impact 的物理特征是"快速变化 + 急停"，PoseC3D 训练集里对应的行为模式本就不典型，输出既不 impact-specific 也不 normal 高置信的概率较高 —— 被 P48 veto 的概率低。
+
+**回退**：删 P48 `dominant_normal` 分支 + 相应 `elif` 块，恢复 P42 单层 veto。
+
+**未处理**：
+- 灰度带最后一段（`normal ∈ [0.65, 0.7)` 且 `normal > 2× 异常类`）仍会入 self_harm —— 若实测仍见此类 case，再收紧 P48 门槛到 0.65 或 0.6
+- `fighting` 高置信但实际是写字的语义层面问题（PoseC3D 侧）不归 self_harm 路径管，留观察
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -2959,6 +3020,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+??????? fix(e2e): R30 P48 self_harm raw normal 显著主导 veto (P42 灰度带扩展)  (R30)
 a55d5d2 fix(e2e): R29 P47 _is_upright_posture 二维投影盲区双层防御            (R29)
 54c7d8c fix(e2e): R28 P46 self_harm B 路径双绝对下限 (hip_max 分母失控修复)   (R28)
 ff91a5b fix(e2e): R27 P41-P45 self_harm 误报压制 (坐姿头转动 / 簇发 / kp门槛)  (R27)

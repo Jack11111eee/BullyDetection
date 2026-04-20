@@ -739,10 +739,21 @@ class RuleEngine:
             # 探查 normal 样本仅 7 个走路视频，未覆盖坐姿头部转动 / 看屏幕等场景
             # （F1130 T9 坐姿被 self_harm 误判 = R25 已知局限 #1 兑现）。
             # PoseC3D 极度确信 normal 时不入态，比事后退 HOLD 更根本。
+            # R30 P48: 扩展灰度带 —— normal 显著主导（>= 0.7 且 >= 2× 异常类最大值）
+            # F1247 T1 坐桌前写字：normal=0.756 fighting=0.240 → P42 不触发但 A 路径误判。
+            # PoseC3D 说 normal 主语义明确时（即使不到 0.9），skeleton 速度应让路。
             normal_prob_sh = float(pose_probs[0])
-            if normal_prob_sh >= 0.9:
-                logger.debug(f'  [RAW] T{track_id} self_harm 前置veto: '
+            attack_max_sh = max(float(pose_probs[i]) for i in (1, 2, 3, 4))
+            strong_normal = normal_prob_sh >= 0.9
+            dominant_normal = (normal_prob_sh >= 0.7 and
+                               normal_prob_sh >= attack_max_sh * 2)
+            if strong_normal:
+                logger.debug(f'  [RAW] T{track_id} self_harm 前置veto (P42 强normal): '
                              f'PoseC3D normal={normal_prob_sh:.3f}>=0.9 → 跳过 self_harm 判据')
+            elif dominant_normal:
+                logger.debug(f'  [RAW] T{track_id} self_harm 前置veto (P48 normal主导): '
+                             f'PoseC3D normal={normal_prob_sh:.3f}>=0.7 且 '
+                             f'>=2*异常类max({attack_max_sh:.3f}) → 跳过 self_harm 判据')
             else:
                 triggered, conf_sh, src_sh = check_self_harm(head_vel_hist, hip_vel_hist)
                 if triggered:
