@@ -181,8 +181,13 @@ def adapt_pipeline_to_web_event(payload, task):
 # ============================================================
 # 任务管理
 # ============================================================
-class PipelineStoppedException(Exception):
-    """pipeline 回调抛出以中断 run() 循环"""
+class PipelineStoppedException(BaseException):
+    """pipeline 回调抛出以中断 run() 循环。
+
+    R17 修 A：必须继承 BaseException 而非 Exception，否则会被
+    pipeline.py:_process_frame 末尾的 `except Exception` 吃掉，
+    导致 /stop 失效、worker 永远跑、PIPELINE_LOCK 永远不释放。
+    """
 
 
 class AnalyzeTask:
@@ -208,6 +213,7 @@ class AnalyzeTask:
         self.thread = None
         self.created_at = time.time()
         self.finished_at = None
+        self.last_progress_ts = 0.0  # R17 修 D: watchdog 用,每次 on_frame 刷新
 
     def push_sse(self, event_name, data):
         """线程安全地入队一条 SSE 事件"""
@@ -225,6 +231,11 @@ PIPELINE = None  # InferencePipeline 实例（全局加载）
 PIPELINE_LOCK = threading.Lock()  # 同一时刻只允许 1 个任务跑（GPU 显存限制）
 UPLOAD_DIR = None  # 视频保存目录
 
+# R17 修 D: watchdog 配置
+WATCHDOG_INTERVAL_SEC = 10   # 每 10 秒扫一次
+WATCHDOG_STALL_SEC = 30      # running task last_progress_ts 超过此阈值未变 → 强制 error
+_WATCHDOG_STARTED = False
+
 
 def _run_task(task):
     """在 worker 线程里跑 pipeline.run()，通过回调把每帧结果推到 SSE queue"""
@@ -234,6 +245,7 @@ def _run_task(task):
         if task.stop_event.is_set():
             raise PipelineStoppedException('stop requested')
         task.current_frame = payload['frame_index'] + 1
+        task.last_progress_ts = time.time()  # R17 修 D: watchdog 存活信号
         if task.total_frames > 0:
             task.progress = min(1.0, task.current_frame / task.total_frames)
         event_data = adapt_pipeline_to_web_event(payload, task)
@@ -241,7 +253,11 @@ def _run_task(task):
 
     with PIPELINE_LOCK:
         task.status = 'running'
+        task.last_progress_ts = time.time()  # R17 修 D: watchdog 起点
         try:
+            # R17 修 B: 清空上一个 task 遗留的 SkeletonBuffer / RuleEngine / track_labels 状态
+            PIPELINE.reset()
+
             # 预探视频总帧数 + fps（方案 A 前端对齐用）
             import cv2
             cap = cv2.VideoCapture(task.video_path)
@@ -267,13 +283,60 @@ def _run_task(task):
             task.push_sse('error', {'taskId': task.task_id, 'message': err})
             task.mark_finished('error', err)
         finally:
-            PIPELINE.on_frame_callback = None
+            try:
+                PIPELINE.on_frame_callback = None
+            except Exception:
+                pass
             # 清理上传的临时视频文件
             try:
                 if os.path.exists(task.video_path):
                     os.remove(task.video_path)
             except Exception:
                 pass
+
+
+# ============================================================
+# R17 修 D: 看门狗后台线程 — 强制释放卡死的 running task
+# ============================================================
+def _watchdog_loop():
+    """每 WATCHDOG_INTERVAL_SEC 扫一次所有 running task。
+    若 last_progress_ts 超过 WATCHDOG_STALL_SEC 没更新 → 标记 error + 触发 stop。
+    worker 被 stop_event 或 error 终止后释放 PIPELINE_LOCK。
+    """
+    while True:
+        try:
+            time.sleep(WATCHDOG_INTERVAL_SEC)
+            now = time.time()
+            for task in list(TASKS.values()):
+                if task.status != 'running':
+                    continue
+                if task.last_progress_ts <= 0:
+                    continue  # 还没开始第一帧,给它时间
+                stalled = now - task.last_progress_ts
+                if stalled > WATCHDOG_STALL_SEC:
+                    logger.warning(
+                        f'[WATCHDOG] task {task.task_id} 卡死 {stalled:.0f}s '
+                        f'(currentFrame={task.current_frame}),强制标记 error 并释放'
+                    )
+                    task.stop_event.set()  # 让 on_frame 抛 PipelineStoppedException
+                    task.push_sse('error', {
+                        'taskId': task.task_id,
+                        'message': f'watchdog: pipeline stalled {stalled:.0f}s',
+                    })
+                    task.mark_finished('error', f'watchdog stall {stalled:.0f}s')
+        except Exception:
+            logger.exception('[WATCHDOG] scan 失败')
+
+
+def _start_watchdog():
+    global _WATCHDOG_STARTED
+    if _WATCHDOG_STARTED:
+        return
+    _WATCHDOG_STARTED = True
+    t = threading.Thread(target=_watchdog_loop, name='task-watchdog', daemon=True)
+    t.start()
+    logger.info(f'[WATCHDOG] started (interval={WATCHDOG_INTERVAL_SEC}s, '
+                f'stall={WATCHDOG_STALL_SEC}s)')
 
 
 # ============================================================
@@ -353,23 +416,31 @@ async def analyze_stream(task_id: str):
         yield {'event': 'connected', 'data': 'stream-connected'}
 
         loop = asyncio.get_event_loop()
-        while True:
-            # 轮询 queue，非阻塞交给线程池，0.5s 超时
-            try:
-                item = await loop.run_in_executor(
-                    None, lambda: task.event_queue.get(timeout=0.5)
-                )
-            except queue.Empty:
-                # 空 queue 时检查任务是否已结束
-                if task.status in ('done', 'stopped', 'error'):
-                    break
-                # 保持连接活跃
-                yield {'event': 'ping', 'data': str(int(time.time()))}
-                continue
+        try:
+            while True:
+                # 轮询 queue，非阻塞交给线程池，0.5s 超时
+                try:
+                    item = await loop.run_in_executor(
+                        None, lambda: task.event_queue.get(timeout=0.5)
+                    )
+                except queue.Empty:
+                    # 空 queue 时检查任务是否已结束
+                    if task.status in ('done', 'stopped', 'error'):
+                        break
+                    # 保持连接活跃
+                    yield {'event': 'ping', 'data': str(int(time.time()))}
+                    continue
 
-            yield item
-            if item['event'] in ('done', 'stopped', 'error'):
-                break
+                yield item
+                if item['event'] in ('done', 'stopped', 'error'):
+                    break
+        except asyncio.CancelledError:
+            # R17 修 C: 客户端断开 (浏览器刷新/关闭/网络中断) → 触发 task 停止
+            # 避免 worker 继续空跑 + 占用 PIPELINE_LOCK
+            logger.info(f'[task {task_id}] SSE 客户端断开,触发 stop')
+            if task.status == 'running':
+                task.stop_event.set()
+            raise  # 重新抛给 FastAPI/uvicorn 清理连接
 
     return EventSourceResponse(event_gen())
 
@@ -390,6 +461,10 @@ async def analyze_status(task_id: str):
     task = TASKS.get(task_id)
     if task is None:
         raise HTTPException(404, f'task {task_id} not found')
+    # R17 修 D: 暴露 secondsSinceProgress 让前端/调试能肉眼发现卡顿
+    seconds_since_progress = None
+    if task.status == 'running' and task.last_progress_ts > 0:
+        seconds_since_progress = round(time.time() - task.last_progress_ts, 2)
     return {
         'taskId': task_id,
         'status': task.status,
@@ -402,6 +477,8 @@ async def analyze_status(task_id: str):
         'errorMessage': task.error_message,
         'createdAt': task.created_at,
         'finishedAt': task.finished_at,
+        'lastProgressTs': task.last_progress_ts if task.last_progress_ts > 0 else None,
+        'secondsSinceProgress': seconds_since_progress,
     }
 
 
@@ -493,7 +570,17 @@ def main():
     PIPELINE = build_pipeline(args)
     print('Pipeline ready.')
 
-    uvicorn.run(app, host=args.host, port=args.port, log_level='info')
+    # R17 修 D: 启动看门狗后台线程
+    _start_watchdog()
+
+    # R17 修 F: 启用 access_log 便于追踪 "Unsupported upgrade request" 来源
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+        log_level='info',
+        access_log=True,
+    )
 
 
 if __name__ == '__main__':

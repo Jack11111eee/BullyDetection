@@ -634,6 +634,15 @@ class RuleEngine:
         self._scene_count_history = []  # R12 P14: 最近 N 次推理的 scene_person_count（场景级）
         self._scene_count_window = 5    # vandalism 持续性窗口
 
+    def reset(self):
+        """R17 修 B：跨 task 状态清空。InferencePipeline.reset() 中调用。"""
+        self.history.clear()
+        self.track_positions.clear()
+        self._missing_count.clear()
+        self._last_smoothed.clear()
+        self._last_pose_probs.clear()
+        self._scene_count_history.clear()
+
     def judge(self, track_id, pose_probs, person_kps, person_scores,
               all_person_kps, small_obj_detections, img_shape,
               all_person_kps_scores=None, track_kps_dict=None, track_bboxes_dict=None,

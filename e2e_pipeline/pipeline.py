@@ -301,6 +301,18 @@ class SkeletonBuffer:
             logger.info(f'[REASSOC] SkeletonBuffer: T{old_tid} → T{new_tid} '
                         f'(migrated {len(old_buf["kps"])} frames)')
 
+    def reset(self):
+        """R17 修 B：清空所有 track 状态，供 API server 跨 task 调用避免污染"""
+        self.tracks.clear()
+        self._missing_count.clear()
+        self._last_positions.clear()
+        self._smooth_kps.clear()
+        self._smooth_scores.clear()
+        self._vel_hist.clear()
+        self._prev_head.clear()
+        self._prev_hip.clear()
+        self._last_bbox_h.clear()
+
     def remove_stale(self, active_ids):
         """遮挡宽限：track 消失后保留 grace_frames 帧，恢复时继承旧 buffer"""
         for tid in list(self.tracks.keys()):
@@ -622,6 +634,19 @@ class InferencePipeline:
         print(f'  clip_len={clip_len} (auto-detected from config)')
         print(f'  stride={stride}, with_kp={self.posec3d.with_kp}, with_limb={self.posec3d.with_limb}')
 
+    def reset(self):
+        """R17 修 B：跨 task 状态清空。API server 在每次新任务启动前调用，
+        避免上一个 task 的 track 历史、骨骼 buffer、投票状态污染新 task 判定。
+        """
+        self.skeleton_buf.reset()
+        self.rule_engine.reset()
+        self.track_labels.clear()
+        self._label_missing_count.clear()
+        self._known_track_ids.clear()
+        self.event_log.clear()
+        self.on_frame_callback = None
+        self.tamper_detector.reset()
+
     def run(self, source, show=False, output_video=None, output_json=None):
         """
         运行推理。
@@ -657,33 +682,53 @@ class InferencePipeline:
         frame_idx = 0
         t_start = time.time()
 
-        while True:
-            ret, frame = source.read()
-            if not ret:
-                break
-
-            self._process_frame(frame, frame_idx, img_shape)
-
-            # FPS overlay
-            elapsed = time.time() - t_start
-            current_fps = (frame_idx + 1) / elapsed if elapsed > 0 else 0
-            draw_info(frame, current_fps, frame_idx, total_frames)
-
-            if writer:
-                writer.write(frame)
-            if show:
-                cv2.imshow('Campus Safety', frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+        # R17 修 B：用 try/finally 确保资源释放 —— /stop 抛出的
+        # PipelineStoppedException (BaseException 子类) 会穿透 while 循环
+        try:
+            while True:
+                ret, frame = source.read()
+                if not ret:
                     break
 
-            frame_idx += 1
+                # R17 修 E：单帧耗时诊断 —— 超过 500ms 打 warning 便于定位 9s 卡顿
+                t_frame_start = time.time()
+                self._process_frame(frame, frame_idx, img_shape)
+                frame_cost_ms = (time.time() - t_frame_start) * 1000
+                if frame_cost_ms > 500:
+                    logger.warning(
+                        f'[SLOW-FRAME] F{frame_idx} cost={frame_cost_ms:.0f}ms '
+                        f'(阈值 500ms) — 可能在 YOLO/PoseC3D/cv2 某一步阻塞'
+                    )
 
-        # 清理
-        source.release()
-        if writer:
-            writer.release()
-        if show:
-            cv2.destroyAllWindows()
+                # FPS overlay
+                elapsed = time.time() - t_start
+                current_fps = (frame_idx + 1) / elapsed if elapsed > 0 else 0
+                draw_info(frame, current_fps, frame_idx, total_frames)
+
+                if writer:
+                    writer.write(frame)
+                if show:
+                    cv2.imshow('Campus Safety', frame)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+
+                frame_idx += 1
+        finally:
+            # 无论正常结束 / 异常退出 / PipelineStoppedException 穿透，都释放资源
+            try:
+                source.release()
+            except Exception:
+                pass
+            if writer:
+                try:
+                    writer.release()
+                except Exception:
+                    pass
+            if show:
+                try:
+                    cv2.destroyAllWindows()
+                except Exception:
+                    pass
 
         total_time = time.time() - t_start
         avg_fps = frame_idx / total_time if total_time > 0 else 0
