@@ -1056,20 +1056,24 @@ class RuleEngine:
             self._last_smoothed[track_id] = 'normal'
             return 'normal'
 
-        # R18 P22 (Solution B)：PoseC3D 强 normal 否决 fighting/bullying HOLD
+        # R18 P22 (Solution B)：PoseC3D 强 normal 否决异常态 HOLD
         # 场景：pair inference 污染（T_self 是旁观者但与施暴者配对 → RAW 被带偏 fighting）
         #      或 _inject_to_overlapping_neighbor / couple_overlapping_pairs 写入攻击态
         #      → HOLD 在 fighting 窗口里硬撑。
+        # R22 扩展：last 从 (fighting, bullying) 扩到 (fighting, bullying, falling, climbing) ——
+        #      F1439 场景 T1 站起后 PoseC3D normal=0.934，但 last=falling HOLD 锁死。
+        #      P19 STRONG_NORMAL_SOURCES 只接 rule_*（即时退出），P22 配合 recent3 一致性
+        #      接 posec3d source，覆盖剩余的所有异常态 HOLD。
         # 触发条件（三重防误退）：
         #   a) 当前 raw label='normal' 且 raw_source='posec3d'（不是 rule_no_proximity 等）
         #   b) PoseC3D normal_prob >= 0.9（自身输出极度明确）
-        #   c) 最近 3 帧 raw 至少 2 帧 normal（持续性，避免真施暴 1 帧抖动误退）
-        # 失败则走原 HOLD 逻辑（真施暴者窗口里本来就有多数 fighting，a/c 不会同时满足）。
+        #   c) 最近 3 帧 raw 至少 2 帧 normal（持续性，避免真施暴/摔倒 1 帧抖动误退）
+        # 失败则走原 HOLD 逻辑（真异常者窗口里本来就有多数异常 raw，a/c 不会同时满足）。
         if (current_label == 'normal'
                 and raw_source == 'posec3d'
                 and pose_normal_prob is not None
                 and pose_normal_prob >= 0.9
-                and last in ('fighting', 'bullying')):
+                and last in ('fighting', 'bullying', 'falling', 'climbing')):
             recent3 = history[-3:]  # 已 append 当前 label，含本帧
             if len(recent3) >= 2 and recent3.count('normal') >= 2:
                 logger.debug(f'  [VOTE] T{track_id} current=normal → normal '
