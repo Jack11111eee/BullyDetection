@@ -271,6 +271,11 @@ def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
     """检查骨骼包围框纵横比 — 纵向展开=坐/站，横向展开=躺倒。
     只需要任意 3+ 个有效关键点即可计算，不依赖特定关键点。
     返回 True 表示非倒地姿态，不应判为 falling。
+
+    R21 P27: h/w>1.1 之后追加 head-vs-hip 二层校验 —
+    头朝相机躺地时骨骼在图像里也是竖直（h/w>1），仅凭纵横比会误判为坐姿。
+    头在图像里明显低于髋（head_hip < -h*0.02）→ 翻转结论，判定躺倒。
+    头朝远处躺地为 2D 投影盲区，本函数无法区分（交由调用方的 YOLO conf 豁免处理）。
     """
     valid = scores > threshold
     if valid.sum() < 3:
@@ -288,11 +293,24 @@ def _is_sitting_posture(kps, scores, img_shape, threshold=0.3):
 
     # 纵横比 > 1.1 → 骨骼纵向展开 → 坐着/站着（身体竖直）
     # 纵横比 < 1.1 → 骨骼横向展开 → 躺倒（身体水平）
-    is_upright = aspect_ratio > 1.1
+    if aspect_ratio <= 1.1:
+        return False
 
-    if is_upright:
-        logger.debug(f'  [RULE] 骨骼纵横比检测: h/w={aspect_ratio:.2f} > 1.1 → 非倒地(坐姿/站姿)')
-    return is_upright
+    # R21 P27: head-vs-hip 第二层校验
+    # head_hip = hip_y - head_y，正值=头在髋上方（直立），负值=头在髋下方（头朝相机躺）
+    head_hip = _head_above_hip_ratio(kps, scores, threshold)
+    if head_hip is not None:
+        h = img_shape[0]
+        head_below_hip_margin = -h * 0.02
+        if head_hip < head_below_hip_margin:
+            logger.debug(
+                f'  [RULE] h/w={aspect_ratio:.2f}>1.1 但 head_hip={head_hip:.1f}<{head_below_hip_margin:.1f}'
+                f' → 头低于髋，判定躺倒（头朝相机）'
+            )
+            return False
+
+    logger.debug(f'  [RULE] 骨骼纵横比检测: h/w={aspect_ratio:.2f} > 1.1 → 非倒地(坐姿/站姿)')
+    return True
 
 
 def _bbox_overlap_ratio(bbox1, bbox2):
@@ -679,21 +697,28 @@ class RuleEngine:
                 # 不直接丢弃 — 否则 step 6 攻击判定失败时会被 normal argmax 吞掉。
                 yolo_falling_deferred = (fallen_yolo_conf, bbox_horizontal)
                 logger.debug(f'  [RAW] T{track_id} YOLO躺地但PoseC3D有攻击信号 '
-                             f'(fighting={fighting_prob_early:.3f}, bullying={bullying_prob_early:.3f}), '
+                             f'(conf={fallen_yolo_conf:.3f}, '
+                             f'fighting={fighting_prob_early:.3f}, bullying={bullying_prob_early:.3f}), '
                              f'暂存YOLO falling给step 6后兜底')
             else:
                 # R15 修复 B：骨骼坐姿软否决（压误报）
                 # 条件：骨骼纵横比纵向展开 + 至少 8 个有效关键点 + PoseC3D normal >= 0.25
                 # 三重门槛是为了在"骨骼可信 + 模型交叉验证"时才否决，避免遮挡/低质骨骼导致漏检
+                # R21 P28: YOLO 高 conf 豁免 — 头朝远处躺地骨骼 2D 盲区，若 YOLO conf>=0.6 则信任检测器
                 valid_kp_count = int((person_scores > 0.3).sum())
                 normal_prob_here = float(pose_probs[0])
-                if (valid_kp_count >= 8 and
+                if fallen_yolo_conf >= 0.6:
+                    logger.debug(
+                        f'  [RAW] T{track_id} YOLO conf={fallen_yolo_conf:.3f}>=0.6 '
+                        f'→ 高置信豁免坐姿否决'
+                    )
+                elif (valid_kp_count >= 8 and
                         _is_sitting_posture(person_kps, person_scores, img_shape) and
                         normal_prob_here >= 0.25):
                     logger.debug(
                         f'  [RAW] T{track_id} YOLO falling 被坐姿否决 '
-                        f'(valid_kp={valid_kp_count}, normal={normal_prob_here:.3f}, '
-                        f'bbox={"水平" if bbox_horizontal else "竖直"})'
+                        f'(conf={fallen_yolo_conf:.3f}, valid_kp={valid_kp_count}, '
+                        f'normal={normal_prob_here:.3f}, bbox={"水平" if bbox_horizontal else "竖直"})'
                     )
                     return 'normal', 1.0 - fallen_yolo_conf, 'rule_sitting_veto_yolo'
                 # 信任 YOLO falling 检测
@@ -824,15 +849,21 @@ class RuleEngine:
             # R16 P20：P7 兜底路径同样加坐姿软否决（与 step 2 主路径 R15 P18 对称）
             # 场景：PoseC3D 弱攻击信号触发 defer，但被 normal 压制失败 → 落到 P7 兜底
             # 日志 F2575/F2591：T3 坐着被持续判 falling；R15 P18 只覆盖主路径未覆盖此处
+            # R21 P28: YOLO 高 conf 豁免（头朝远处躺地 2D 盲区兜底，与 P18 对称）
             valid_kp_count = int((person_scores > 0.3).sum())
             normal_prob_here = float(pose_probs[0])
-            if (valid_kp_count >= 8 and
+            if conf >= 0.6:
+                logger.debug(
+                    f'  [RAW] T{track_id} P7兜底 YOLO conf={conf:.3f}>=0.6 '
+                    f'→ 高置信豁免坐姿否决'
+                )
+            elif (valid_kp_count >= 8 and
                     _is_sitting_posture(person_kps, person_scores, img_shape) and
                     normal_prob_here >= 0.25):
                 logger.debug(
                     f'  [RAW] T{track_id} P7兜底YOLO falling 被坐姿否决 '
-                    f'(valid_kp={valid_kp_count}, normal={normal_prob_here:.3f}, '
-                    f'bbox={"水平" if horizontal else "竖直"})'
+                    f'(conf={conf:.3f}, valid_kp={valid_kp_count}, '
+                    f'normal={normal_prob_here:.3f}, bbox={"水平" if horizontal else "竖直"})'
                 )
                 return 'normal', 1.0 - conf, 'rule_sitting_veto_yolo'
             logger.debug(f'  [RAW] T{track_id} → falling (step 6未判攻击, YOLO falling兜底, '
