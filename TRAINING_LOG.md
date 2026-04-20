@@ -1807,6 +1807,64 @@ YOLO falling conf >= 0.4                     → 基线信任
 
 ---
 
+### E2E Fix Round 24 — 自伤（撞墙 / 扶墙撞头）检测 · 探查阶段
+
+**背景**：用户要求新增 self-harm 标签，覆盖"较快速度整身或头撞墙"以及"扶墙反复撞头"两种形态。样本只有 ~20 个（多为头撞墙）。评估后判断训练不可行：
+- bullying 446 样本（22× 于当前样本）在 R10 仍需 `b≥f×1.5 且 b≥0.4` 才压得住概率抖动
+- "Garbage bin class" 模式在本项目 4 次重演，20 样本加第 6 类几乎必然再次触发
+- 样本量连 val 切分都切不出（80/20 只有 4 个 val）
+
+**决策**：走规则法，但**不先写规则**。先做特征探查，让 20 样本的真实物理信号决定判据形式与阈值。
+
+**判据框架（初版讨论中，未落地）**：
+
+两类独立检测器，触发任一即判 `self_harm`：
+
+| 检测器 | 物理签名 | 候选 AND 判据 |
+|---|---|---|
+| A 撞击式 | 单人高速 2D 平移 → 1-2 帧急停 → 保持竖直（或竖直→下滑） | 归一化 hip_vel 峰值 ≥ T_v；峰后 2 帧衰减 ≤ k·peak；`_is_sitting_posture=False`；无 partner（bbox overlap < 10% + 1.5× height 内无邻居）；falling_prob<0.5 且 climbing_prob<0.5；事件长度 ≤ 2s |
+| B 扶墙撞头式 | 身体静止 + 头部周期性往复 | hip 滑窗位置 std（w=90）< bbox_h×0.05；head 滑窗 std > bbox_h×0.03；head_std/hip_std ≥ 3；head Y 序列自相关在 lag 10-60（0.5-3Hz）有峰；可选加强：至少一只手腕靠近头 |
+
+**关键修正（讨论中）**：
+- 最初提"X 方向位移 + 0.15 衰减比"都不严谨；改为 2D 速度矢量模长（撞背景墙时位移以 Y 为主），衰减比需从数据拟合而非拍脑袋
+- 最初提"朝向画面边缘"的墙定位是伪判据：墙可能在画面任何位置，我们也没有墙 detector。改为**不检测墙**，只检测冲击签名本身 —— 单人 + 竖直 + 急停的联合约束在物理上唯一指向"撞到静态垂直表面"
+- 承认规则法本征盲区：Z 方向撞墙（像素位移几乎为零）、慢速撞墙、撞墙时有他人在旁
+
+**探查脚本 `probe_wall_impact.py`（根目录）**：
+
+目的：不先写规则，先看 20 样本的真实速度/位置/周期性时序分布，把阈值从数据拟合出来，避免 R7-R23 每一轮踩过的"先定指标再调参"坑。
+
+输出分层：
+- **per_video/<class>_<stem>/**：`features.npz`（所有时序数组）+ `trace.png`（12 行共享 x 轴）+ `summary.json`
+- **aggregate/**：峰对齐速度叠加图、head_hip_std_ratio 叠加图、跨类直方图、`distribution.json`（p5/p50/p95）
+
+采集指标：
+- 速度：hip / head / torso 2D mag，按 bbox_h 归一化
+- 静止度：hip/head 位置滑窗 std（w=30/60/90）及其比值
+- 周期性：head Y / head X 滑窗自相关峰（lag 10-60）
+- 姿态：骨骼 h/w、head_hip_ratio、上下半身 kp 有效数、手-头距离
+- 场景：最近他 track 距离、最大 bbox overlap、active_track_count
+- 可选：PoseC3D 5 类概率（`--with-posec3d` 开关）
+
+运行预期：
+```bash
+python probe_wall_impact.py \
+  --videos-dir /path/to/probe_samples \
+  --output-dir probe_output
+# 若想带 PoseC3D 语义对照：
+# --with-posec3d --posec3d-config ... --posec3d-ckpt ...
+```
+
+**状态**：探查脚本已建但未跑。样本收齐后先跑探查，看叠加图与分布再决定：
+- 若 A 撞击峰形一致性高、B 自相关峰稳定 → 按数据定阈值实现规则
+- 若曲线离散 → 需补样本，或考虑用更粗但鲁棒的指标（如头部轨迹长度 / 身体位移）
+- 若整体信号在 2D pose 里都很弱 → 承认此 case 不可做，向用户汇报
+
+**避免提前陷入实现细节的理由（记录给未来的自己）**：
+规则模型的失败模式 R7-R23 全部印证 —— 阈值早定、没看数据就动手，上线后就要反复打补丁。本轮先让数据说话，阈值落地之后再写规则，能省 3-5 轮补丁。
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -2340,6 +2398,7 @@ track 被分配新 ID（重关联）
 | Per-run debug log | `e2e_pipeline/run.py` `_derive_source_tag` | `logs/debug_<source>_<ts>.log` 按运行归档(commit `5ebac76`) |
 | API 服务（Web 联调） | `e2e_pipeline/api_server.py` + `API_README.md` | FastAPI + sse-starlette，POST mp4 → SSE 推 frame/alert 事件。对齐 WEB-HANDOFF §6.3。端口默认 8000，GPU 显存限制下串行跑 |
 | Pipeline 回调钩子 | `InferencePipeline(on_frame_callback=...)` + `_emit_frame_callback` | `_process_frame` 末尾调用回调，传每 track 的 label/conf/bbox_xyxy。API server 转换成 WEB frame 事件 |
+| 撞墙 / 头撞墙探查 | `probe_wall_impact.py` | R24 Probe：YOLO-Pose+ByteTrack 跑给定样本，输出速度 / 滑窗 std / 自相关 / 姿态 / 场景上下文时序 + 跨视频叠加图，用于数据驱动定阈值。`--with-posec3d` 可选叠加 5 类概率对照 |
 
 ---
 
