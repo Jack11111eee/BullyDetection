@@ -1522,6 +1522,113 @@ R18 上线后发现 T2 没推理的帧仍然每帧打印一次 `[COUPLE] T2 → 
 
 ---
 
+### E2E Fix Round 21 — 头朝相机躺地的 sitting veto 盲区修复（commit `5c18eac`）
+
+**背景**：日志 F2284 T7 朝相机方向躺倒但被持续判 normal。关键日志：
+
+```
+[F2284] T7 PoseC3D normal=0.443 fighting=0.397 bullying=0.011 falling=0.145
+  [RAW] T7 YOLO躺地但PoseC3D有攻击信号 (fighting=0.397, bullying=0.011), 暂存YOLO falling给step 6后兜底
+  [RAW] T7 攻击信号但proximity失败 (nearest=684 > 270)，落到argmax路径
+  [RULE] 骨骼纵横比检测: h/w=1.37 > 1.1 → 非倒地(坐姿/站姿)
+  [RAW] T7 P7兜底YOLO falling 被坐姿否决 (valid_kp=17, normal=0.443, bbox=竖直)
+  [FINAL] normal ✗
+```
+
+**根因**：R15 P18 / R16 P20 / R19 P24 三处 YOLO falling 坐姿 veto 都依赖单一判据 —— 骨骼包围框纵横比 `h/w > 1.1`。但头朝相机方向躺地时：
+- 身体在图像中沿 Y 轴方向展开（头在下方、脚在上方）
+- 骨骼包围框 `h/w` 仍 > 1（Y 方向跨度大 > X 方向宽度）
+- h/w 判据失效 → 误判坐姿 → veto 触发 → 返回 normal
+
+继 R19 P24 "手臂外展导致 w 变大" 之后，**第二次翻同一个判据盲区**。必须加第二个独立判据。
+
+#### P27 — `_is_sitting_posture` 内聚 head-vs-hip 二层校验
+
+**文件**：`e2e_pipeline/rule_engine.py:270`
+
+在 `h/w > 1.1` 判定"非倒地"之后，追加头髋相对位置校验：
+
+```python
+# head_hip = hip_y - head_y；正值=头在髋上方（直立），负值=头在髋下方
+head_hip = _head_above_hip_ratio(kps, scores, threshold)
+if head_hip is not None:
+    h = img_shape[0]
+    head_below_hip_margin = -h * 0.02
+    if head_hip < head_below_hip_margin:
+        return False  # 头低于髋 → 躺倒（头朝相机）
+```
+
+**三重保护**：
+- 仅在 `h/w > 1.1` 时触发（横向躺倒 `h/w < 1.1` 已被第一层 return False 挡下）
+- `margin = h * 0.02`（~15px @ 720p），避免 head_y ≈ hip_y 的边界抖动
+- 复用 `_head_above_hip_ratio`（已内置 keypoint_valid 校验）
+
+**位置选择**：内聚到 `_is_sitting_posture` 内部而非每个调用点各加 —— 延续 R19 P24 的设计模式，一次修好 P18 主路径、P20 P7 兜底、step 6d argmax falling 三处调用。
+
+#### P28 — P18/P20 调用点加 YOLO conf 豁免门
+
+**背景**：P27 只救"头朝相机躺地"这一种。**头朝远处躺地时骨骼 Y 序和站立完全相同**（head_y < hip_y），是 2D 投影本征盲区 —— 骨骼启发式不可能分辨。
+
+**文件**：`e2e_pipeline/rule_engine.py:697-718`（P18 主路径）+ `:847-862`（P20 P7 兜底）
+
+在调 `_is_sitting_posture` 之前加豁免门：
+
+```python
+if fallen_yolo_conf >= 0.6:
+    # 高置信 YOLO → 跳过坐姿 veto，信任检测器（2D 盲区兜底）
+    pass
+elif (valid_kp_count >= 8 and
+        _is_sitting_posture(...) and
+        normal_prob_here >= 0.25):
+    return 'normal', ..., 'rule_sitting_veto_yolo'
+# else → 信任 YOLO falling
+```
+
+**阈值 0.6 的语义**：
+- R14 已把 YOLO falling 检测下限设为 0.4（基线过滤边界噪声）
+- 0.6 是"强信号"阈值 —— 检测器对躺地非常确定
+- 真站/坐 + YOLO 高 conf 误检是罕见 case（laying 模型主要训练于真落地姿势）；真躺地 + 高 conf 通常是真阳
+
+#### P29（同一批）— sitting_veto 相关日志补 conf
+
+三处日志补 `conf={x:.3f}`，方便视频验证后按 conf 分布调优 0.6 阈值：
+- "暂存 YOLO falling" 日志
+- "YOLO falling 被坐姿否决"（P18 主路径）
+- "P7兜底YOLO falling 被坐姿否决"（P20 兜底）
+
+#### 行为矩阵
+
+| 场景 | h/w | head vs hip | YOLO conf | R20 | R21 |
+|---|---|---|---|---|---|
+| 本图 F2284 头朝相机躺 | >1.1 | head_y>hip_y | ? | 误判 normal ✗ | **P27 翻转 → falling ✓** |
+| 头朝远处躺 + YOLO 高 conf | >1.1 | head_y<hip_y | ≥0.6 | 误判 normal ✗ | **P28 豁免 → falling ✓** |
+| 头朝远处躺 + YOLO 低 conf | >1.1 | head_y<hip_y | <0.6 | 误判 normal ✗ | 仍漏检（2D 本征盲区，接受） |
+| 真站/坐 + YOLO 误检（低 conf） | >1.1 | head_y<hip_y | <0.6 | veto ✓ | veto ✓ |
+| 真站/坐 + YOLO 误检（高 conf 罕见） | >1.1 | head_y<hip_y | ≥0.6 | veto ✓ | **新增 FP 风险（可接受）** |
+| 躺倒身体横展 | <1.1 | — | — | falling ✓ | falling ✓ |
+| R19 P24 下半身全缺 + 上半身 ≥5 | >1.1 | — | — | P24 拦截 ✓ | P24 拦截 ✓（前置，不冲突） |
+
+#### R21 配置快照
+
+| 项 | R20 | R21 |
+|---|---|---|
+| `_is_sitting_posture` 判据 | h/w > 1.1 单轴 | **h/w > 1.1 AND (head_hip ≥ -h*0.02)** 双轴 |
+| YOLO falling conf 豁免 | 无 | **conf ≥ 0.6 → 跳过 sitting veto** |
+| sitting_veto 日志 conf | 缺失 | 全路径补齐 |
+
+**风险/回退**：
+- 风险：YOLO laying 对竖直姿态偶发 conf ≥ 0.6（假阳性）→ 豁免门放过 → 误判 falling。若视频测试暴露此问题，可调高阈值到 0.7 或加 `normal_prob ≥ 0.9` 反向门
+- 回退：
+  - P27：删 `_is_sitting_posture` 里 head_hip 块（~11 行）
+  - P28：删两处调用点的 `if conf >= 0.6` 分支（回到 elif 单路 veto）
+
+**未处理**：
+- head-away + YOLO 低 conf case 依然漏检 —— 承认为 2D 盲区
+- 是否把 P18/P20 per-site veto 整体内聚到 `check_fallen_by_yolo` 内部（连 call site 豁免门都不用加），本轮不做，等 R21 视频验证后再决定
+- Bug 2（proximity `1.5×height` 对拉扯场景过紧）仍留待后续 Round
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -1971,6 +2078,26 @@ track 被分配新 ID（重关联）
   - 副作用：顺带修好每帧反复 COUPLE/DEMOTE 的日志污染
 - **状态**：已修复（待视频验证）
 
+#### Problem 34: 头朝相机躺地被骨骼 h/w 单一判据误判为坐姿
+
+- **发现**：E2E Fix Round 21（用户报告 + debug.log F2284 分析）
+- **详情**：T7 朝相机方向躺倒（头在图像下方、脚在上方），骨骼包围框 h/w=1.37 > 1.1 触发坐姿 veto → FINAL=normal。PoseC3D 同时输出 normal=0.443 恰好过 ≥ 0.25 阈值，veto 三重门槛全满足
+- **证据**：
+  ```
+  F2284 T7 PoseC3D normal=0.443 fighting=0.397 falling=0.145
+        [RAW] T7 YOLO躺地但PoseC3D有攻击信号 → 暂存
+        [RAW] T7 proximity失败 → 落到argmax路径
+        [RULE] h/w=1.37 > 1.1 → 非倒地(坐姿/站姿)
+        [RAW] T7 P7兜底YOLO falling 被坐姿否决 (valid_kp=17, normal=0.443)
+        [FINAL] normal ✗
+  ```
+- **根因**：R15 P18 / R16 P20 / R19 P24 三处 YOLO falling sitting veto 都只用 `h/w > 1.1` 一个判据。头朝相机方向躺地时身体沿图像 Y 轴展开 → h/w > 1 → 判据失效。继 R19 P24 "手臂外展 w 变大" 之后第二次翻同一个判据盲区。另外 head-away 躺地是 2D 投影本征盲区，骨骼启发式无解
+- **修复**：R21 P27 + P28（commit `5c18eac`）
+  - **P27**：`_is_sitting_posture` 内聚 head-vs-hip 二层校验 — `head_hip < -h*0.02` 时翻转返回 False（头在髋下方 → 躺倒）
+  - **P28**：P18 主路径 + P20 P7 兜底加 YOLO conf 豁免门 — `conf ≥ 0.6` 时跳过 sitting veto（头朝远处躺地 2D 盲区兜底）
+  - 日志：3 处 sitting_veto 路径日志补 `conf={x:.3f}`
+- **状态**：已修复（待视频验证）
+
 ---
 
 ## 11. 辅助组件
@@ -2047,6 +2174,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+5c18eac fix(e2e): R21 P27+P28 head-vs-hip + YOLO-conf bypass for lying-toward-camera (R21)
 4a69675 fix(e2e): R20 P25+P26 target strong-normal guard in couple+inject    (R20)
 67f40f4 fix(e2e): R19 P24 lower-body-missing veto in check_fallen_by_yolo    (R19)
 0f7c1b3 fix(e2e): R18 P22+P23 kill single-person fighting                    (R18)
