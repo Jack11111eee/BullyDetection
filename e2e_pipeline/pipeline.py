@@ -507,12 +507,35 @@ def draw_skeleton(frame, kps, scores, color=(0, 255, 0), threshold=0.3):
 
 
 def draw_label(frame, bbox, label, confidence, color):
+    """自适应标签位置：
+    - 默认贴 bbox 上方左对齐（原行为）
+    - 上方超出 → 翻到 bbox 内部顶端（朝下）
+    - 右侧超出 → 向左对齐（bx = fw - box_w）
+    - 左侧超出 → 贴左边 (bx = 0)
+    - 底部兜底 → bbox 横跨整高时夹到画面内
+    """
+    fh, fw = frame.shape[:2]
     x1, y1, x2, y2 = [int(v) for v in bbox]
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
     text = f'{label} {confidence:.0%}'
     (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-    cv2.rectangle(frame, (x1, y1 - th - 8), (x1 + tw + 4, y1), color, -1)
-    cv2.putText(frame, text, (x1 + 2, y1 - 4),
+    pad_x, pad_y = 2, 4
+    box_w = tw + pad_x * 2
+    box_h = th + pad_y * 2
+
+    bx = x1
+    by = y1 - box_h
+    if by < 0:
+        by = y1  # 翻到 bbox 内部顶端
+    if bx + box_w > fw:
+        bx = fw - box_w
+    if bx < 0:
+        bx = 0
+    if by + box_h > fh:
+        by = max(0, fh - box_h)
+
+    cv2.rectangle(frame, (bx, by), (bx + box_w, by + box_h), color, -1)
+    cv2.putText(frame, text, (bx + pad_x, by + pad_y + th),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
 

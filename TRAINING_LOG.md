@@ -2103,6 +2103,19 @@ rule_engine.judge(..., head_vel_hist=head_hist, hip_vel_hist=hip_hist)
 - 未做视频实测；默认阈值来自原脚本（`edr_threshold=0.83, drop_ratio=0.5`）
 - 单帧误触发抑制 / 连续性校验未加，视实测再补 scene-level VOTE
 
+#### P40 — draw_label 自适应位置（R26 后续补丁）
+
+**文件**：`e2e_pipeline/pipeline.py` `draw_label`
+
+**背景**：原实现把标签硬编码画在 bbox 左上角上方 `(x1, y1 - th - 8)`。人物靠近画面顶端 / 右边 / 左边时标签被裁，看不见。
+
+**改动**：读 `frame.shape` 取画面尺寸后按优先级 clamp：
+- 默认：bbox 上方左对齐（保持原行为）
+- 上方超出 (`y1 - box_h < 0`) → 翻到 bbox 内部顶端 (`by = y1`)
+- 右侧超出 (`bx + box_w > fw`) → 向左对齐 (`bx = fw - box_w`)
+- 左侧超出 (`bx < 0`) → 贴左边界
+- 底部兜底 → 夹到画面内
+
 ---
 
 ## 9. E2E 规则引擎当前完整逻辑
