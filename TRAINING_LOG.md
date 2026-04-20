@@ -2694,7 +2694,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
-c054b92 feat(e2e): R26 P37-P39 camera_tampering scene-level 检测             (R26)
+a319fe4 feat(e2e): R26 P37-P39 camera_tampering scene-level 检测             (R26)
 da4e546 feat(e2e): R25 self_harm 落地 — 撞墙/扶墙撞头 skeleton 速度双路径       (R25)
 8b3c749 fix+feat(probe): R24 二轮 · 修 self-exclusion bug + 加新指标            (R24)
 f056547 feat(probe): R24 probe_wall_impact.py for self-harm feature exploration (R24)
