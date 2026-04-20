@@ -1696,6 +1696,106 @@ last in ('fighting', 'bullying', 'falling', 'climbing')
 
 ---
 
+### E2E Fix Round 23 — PoseC3D 强 normal 反向 veto YOLO 高 conf 豁免（R21 P28 风险兑现）（commit `165a0c4`）
+
+**背景**：日志 F1679 / F1695 T3 在视频边缘，骨骼 noisy 但 YOLO laying 高 conf 误检 →  被 R21 P28 豁免门放过：
+
+```
+[F1679] T3 PoseC3D normal=0.998 fighting=0.001 falling=0.001
+  [RAW] T3 YOLO conf=0.853>=0.6 → 高置信豁免坐姿否决
+  [RAW] T3 → falling (YOLO辅助检测: conf=0.853, bbox=水平)
+  [VOTE] T3 falling<ENTRY2 → normal (history=[n,n,n,n,n,n,falling])
+
+[F1695] T3 PoseC3D normal=0.998
+  [RAW] T3 YOLO conf=0.849>=0.6 → 高置信豁免坐姿否决
+  [RAW] T3 → falling
+  [VOTE] T3 ENTRY 2>=2 → falling ✗  (history=[n,n,n,n,n,falling,falling])
+```
+
+**根因**：R21 P28 设计时的风险笔记就预判到了 —— "YOLO laying 对竖直姿态偶发 conf ≥ 0.6（假阳性）→ 豁免门放过 → 误判 falling。若视频测试暴露此问题，可调高阈值到 0.7 或加 `normal_prob ≥ 0.9` 反向门"。F1679 / F1695 直接落在这条风险上：边缘/截断的 bbox 让 YOLO 高置信误判 horizontal bbox，而 PoseC3D 看全 17 个 keypoint 时序信号 → 0.998 极度确信 normal。两模型高置信冲突，P28 当前无仲裁逻辑。
+
+#### P31 — YOLO conf 豁免门内加 PoseC3D 强 normal 反向 veto
+
+**文件**：`e2e_pipeline/rule_engine.py`
+- P18 主路径（step 2 YOLO falling 默认分支）
+- P20 P7 兜底路径（与 P18 对称）
+
+```python
+if fallen_yolo_conf >= 0.6:
+    if normal_prob_here >= 0.9:          # 两 model 高置信冲突 → 信任 PoseC3D
+        return 'normal', normal_prob_here, 'rule_strong_normal_veto_yolo'
+    # 原豁免日志（此时 normal<0.9, 信任 YOLO）
+elif (valid_kp_count >= 8 and _is_sitting_posture(...) and normal>=0.25):
+    return 'normal', 1.0 - conf, 'rule_sitting_veto_yolo'
+# 信任 YOLO falling
+return 'falling', fallen_yolo_conf, 'rule_yolo_falling'
+```
+
+**新 source 名**：`rule_strong_normal_veto_yolo`，与 `rule_sitting_veto_yolo` 同级语义（rule 级强证据 normal）。
+
+#### P31 续 — 新 source 加入 STRONG_NORMAL_SOURCES
+
+新 source 若不进 `_vote_smooth` 的 STRONG_NORMAL_SOURCES 集合：
+- VOTE current=normal，但 last=falling HOLD
+- P19 不匹配（source 新）、P22 不匹配（source != 'posec3d'）
+- 落到原 HOLD 逻辑 → 锁住 falling
+
+所以把 `rule_strong_normal_veto_yolo` 加入 `STRONG_NORMAL_SOURCES`：
+
+```python
+STRONG_NORMAL_SOURCES = {
+    'rule_upright', 'rule_sitting', 'rule_no_vertical',
+    'rule_sitting_veto_yolo',
+    'rule_strong_normal_veto_yolo',   # R23 P31
+}
+```
+
+这样新 source 像 rule_sitting_veto_yolo 一样即时退出 falling/climbing HOLD（无需 recent3 检查，因为内置 normal≥0.9 即为强证据）。
+
+#### 阈值选择
+
+| 阈值 | 含义 | 与其他机制一致性 |
+|---|---|---|
+| YOLO conf >= 0.6 | 豁免门入口（R21 P28） | — |
+| PoseC3D normal_prob >= 0.9 | 反向 veto 门槛 | 与 R18 P22 / R20 P25 P26 / R22 P30 一致（都是 strong-normal 的 0.9 标准线） |
+
+#### F1679 / F1695 验证
+
+| 条件 | F1679 | F1695 | R23 结果 |
+|---|---|---|---|
+| YOLO conf | 0.853 | 0.849 | 都过 0.6 |
+| PoseC3D normal | 0.998 | 0.998 | 都过 0.9 |
+| **R22 后 RAW** | falling | falling | FINAL=falling ✗ |
+| **R23 后 RAW** | normal (rule_strong_normal_veto_yolo) | normal | 不进入 falling history → FINAL=normal ✓ |
+
+#### R23 配置快照
+
+| 项 | R22 | R23 |
+|---|---|---|
+| YOLO conf≥0.6 豁免后处理 | 直接 fall through → falling | **先查 PoseC3D normal≥0.9，满足则 normal (rule_strong_normal_veto_yolo)** |
+| STRONG_NORMAL_SOURCES | 4 个 rule_* | **+ rule_strong_normal_veto_yolo** |
+| 两 model 高置信冲突仲裁 | 偏向 YOLO（豁免门优先） | **偏向 PoseC3D（时序全骨骼优先）** |
+
+**模型信任优先级（R23 后）**：
+```
+PoseC3D normal_prob >= 0.9                   → 最高（覆盖 YOLO 高 conf）
+YOLO falling conf >= 0.6 (且 PoseC3D normal<0.9) → 次高（跳过 sitting veto）
+骨骼 _is_sitting_posture + PoseC3D normal>=0.25  → 压制 YOLO 低 conf 误检
+YOLO falling conf >= 0.4                     → 基线信任
+```
+
+**风险/回退**：
+- 风险：真"头朝远处躺地" + PoseC3D 恰好输出 normal ≥ 0.9 → 被反向 veto 漏检。但实际躺地者骨骼 Y 序虽然像站立，时序静止无行走/坐起的典型 normal 动态特征，PoseC3D 通常输出 0.5–0.8 区间；到 0.9+ 是罕见 case。F1679 的 0.998 是边缘骨骼噪声让 PoseC3D 走极端，本来就该这么用
+- 回退：
+  - 删 P18/P20 的 `if normal_prob_here >= 0.9` 分支（~7 行×2 = 14 行）
+  - 从 STRONG_NORMAL_SOURCES 里删 `rule_strong_normal_veto_yolo`
+
+**未处理**：
+- 反向 veto 只作用于 YOLO 高 conf 豁免分支。低 conf (< 0.6) 时走原 sitting_veto 路径，normal 判据已经是 >= 0.25，不需要额外反向 veto
+- YOLO conf 阈值 0.6 本身是否再需要微调（某些黑盒视频边缘 case conf 可能更高），视后续验证
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -2185,6 +2285,26 @@ track 被分配新 ID（重关联）
 - **状态**：已修复（待视频验证）
 - **教训**：R18 写 P22 时只针对 F7210 pair-inference 污染攻击态场景，没有扩到所有"异常态 HOLD"。P19 和 P22 本质上是同一类机制（强 normal 退 HOLD）的两个互补分支（source 不同、防误退策略不同），分头写就漏跨交集 case。以后新增 HOLD exit 应先穷举 (raw_source, last) 两维组合表
 
+#### Problem 36: 视频边缘 bbox 让 YOLO 高 conf 误检吞掉 PoseC3D 强 normal（R21 P28 风险兑现）
+
+- **发现**：E2E Fix Round 23（用户报告 + debug.log F1679 / F1695 分析）
+- **详情**：T3 位于视频边缘，骨骼 noisy。YOLO laying 对截断/边缘 bbox 输出 conf=0.85 horizontal bbox → R21 P28 豁免门放过 sitting veto → 直接返回 falling。但 PoseC3D 看完整 17 keypoint 时序输出 `normal=0.998` 极度确信
+- **证据**：
+  ```
+  F1679 T3 PoseC3D normal=0.998
+        [RAW] YOLO conf=0.853>=0.6 → 高置信豁免 → falling
+        history=[n,n,n,n,n,n,falling] ENTRY 1<2 → normal
+  F1695 T3 PoseC3D normal=0.998
+        [RAW] YOLO conf=0.849>=0.6 → 高置信豁免 → falling
+        history=[n,n,n,n,n,falling,falling] ENTRY 2>=2 → falling ✗
+  ```
+- **根因**：R21 P28 的 YOLO 高 conf 豁免无仲裁逻辑。风险笔记预判到了 —— "若视频测试暴露，可调高阈值到 0.7 或加 normal_prob ≥ 0.9 反向门"。F1679 / F1695 直接把这条风险兑现
+- **修复**：R23 P31（commit `165a0c4`）
+  - P18 主路径 + P20 P7 兜底对称加：YOLO conf≥0.6 豁免分支内再查 PoseC3D `normal_prob ≥ 0.9`，满足即反向 veto 返回 normal，新 source `rule_strong_normal_veto_yolo`
+  - 新 source 加入 `STRONG_NORMAL_SOURCES`，VOTE 层即时退出 falling/climbing HOLD（与其他 rule_* 强证据同级）
+- **状态**：已修复（待视频验证）
+- **教训**：两个子模型（YOLO 边缘 bbox vs PoseC3D 全骨骼时序）高置信冲突时需要明确的仲裁规则。YOLO 看的是框的形状和像素特征，容易被截断/遮挡的边缘 bbox 欺骗；PoseC3D 看的是 17 个关键点在 64 帧里的时序模式，对噪声 keypoint 有鲁棒性。两者高置信冲突时应优先信任时序信息。P28 原始设计"高 conf 就信"过于一刀切，必须给反向证据开一道门
+
 ---
 
 ## 11. 辅助组件
@@ -2261,6 +2381,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+165a0c4 fix(e2e): R23 P31 PoseC3D strong-normal reverse-veto YOLO conf bypass (R23)
 442331b fix(e2e): R22 P30 extend P22 STRONG_NORMAL posec3d HOLD exit to falling/climbing (R22)
 5c18eac fix(e2e): R21 P27+P28 head-vs-hip + YOLO-conf bypass for lying-toward-camera (R21)
 4a69675 fix(e2e): R20 P25+P26 target strong-normal guard in couple+inject    (R20)
