@@ -3020,7 +3020,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
-??????? fix(e2e): R30 P48 self_harm raw normal 显著主导 veto (P42 灰度带扩展)  (R30)
+e8b1f77 fix(e2e): R30 P48 self_harm raw normal 显著主导 veto (P42 灰度带扩展)  (R30)
 a55d5d2 fix(e2e): R29 P47 _is_upright_posture 二维投影盲区双层防御            (R29)
 54c7d8c fix(e2e): R28 P46 self_harm B 路径双绝对下限 (hip_max 分母失控修复)   (R28)
 ff91a5b fix(e2e): R27 P41-P45 self_harm 误报压制 (坐姿头转动 / 簇发 / kp门槛)  (R27)
