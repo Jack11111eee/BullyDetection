@@ -485,7 +485,8 @@ def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, i
 
 
 def check_self_harm(head_vel_hist, hip_vel_hist,
-                    exceed_thr=0.08, exceed_window=60, exceed_min_count=1,
+                    exceed_thr=0.08, exceed_window=60,
+                    exceed_min_count=2, exceed_max_gap=5,
                     ratio_thr=3.5, ratio_window=60, eps=1e-6):
     """R25 撞墙/扶墙撞头自伤判定（基于 skeleton 速度滑窗）。
 
@@ -494,8 +495,10 @@ def check_self_harm(head_vel_hist, hip_vel_hist,
         hip_vel_hist:  (T,) 归一化 hip 中心速度历史
 
     判据（OR，任一满足即 True）:
-        A) 最近 exceed_window 帧内 head_vel > exceed_thr 的帧数 >= exceed_min_count
-           → 主路径：探查 normal 0/7 触发，impact 4/4 触发，headbang ~44% 触发
+        A) 簇发判据（R27 P43 收紧）：最近 exceed_window 帧里有 ≥ exceed_min_count
+           次 head_vel > exceed_thr，且其中至少两次过阈索引差 ≤ exceed_max_gap。
+           物理动机：真撞墙是"加速→撞击→急停"的连续 2-3 帧高速；孤立单帧
+           跳变（YOLO-Pose nose kp 漂移）天然不满足"簇发"。
         B) 最近 ratio_window 帧内 max(head_vel) / max(hip_vel) >= ratio_thr
            → 补强路径：headbang 大多数 ratio >= 5，normal max=2.62、impact max=3.29
 
@@ -505,13 +508,23 @@ def check_self_harm(head_vel_hist, hip_vel_hist,
     if not head_vel_hist or not hip_vel_hist:
         return False, 0.0, None
 
-    # A) 主路径
+    # A) 主路径 — 簇发判据
     head_recent = head_vel_hist[-exceed_window:]
-    exceed_count = sum(1 for v in head_recent if v is not None and v > exceed_thr)
-    if exceed_count >= exceed_min_count:
+    exceed_idx = [i for i, v in enumerate(head_recent)
+                  if v is not None and v > exceed_thr]
+    burst = False
+    if len(exceed_idx) >= exceed_min_count:
+        # 检查是否存在两次过阈索引差 ≤ exceed_max_gap
+        for i in range(len(exceed_idx) - 1):
+            if exceed_idx[i + 1] - exceed_idx[i] <= exceed_max_gap:
+                burst = True
+                break
+    if burst:
+        exceed_count = len(exceed_idx)
         conf = min(1.0, 0.5 + 0.1 * exceed_count)
-        logger.debug(f'  [RULE] self_harm A路径: head_vel>{exceed_thr} '
-                     f'count={exceed_count} in last {exceed_window}f → conf={conf:.2f}')
+        logger.debug(f'  [RULE] self_harm A路径簇发: head_vel>{exceed_thr} '
+                     f'count={exceed_count} (gap≤{exceed_max_gap}) '
+                     f'in last {exceed_window}f → conf={conf:.2f}')
         return True, conf, 'rule_self_harm_vel'
 
     # B) 补强路径
@@ -663,10 +676,19 @@ class RuleEngine:
         #   head_vel_exceed_008_w60 ≥ 1: normal 0/7, impact 4/4, headbang 7/16
         #   head_to_hip_peak_ratio_w60 ≥ 3.5: normal max=2.62, impact max=3.29, headbang p50=5.9
         if head_vel_hist is not None and hip_vel_hist is not None:
-            triggered, conf_sh, src_sh = check_self_harm(head_vel_hist, hip_vel_hist)
-            if triggered:
-                logger.debug(f'  [RAW] T{track_id} → self_harm ({src_sh}, conf={conf_sh:.2f})')
-                return 'self_harm', conf_sh, src_sh
+            # R27 P42: PoseC3D normal_prob >= 0.9 强 normal 前置 veto
+            # 探查 normal 样本仅 7 个走路视频，未覆盖坐姿头部转动 / 看屏幕等场景
+            # （F1130 T9 坐姿被 self_harm 误判 = R25 已知局限 #1 兑现）。
+            # PoseC3D 极度确信 normal 时不入态，比事后退 HOLD 更根本。
+            normal_prob_sh = float(pose_probs[0])
+            if normal_prob_sh >= 0.9:
+                logger.debug(f'  [RAW] T{track_id} self_harm 前置veto: '
+                             f'PoseC3D normal={normal_prob_sh:.3f}>=0.9 → 跳过 self_harm 判据')
+            else:
+                triggered, conf_sh, src_sh = check_self_harm(head_vel_hist, hip_vel_hist)
+                if triggered:
+                    logger.debug(f'  [RAW] T{track_id} → self_harm ({src_sh}, conf={conf_sh:.2f})')
+                    return 'self_harm', conf_sh, src_sh
 
         # 2. YOLO 辅助 falling 检测（一动不动躺地，PoseC3D 识别不出）
         #    躺地 + 附近有被标为 fighting/bullying 的人 → bullying（被霸凌）
@@ -1047,13 +1069,14 @@ class RuleEngine:
         'fighting': 2,   # R9: 1→2 防永锁
         'smoking': 2,    # R13 P17: 小物体检测稀疏,2次维持防闪断
         'phone_call': 2,
-        'self_harm': 2,  # R25: 撞墙事件短,HOLD=2 防闪断,但不至于永锁
+        'self_harm': 1,  # R27 P41: 判据已内嵌 60 帧持续性, HOLD=1 只需防闪断
     }
     # R13 P17：per-label 投票窗口 —— smoking 等稀疏信号用更长窗口累积证据
     # 默认所有标签用 self.vote_window (=5),此处 override
     VOTE_WINDOW_LABEL = {
         'smoking': 7,     # 吸烟是持续几分钟行为,但单帧检测稀疏,放大窗口
         'phone_call': 7,
+        'self_harm': 3,   # R27 P41: 判据 60 帧内爆发, VOTE 层只做小窗口平滑防单帧抖动
     }
 
     def _window_for(self, label):
@@ -1142,7 +1165,7 @@ class RuleEngine:
                 and raw_source == 'posec3d'
                 and pose_normal_prob is not None
                 and pose_normal_prob >= 0.9
-                and last in ('fighting', 'bullying', 'falling', 'climbing')):
+                and last in ('fighting', 'bullying', 'falling', 'climbing', 'self_harm')):
             recent3 = history[-3:]  # 已 append 当前 label，含本帧
             if len(recent3) >= 2 and recent3.count('normal') >= 2:
                 logger.debug(f'  [VOTE] T{track_id} current=normal → normal '

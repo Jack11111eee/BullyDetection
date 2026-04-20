@@ -2118,6 +2118,123 @@ rule_engine.judge(..., head_vel_hist=head_hist, hip_vel_hist=hip_hist)
 
 ---
 
+### E2E Fix Round 27 — self_harm 误报全面压制（坐姿头转动误判 + VOTE 过宽 + 单帧 kp 跳变）
+
+**背景**：F1130 T9 坐在桌前看屏幕，PoseC3D `normal=0.996` 极度明确，但 FINAL=self_harm。
+```
+[F1130] T9 PoseC3D: argmax=normal(0.996) | normal=0.996 fighting=0.000
+  [RULE] self_harm A路径: head_vel>0.08 count=1 in last 60f → conf=0.60
+  [RAW] T9 → self_harm (rule_self_harm_vel, conf=0.60)
+  [VOTE] T9 current=self_harm → self_harm (HOLD 4>=2, window=5)
+         history=[normal,normal,normal,self_harm,self_harm,self_harm,self_harm]
+```
+
+**根因（五条独立病灶）**：
+1. **归一化基准反向偏置**：坐姿 bbox_h ≈150px（上身）vs 站姿 ≈300px（全身）→ 相同像素鼻子抖动归一化后坐姿翻倍，**对坐姿更敏感**（违反物理直觉）
+2. **YOLO-Pose nose kp 单帧跳变**：侧脸/低分辨率下 nose 单帧能跳 8–15px，EMA α=0.5 平滑不掉。12px ÷ 150px = 0.08 刚好过阈
+3. **探查样本 bias**：R25 normal 仅 7 个走路样本，没覆盖坐姿头转动 / 看屏幕。R25 "已知局限 #1" 已记此风险，F1130 即兑现
+4. **A 路径 `exceed_min_count=1` 单帧即触发**：60 帧里任意 1 帧过阈就判 self_harm；孤立 kp 漂变 = 误触发金线
+5. **VOTE 过宽**：HOLD=2/window=5 配合 ENTRY=1，误入态后单帧漏检不退
+
+#### P41 — VOTE 收紧 self_harm
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+| 配置 | R25 | R27 |
+|---|---|---|
+| `VOTE_HOLD_MIN['self_harm']` | 2 | **1** |
+| `VOTE_WINDOW_LABEL['self_harm']` | 5 (默认) | **3** |
+| `VOTE_ENTRY_MIN['self_harm']` | 1 | 1（不变） |
+
+理由：A 路径判据本身已内嵌 60 帧窗口持续性；VOTE 层只需小窗口平滑防单帧抖动，不需要再叠加 HOLD 维持。HOLD=1 保留"单帧漏检不立即退"，window=3 平衡响应速度与稳定性。
+
+#### P42 — _raw_judge 加 PoseC3D 强 normal 前置 veto
+
+**文件**：`e2e_pipeline/rule_engine.py` `_raw_judge` step 1.5 入口
+
+```python
+normal_prob_sh = float(pose_probs[0])
+if normal_prob_sh >= 0.9:
+    logger.debug(f'  [RAW] T{track_id} self_harm 前置veto: normal>=0.9')
+else:
+    triggered, conf_sh, src_sh = check_self_harm(...)
+```
+
+**位置选择（raw 前置 vs HOLD exit）**：用户讨论中提议放 HOLD exit，但 raw 前置更根本 —— R22 P30 的 HOLD exit 是救"异常态已建立"的场景，self_harm 的核心问题是 raw 入态本身不可靠（nose kp 漂变 → head_vel 伪峰），在 raw 层拦住比事后退 HOLD 干净。HOLD exit 作为第二层兜底（P43）保留。
+
+#### P43 — STRONG_NORMAL HOLD exit 接受 self_harm
+
+**文件**：`e2e_pipeline/rule_engine.py` `_vote_smooth` 里 R22 P30 分支
+
+```python
+last in ('fighting', 'bullying', 'falling', 'climbing')
+→ last in ('fighting', 'bullying', 'falling', 'climbing', 'self_harm')
+```
+
+三重防误退（`posec3d` source + `normal_prob ≥ 0.9` + `recent3 ≥ 2 normal`）全部保留。**Why**：raw veto 只防新入态，若视频前段已误入 self_harm HOLD，后段 PoseC3D 给强 normal 也需退出。R22 教训（单点防御会留跨交集 case）直接复用。
+
+#### P44 — check_self_harm A 路径改簇发（burst）判据
+
+**文件**：`e2e_pipeline/rule_engine.py` `check_self_harm`
+
+| 参数 | R25 | R27 |
+|---|---|---|
+| `exceed_min_count` | 1 | **2** |
+| `exceed_max_gap`（新） | — | **5** |
+
+新判据：60 帧内过阈索引 ≥ 2 个，且**至少两次过阈索引差 ≤ 5 帧**。
+
+物理动机：真撞墙 = "加速→撞击→急停" 连续 2–3 帧高速。孤立单帧 kp 漂变不满足簇发。
+
+**影响估计**：R25 探查 headbang A 路径 7/16 召回。簇发要求可能掉 1–2 个（真 headbang 样本里 peak 连续 1 帧的），B 路径（head/hip ratio）兜底。impact 4/4 全是连续高速，不影响。
+
+#### P45 — head kp 质量门槛 + 连续性
+
+**文件**：`e2e_pipeline/pipeline.py` `_update_vel_history`
+
+| 改动 | R25 | R27 |
+|---|---|---|
+| head(nose) score 门槛 | 0.3 | **0.5** |
+| 低质跳过时 `prev_head/prev_hip` | 保留 | **清空** |
+
+**关键修复**：原代码低质帧 return 但不清 prev —— 低质 N 帧后第一个有效帧会对**跨 N 帧的陈旧 prev** 做差分，直接伪造高速。新版跳过时 `self._prev_head.pop(track_id, None)` + `self._prev_hip.pop(track_id, None)`，恢复后下一有效帧重建 prev，不产生跨帧假差分。
+
+hip 门槛保持 0.3（髋 kp 稳，不是主要噪声源）。
+
+#### R27 配置快照
+
+| 参数 | 值 | 依据 |
+|---|---|---|
+| `VOTE_HOLD_MIN['self_harm']` | 1 | 判据已内嵌 60 帧持续性 |
+| `VOTE_WINDOW_LABEL['self_harm']` | 3 | 小窗口平滑即可 |
+| raw veto normal_prob 门槛 | 0.9 | 与 R22 P30 对齐 |
+| A 路径 `exceed_min_count` | 2 | 需簇发 |
+| A 路径 `exceed_max_gap` | 5 帧 (~0.17s@30fps) | 撞击爆发典型窗口 |
+| head score 门槛 | 0.5 | 避开 nose kp 漂变的 0.3–0.5 不稳区 |
+
+#### 预期效果
+
+| 场景 | R25 行为 | R27 行为 |
+|---|---|---|
+| F1130 T9 坐姿看屏幕 | self_harm ✗ | normal ✓（P42 前置 veto 于 raw 层拦住）|
+| 侧脸转头 nose 单帧跳变 | 可能入 self_harm | 不触发（P44 簇发 + P45 门槛）|
+| 真撞墙 impact | self_harm ✓ | self_harm ✓（连续高速满足簇发）|
+| 已误入 HOLD + 后续 PoseC3D normal=0.99 | 锁死 | normal（P43 HOLD exit）|
+| 扶墙撞头 headbang 峰稀疏 | 可能 A 路径掉，B 兜底 | B 路径兜底不变 |
+
+**回退**：
+- P41: 改回 `HOLD_MIN=2`、删 `VOTE_WINDOW_LABEL['self_harm']`
+- P42: 删 `_raw_judge` step 1.5 的 `normal_prob >= 0.9` 分支
+- P43: `last in (...)` 删 `'self_harm'`
+- P44: `exceed_min_count=1`、删 `exceed_max_gap` 参数和簇发循环
+- P45: head 门槛改回 0.3、删 pop prev 两行
+
+**未处理**（留给 P3 轮次）：
+- 归一化基准仍是 bbox_h（问题 #2），坐/站姿放大不对称未解决 —— 待换为"肩到髋 × 1.6"后重跑探查重标阈值
+- B 路径 ratio 判据未改，与 A 路径簇发不对称（B 路径任意 1 帧 max 即可）—— 实测再看
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -2707,6 +2824,8 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+??????? fix(e2e): R27 P41-P45 self_harm 误报压制 (坐姿头转动 / 簇发 / kp门槛)  (R27)
+4ced812 fix(e2e): R26 P40 draw_label 自适应位置                                (R26)
 a319fe4 feat(e2e): R26 P37-P39 camera_tampering scene-level 检测             (R26)
 da4e546 feat(e2e): R25 self_harm 落地 — 撞墙/扶墙撞头 skeleton 速度双路径       (R25)
 8b3c749 fix+feat(probe): R24 二轮 · 修 self-exclusion bug + 加新指标            (R24)

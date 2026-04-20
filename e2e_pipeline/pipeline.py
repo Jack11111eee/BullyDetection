@@ -138,6 +138,11 @@ class SkeletonBuffer:
         """计算本帧 head/hip 归一化速度并 push 进滑窗。
         归一化：以 bbox 高度作为参考（消除摄像头距离 / 身高差影响）。
         低置信关键点直接跳过本帧，不 push 到窗口（避免抖动噪声）。
+
+        R27 P44: head 分数门槛 0.3→0.5 + 连续性要求
+        - head 在 0.3–0.5 区间位置极不稳（能从鼻子跳到嘴角到耳朵）
+        - 跳过时同步清理 prev_head/prev_hip，避免恢复时对"陈旧 prev"算出
+          跨 N 帧的放大差分 → 伪造单帧高速 → 误触发 self_harm
         """
         # 确定 bbox_h
         bbox_h = None
@@ -151,10 +156,13 @@ class SkeletonBuffer:
         if bbox_h is None or bbox_h <= 10:
             return
 
-        # 当前 head / hip
-        head_ok = sc[0] > 0.3
+        # 当前 head / hip（R27 P44: head 门槛 0.3→0.5 避免鼻子 kp 漂移）
+        head_ok = sc[0] > 0.5
         hip_ok = (sc[11] > 0.3) or (sc[12] > 0.3)
         if not (head_ok and hip_ok):
+            # 连续性：本帧无效 → 清 prev，下次有效帧不会对跨 N 帧的陈旧 prev 做差分
+            self._prev_head.pop(track_id, None)
+            self._prev_hip.pop(track_id, None)
             return
         head_now = kps[0].astype(np.float32)
         if sc[11] > 0.3 and sc[12] > 0.3:
