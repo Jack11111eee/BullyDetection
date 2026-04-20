@@ -3123,6 +3123,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+d84e572 fix(e2e): R31 P49+P50 demote 放宽 partner + pair-based source 白名单 (R31)
 e8b1f77 fix(e2e): R30 P48 self_harm raw normal 显著主导 veto (P42 灰度带扩展)  (R30)
 a55d5d2 fix(e2e): R29 P47 _is_upright_posture 二维投影盲区双层防御            (R29)
 54c7d8c fix(e2e): R28 P46 self_harm B 路径双绝对下限 (hip_max 分母失控修复)   (R28)
