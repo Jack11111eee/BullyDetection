@@ -888,15 +888,17 @@ class InferencePipeline:
             # 第二遍A: 推理 + 画骨骼（标签绘制延后到耦合之后）
             inferred_tids = []
             for track_id, (kps_xy, kps_sc) in track_kps.items():
-                # 画骨骼（用上一帧的标签色，当前帧推理还没完成）
-                label_info = self.track_labels.get(track_id)
-                color = LABEL_COLORS.get(
-                    label_info.label if label_info else 'normal', (200, 200, 200))
-                draw_skeleton(frame, kps_xy, kps_sc, color=color)
-
                 # Step 2: PoseC3D 推理（双人配对）
                 buf = self.skeleton_buf.tracks[track_id]
                 buf_len = len(buf['kps'])
+                min_frames = max(16, self.skeleton_buf.clip_len // 2)
+                buf_ready = buf_len >= min_frames or track_id in self.track_labels
+
+                if buf_ready:
+                    label_info = self.track_labels.get(track_id)
+                    color = LABEL_COLORS.get(
+                        label_info.label if label_info else 'normal', (200, 200, 200))
+                    draw_skeleton(frame, kps_xy, kps_sc, color=color)
 
                 if self.skeleton_buf.should_infer(track_id):
                     nearest_tid = self._find_nearest_track(track_id, track_positions)
@@ -974,8 +976,13 @@ class InferencePipeline:
                         **judgment.to_dict(),
                     })
 
-            # 第二遍C: 可视化标签（用耦合后的标签）
+            # 第二遍C: 可视化标签（用耦合后的标签，buffer 不足的 track 不画）
             for track_id in track_kps.keys():
+                buf = self.skeleton_buf.tracks.get(track_id)
+                buf_len = len(buf['kps']) if buf else 0
+                min_frames = max(16, self.skeleton_buf.clip_len // 2)
+                if buf_len < min_frames and track_id not in self.track_labels:
+                    continue
                 bbox = track_bboxes.get(track_id)
                 if bbox:
                     if track_id in self.track_labels:
