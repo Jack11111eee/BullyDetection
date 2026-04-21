@@ -253,6 +253,8 @@
 | 10 | 80.7% | 82.5% | with_limb=True（数据干净后可用，略低于 kp）|
 | 11 | **89.9%** | **93.3%** | **MIL 交叉折清洗（threshold=0.3, -4755 噪声）** |
 
+![accuracy_trend](training_docs/accuracy_trend.png)
+
 ![training_progress](training_docs/training_progress.png)
 
 ---
