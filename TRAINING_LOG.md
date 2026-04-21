@@ -3481,3 +3481,4 @@ add2edc fix: trust YOLO falling (remove posture checks)                      (R7
 c9dec2b feat: track re-association on ByteTrack ID switch                    (R7)
 ```
 f2dd150 fix(api): 对齐 DUAL-MODE-API-PROTOCOL SSE 事件及 status 响应字段 (联调)
+88dae4b fix(api): push_sse 序列化 dict→JSON，修复 Spring Boot 解析失败导致 SSE 断流 (联调)
