@@ -227,6 +227,8 @@
 | falling | 96.1% | 99.1% | +3.0% |
 | climbing | 77.4% | **98.4%** | **+21.0%** |
 
+![perclass_r9_r11](training_docs/perclass_r9_r11.png)
+
 **成功原因：**
 1. 清洗掉 4,755 个噪声样本（11.6%），消除了 fighting 视频中的 normal 片段标签噪声
 2. normal↔fighting 互混大幅下降
