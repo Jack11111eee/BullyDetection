@@ -3480,3 +3480,4 @@ add2edc fix: trust YOLO falling (remove posture checks)                      (R7
 1a93399 fix: loitering threshold 60s→300s + lower priority                   (R7)
 c9dec2b feat: track re-association on ByteTrack ID switch                    (R7)
 ```
+f2dd150 fix(api): 对齐 DUAL-MODE-API-PROTOCOL SSE 事件及 status 响应字段 (联调)
