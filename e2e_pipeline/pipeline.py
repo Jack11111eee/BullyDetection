@@ -627,7 +627,6 @@ class InferencePipeline:
         self.event_log = []
         # API 联调钩子：每帧处理完成后回调，payload 见 _emit_frame_callback
         self.on_frame_callback = on_frame_callback
-        self._profile_accum = []  # [PROFILE] 逐帧计时数据
 
         # R26 P37: 镜头遮挡/黑屏/失焦 scene-level 检测器
         # 触发即短路 _process_frame，跳过 YOLO/PoseC3D/规则，避免下游全部误判
@@ -648,7 +647,6 @@ class InferencePipeline:
         self.event_log.clear()
         self.on_frame_callback = None
         self.tamper_detector.reset()
-        self._profile_accum = []
 
     def run(self, source, show=False, output_video=None, output_json=None):
         """
@@ -737,32 +735,6 @@ class InferencePipeline:
         avg_fps = frame_idx / total_time if total_time > 0 else 0
         print(f'\nDone. {frame_idx} frames in {total_time:.1f}s ({avg_fps:.1f} fps)')
 
-        # [PROFILE] 汇总统计
-        if self._profile_accum:
-            n = len(self._profile_accum)
-            keys = ['yolo_pose', 'posec3d', 'small_obj', 'rule', 'other', 'total']
-            avg = {k: sum(p.get(k, 0) for p in self._profile_accum) / n for k in keys}
-            infer_frames = [p for p in self._profile_accum if p.get('posec3d', 0) > 0]
-            non_infer = [p for p in self._profile_accum if p.get('posec3d', 0) == 0]
-            print(f'\n{"="*70}')
-            print(f'[PROFILE SUMMARY] {n} frames')
-            print(f'  AVG per frame:  yolo_pose={avg["yolo_pose"]:.1f}ms  '
-                  f'posec3d={avg["posec3d"]:.1f}ms  small_obj={avg["small_obj"]:.1f}ms  '
-                  f'rule={avg["rule"]:.1f}ms  other={avg["other"]:.1f}ms  '
-                  f'total={avg["total"]:.1f}ms')
-            if non_infer:
-                ni_avg = sum(p.get('total', 0) for p in non_infer) / len(non_infer)
-                print(f'  Non-infer frames ({len(non_infer)}):  avg_total={ni_avg:.1f}ms')
-            if infer_frames:
-                inf_avg = {k: sum(p.get(k, 0) for p in infer_frames) / len(infer_frames) for k in keys}
-                print(f'  Infer frames ({len(infer_frames)}):  '
-                      f'yolo_pose={inf_avg["yolo_pose"]:.1f}ms  '
-                      f'posec3d={inf_avg["posec3d"]:.1f}ms  '
-                      f'small_obj={inf_avg["small_obj"]:.1f}ms  '
-                      f'rule={inf_avg["rule"]:.1f}ms  '
-                      f'total={inf_avg["total"]:.1f}ms')
-            print(f'{"="*70}\n')
-
         if output_json and self.event_log:
             with open(output_json, 'w', encoding='utf-8') as f:
                 json.dump(self.event_log, f, ensure_ascii=False, indent=2)
@@ -793,15 +765,11 @@ class InferencePipeline:
 
     def _process_frame(self, frame, frame_idx, img_shape):
         """处理单帧"""
-        _pf = {}  # per-frame profile timings
-        _t0 = time.time()
 
         # R26 P37: Step 0 — 镜头遮挡/黑屏/失焦 scene-level 检测（最高优先级）
         # 镜头被干扰时 YOLO/PoseC3D/ByteTrack 全部不可靠 → 短路下游推理
         # track 状态由 SkeletonBuffer.grace_frames=90 自然保留；短暂遮挡（<3s）恢复后延续
-        _t_tamper = time.time()
         is_tamper, tamper_alarms = self.tamper_detector.update(frame)
-        _pf['tamper'] = (time.time() - _t_tamper) * 1000
         if is_tamper:
             render_tamper_overlay(frame, tamper_alarms)
             logger.info(f'[F{frame_idx}] SCENE camera_tampering: {tamper_alarms}')
@@ -832,14 +800,9 @@ class InferencePipeline:
                     })
                 except Exception as cb_err:
                     logger.debug(f'[F{frame_idx}] tamper on_frame_callback 失败: {cb_err}')
-            _pf['total'] = (time.time() - _t0) * 1000
-            _pf['tamper'] = _pf['total']
-            self._profile_accum.append(_pf)
             return  # 短路：不跑 YOLO/PoseC3D/规则/coupling/清理
 
         # Step 1: YOLO Pose + ByteTrack
-        torch.cuda.synchronize()
-        _t1 = time.time()
         results = self.yolo_pose.track(
             source=frame,
             persist=True,
@@ -848,8 +811,6 @@ class InferencePipeline:
             iou=0.5,
             verbose=False,
         )
-        torch.cuda.synchronize()
-        _pf['yolo_pose'] = (time.time() - _t1) * 1000
 
         result = results[0]
         current_track_ids = set()
@@ -858,7 +819,6 @@ class InferencePipeline:
         track_kps = {}        # {tid: (kps_xy, kps_sc)}
         track_bboxes = {}     # {tid: [x1, y1, x2, y2]}
 
-        _t_extract = time.time()
         if result.boxes is not None and result.keypoints is not None:
             # 第一遍: 收集所有 track 位置
             for i, box in enumerate(result.boxes):
@@ -909,8 +869,6 @@ class InferencePipeline:
             # smoking 模型的输入彻底掐断。per-track gating 在 YOLO 帧级调用下无法实现
             # (YOLO 一次检测整张画面),所以干脆全部跑。
             # 保留接口(need_falling/smoking/phone)用于未来可能的扩展,当前固定 True。
-            _pf['extract'] = (time.time() - _t_extract) * 1000
-
             gate_need_falling = True
             gate_need_smoking = True
             gate_need_phone = True
@@ -953,16 +911,10 @@ class InferencePipeline:
                     logger.debug(f'[F{frame_idx}] T{track_id} INFER: buf_total={buf_len}, '
                                  f'sampled={n_valid_frames}/64, pair=T{nearest_tid}(P1:{n_valid_p2}/64)')
 
-                    torch.cuda.synchronize()
-                    _t_pc = time.time()
                     pose_probs = self.posec3d.infer(keypoint, keypoint_score, img_shape)
-                    torch.cuda.synchronize()
-                    _pf['posec3d'] = _pf.get('posec3d', 0) + (time.time() - _t_pc) * 1000
 
                     # Step 3: 小物体检测（按需 + 帧级缓存）
                     if small_objs_cache is None:
-                        torch.cuda.synchronize()
-                        _t_so = time.time()
                         if self.multi_detector is not None:
                             small_objs_cache = self.multi_detector.detect(
                                 frame,
@@ -974,12 +926,9 @@ class InferencePipeline:
                             small_objs_cache = self.small_obj_detector.detect(frame)
                         else:
                             small_objs_cache = []
-                        torch.cuda.synchronize()
-                        _pf['small_obj'] = (time.time() - _t_so) * 1000
                     small_objs = small_objs_cache
 
                     # Step 4: 规则引擎
-                    _t_re = time.time()
                     all_kps_scores = [(kps, sc) for kps, sc in track_kps.values()]
                     head_hist, hip_hist = self.skeleton_buf.get_vel_histories(track_id)
                     judgment = self.rule_engine.judge(
@@ -997,7 +946,6 @@ class InferencePipeline:
                         head_vel_hist=head_hist,
                         hip_vel_hist=hip_hist,
                     )
-                    _pf['rule'] = _pf.get('rule', 0) + (time.time() - _t_re) * 1000
                     self.track_labels[track_id] = judgment
                     inferred_tids.append(track_id)
                 else:
@@ -1006,13 +954,11 @@ class InferencePipeline:
                         logger.debug(f'[F{frame_idx}] T{track_id} SKIP: buffer不足 {buf_len}/{min_frames}')
 
             # 第二遍B: Pair coupling —— bbox 重叠的 track 必须共享攻击态
-            _t_couple = time.time()
             active_judgments = {tid: self.track_labels[tid]
                                 for tid in current_track_ids
                                 if tid in self.track_labels}
             self.rule_engine.couple_overlapping_pairs(active_judgments, track_bboxes)
             self.rule_engine.demote_unsupported_attacks(active_judgments, track_bboxes)
-            _pf['couple'] = (time.time() - _t_couple) * 1000
 
             # 记录事件（用耦合后的标签）
             for track_id in inferred_tids:
@@ -1027,7 +973,6 @@ class InferencePipeline:
                     })
 
             # 第二遍C: 可视化标签（用耦合后的标签，buffer 不足的 track 不画）
-            _t_draw = time.time()
             for track_id in track_kps.keys():
                 buf = self.skeleton_buf.tracks.get(track_id)
                 buf_len = len(buf['kps']) if buf else 0
@@ -1045,23 +990,14 @@ class InferencePipeline:
                         draw_label(frame, bbox, disp_label, info.confidence, color)
                     else:
                         draw_label(frame, bbox, 'normal', 1.0, LABEL_COLORS['normal'])
-            _pf['draw'] = (time.time() - _t_draw) * 1000
-        else:
-            _pf.setdefault('extract', 0)
-            _pf.setdefault('couple', 0)
-            _pf.setdefault('draw', 0)
-
         # API 联调回调：推送本帧所有活跃 track 的标签
-        _t_cb = time.time()
         if self.on_frame_callback is not None:
             try:
                 self._emit_frame_callback(frame_idx, img_shape, current_track_ids, track_bboxes)
             except Exception as cb_err:
                 logger.debug(f'[F{frame_idx}] on_frame_callback 失败: {cb_err}')
-        _pf['callback'] = (time.time() - _t_cb) * 1000
 
         # 清理消失的 track（带遮挡宽限期）
-        _t_clean = time.time()
         self.skeleton_buf.remove_stale(current_track_ids)
         self.rule_engine.clear_stale_tracks(current_track_ids)
         grace = self.skeleton_buf.grace_frames
@@ -1075,34 +1011,6 @@ class InferencePipeline:
             self.track_labels.pop(tid, None)
             self._known_track_ids.discard(tid)
             del self._label_missing_count[tid]
-        _pf['cleanup'] = (time.time() - _t_clean) * 1000
-
-        # [PROFILE] 汇总本帧
-        _pf['total'] = (time.time() - _t0) * 1000
-        _pf.setdefault('posec3d', 0)
-        _pf.setdefault('small_obj', 0)
-        _pf.setdefault('rule', 0)
-        _known = sum(_pf.get(k, 0) for k in
-                     ['yolo_pose', 'posec3d', 'small_obj', 'rule',
-                      'tamper', 'extract', 'couple', 'draw', 'callback', 'cleanup'])
-        _pf['other'] = _pf['total'] - _known
-        self._profile_accum.append(_pf)
-        if frame_idx % 50 == 0 or _pf['total'] > 200:
-            logger.info(
-                f'[PROFILE] F{frame_idx} '
-                f'yolo={_pf.get("yolo_pose",0):.1f} '
-                f'pc3d={_pf["posec3d"]:.1f} '
-                f'sobj={_pf["small_obj"]:.1f} '
-                f'rule={_pf["rule"]:.1f} '
-                f'| tamper={_pf.get("tamper",0):.1f} '
-                f'extract={_pf.get("extract",0):.1f} '
-                f'draw={_pf.get("draw",0):.1f} '
-                f'couple={_pf.get("couple",0):.1f} '
-                f'cb={_pf["callback"]:.1f} '
-                f'clean={_pf["cleanup"]:.1f} '
-                f'other={_pf["other"]:.1f} '
-                f'| total={_pf["total"]:.1f}ms'
-            )
 
     def _emit_frame_callback(self, frame_idx, img_shape, current_track_ids, track_bboxes):
         """构造 API 回调 payload。API 层可按需转换为 WEB frame 事件格式。"""
