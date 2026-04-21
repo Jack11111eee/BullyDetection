@@ -3328,6 +3328,13 @@ track 被分配新 ID（重关联）
 - **修复**：`CameraTamperingDetector` 加 `confirm_frames=3` 连续帧确认。单帧检出只递增计数器，连续 3 帧（~120ms@25fps）都触发才算真 tamper；任一帧清零则重置（commit `ae80f7f`）
 - **状态**：已修复
 
+#### Problem 40: buffer 不足时仍显示 bbox/骨骼/默认 normal 标签
+
+- **发现**：用户反馈
+- **详情**：新 track 出现后 buffer 帧数未达 `min_frames`（`max(16, clip_len//2)`），PoseC3D 尚未推理，但 `draw_skeleton` 和 `draw_label` 仍画出灰色骨骼 + 默认 normal 标签，干扰画面
+- **修复**：骨骼绘制和标签绘制前均加 `buf_ready` 判断，buffer 不足且无历史标签的 track 跳过全部可视化（commit `036ec42`）
+- **状态**：已修复
+
 ---
 
 ## 11. 辅助组件
