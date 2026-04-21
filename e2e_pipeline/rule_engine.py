@@ -881,12 +881,12 @@ class RuleEngine:
                 # R15 修复 B：骨骼坐姿软否决（压误报）
                 # 条件：骨骼纵横比纵向展开 + 至少 8 个有效关键点 + PoseC3D normal >= 0.25
                 # 三重门槛是为了在"骨骼可信 + 模型交叉验证"时才否决，避免遮挡/低质骨骼导致漏检
-                # R21 P28: YOLO 高 conf 豁免 — 头朝远处躺地骨骼 2D 盲区，若 YOLO conf>=0.6 则信任检测器
+                # R21 P28: YOLO 高 conf 豁免 — 头朝远处躺地骨骼 2D 盲区，若 YOLO conf>=0.7 则信任检测器
                 # R34: 加 normal<0.9 门槛 — PoseC3D 极度确信 normal 时不豁免，
                 #   让 _is_sitting_posture 裁决（坐着 h/w>1.1 → veto; 真躺地 h/w<1.1 → 放行）
                 valid_kp_count = int((person_scores > 0.3).sum())
                 normal_prob_here = float(pose_probs[0])
-                if fallen_yolo_conf >= 0.6 and normal_prob_here < 0.9:
+                if fallen_yolo_conf >= 0.7 and normal_prob_here < 0.9:
                     logger.debug(
                         f'  [RAW] T{track_id} YOLO conf={fallen_yolo_conf:.3f}>=0.6 '
                         f'normal={normal_prob_here:.3f}<0.9 → 高置信豁免坐姿否决'
@@ -1505,7 +1505,7 @@ class RuleEngine:
             return judgments
 
         ATTACK_LABELS = ('fighting', 'bullying')
-        PAIR_BASED_SOURCES_PREFIX = ('rule_yolo_bullying', 'rule_bullying', 'pair_couple')
+        PAIR_BASED_SOURCES_PREFIX = ('rule_yolo_bullying', 'pair_couple')
         attack_tids = [tid for tid, j in judgments.items() if j.label in ATTACK_LABELS]
         if not attack_tids:
             return judgments
