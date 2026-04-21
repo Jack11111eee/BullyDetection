@@ -227,6 +227,8 @@
 | falling | 96.1% | 99.1% | +3.0% |
 | climbing | 77.4% | **98.4%** | **+21.0%** |
 
+![radar_r8_r9_r11](training_docs/radar_r8_r9_r11.png)
+
 ![perclass_3rounds](training_docs/perclass_3rounds.png)
 
 ![perclass_r9_r11](training_docs/perclass_r9_r11.png)
