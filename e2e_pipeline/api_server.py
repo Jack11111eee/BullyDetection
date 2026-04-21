@@ -57,7 +57,7 @@ LABEL_MAP = {
     'loitering':  ('LOITER',    'loiter',    '徘徊'),
     # 新增枚举（需 Web 同学同步扩展后端）
     'bullying':   ('BULLY',     'bully',     '霸凌'),
-    'phone_call': ('PHONE',     'phone',     '打电话'),
+    'phone_call': ('PHONE',     'phone',     '玩手机'),
     'vandalism':  ('VANDALISM', 'vandalism', '破坏公物'),
 }
 
@@ -156,7 +156,16 @@ def adapt_pipeline_to_web_event(payload, task):
             'frameIndex': frame_index,
             'processStatus': 'UNPROCESSED',
             'processStatusName': '未处理',
+            'remark': None,
         })
+
+    # systemLog: 汇总本帧告警信息供前端/日志展示
+    system_log = None
+    if alerts:
+        parts = []
+        for a in alerts:
+            parts.append(f"{a['levelName']}：{a['behaviorName']} @ {task.source_name}")
+        system_log = '；'.join(parts)
 
     # 方案 A 所需字段：前端用 videoTime 主动控制 video.currentTime 实现帧对齐
     video_fps = task.video_fps if task.video_fps and task.video_fps > 0 else 30.0
@@ -175,6 +184,7 @@ def adapt_pipeline_to_web_event(payload, task):
         'imageHeight': img_h,
         'targets': targets,
         'alerts': alerts,
+        'systemLog': system_log,
     }
 
 
@@ -271,16 +281,37 @@ def _run_task(task):
             task.progress = 1.0
             task.push_sse('done', {
                 'taskId': task.task_id,
+                'sourceId': task.source_id,
+                'slotIndex': task.slot_index,
+                'sourceName': task.source_name,
+                'status': 'done',
+                'progress': 1.0,
                 'totalFrames': task.current_frame,
             })
             task.mark_finished('done')
         except PipelineStoppedException:
-            task.push_sse('stopped', {'taskId': task.task_id})
+            task.push_sse('stopped', {
+                'taskId': task.task_id,
+                'sourceId': task.source_id,
+                'slotIndex': task.slot_index,
+                'sourceName': task.source_name,
+                'status': 'stopped',
+                'progress': round(task.progress, 4),
+                'totalFrames': task.current_frame,
+            })
             task.mark_finished('stopped')
         except Exception as e:
             err = f'{type(e).__name__}: {e}'
             logger.exception(f'[task {task.task_id}] pipeline 异常')
-            task.push_sse('error', {'taskId': task.task_id, 'message': err})
+            task.push_sse('error', {
+                'taskId': task.task_id,
+                'sourceId': task.source_id,
+                'slotIndex': task.slot_index,
+                'sourceName': task.source_name,
+                'status': 'error',
+                'progress': round(task.progress, 4),
+                'message': err,
+            })
             task.mark_finished('error', err)
         finally:
             try:
@@ -321,6 +352,11 @@ def _watchdog_loop():
                     task.stop_event.set()  # 让 on_frame 抛 PipelineStoppedException
                     task.push_sse('error', {
                         'taskId': task.task_id,
+                        'sourceId': task.source_id,
+                        'slotIndex': task.slot_index,
+                        'sourceName': task.source_name,
+                        'status': 'error',
+                        'progress': round(task.progress, 4),
                         'message': f'watchdog: pipeline stalled {stalled:.0f}s',
                     })
                     task.mark_finished('error', f'watchdog stall {stalled:.0f}s')
@@ -471,6 +507,8 @@ async def analyze_status(task_id: str):
         'progress': round(task.progress, 4),
         'currentFrame': task.current_frame,
         'totalFrames': task.total_frames,
+        'bufferedFrames': task.event_queue.qsize(),
+        'completed': task.status == 'done',
         'sourceId': task.source_id,
         'slotIndex': task.slot_index,
         'sourceName': task.source_name,
@@ -606,7 +644,7 @@ def parse_args():
     p.add_argument('--smoking-model',
                    default='/home/hzcu/yjm/home/yjm/VideoDetection/v8/smoking/runs/smoking_yolo11m_v1/weights/best.pt')
     p.add_argument('--phone-model',
-                   default='/home/hzcu/yjm/home/yjm/VideoDetection/v8/phone/runs/phone_yolo11m_v1/weights/best.pt')
+                   default='/home/hzcu/yjm/phone_model/runs/phone_yolo11m_v1/weights/best.pt')
     p.add_argument('--device', default='cuda:0')
     p.add_argument('--yolo-conf', type=float, default=0.3)
     p.add_argument('--stride', type=int, default=16)
