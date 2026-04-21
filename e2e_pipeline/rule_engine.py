@@ -872,12 +872,14 @@ class RuleEngine:
                 # 条件：骨骼纵横比纵向展开 + 至少 8 个有效关键点 + PoseC3D normal >= 0.25
                 # 三重门槛是为了在"骨骼可信 + 模型交叉验证"时才否决，避免遮挡/低质骨骼导致漏检
                 # R21 P28: YOLO 高 conf 豁免 — 头朝远处躺地骨骼 2D 盲区，若 YOLO conf>=0.6 则信任检测器
+                # R34: 加 normal<0.9 门槛 — PoseC3D 极度确信 normal 时不豁免，
+                #   让 _is_sitting_posture 裁决（坐着 h/w>1.1 → veto; 真躺地 h/w<1.1 → 放行）
                 valid_kp_count = int((person_scores > 0.3).sum())
                 normal_prob_here = float(pose_probs[0])
-                if fallen_yolo_conf >= 0.6:
+                if fallen_yolo_conf >= 0.6 and normal_prob_here < 0.9:
                     logger.debug(
                         f'  [RAW] T{track_id} YOLO conf={fallen_yolo_conf:.3f}>=0.6 '
-                        f'→ 高置信豁免坐姿否决'
+                        f'normal={normal_prob_here:.3f}<0.9 → 高置信豁免坐姿否决'
                     )
                 elif (valid_kp_count >= 8 and
                         _is_sitting_posture(person_kps, person_scores, img_shape) and
@@ -1017,12 +1019,13 @@ class RuleEngine:
             # 场景：PoseC3D 弱攻击信号触发 defer，但被 normal 压制失败 → 落到 P7 兜底
             # 日志 F2575/F2591：T3 坐着被持续判 falling；R15 P18 只覆盖主路径未覆盖此处
             # R21 P28: YOLO 高 conf 豁免（头朝远处躺地 2D 盲区兜底，与 P18 对称）
+            # R34: 加 normal<0.9 门槛（与 P18 对称）
             valid_kp_count = int((person_scores > 0.3).sum())
             normal_prob_here = float(pose_probs[0])
-            if conf >= 0.6:
+            if conf >= 0.6 and normal_prob_here < 0.9:
                 logger.debug(
                     f'  [RAW] T{track_id} P7兜底 YOLO conf={conf:.3f}>=0.6 '
-                    f'→ 高置信豁免坐姿否决'
+                    f'normal={normal_prob_here:.3f}<0.9 → 高置信豁免坐姿否决'
                 )
             elif (valid_kp_count >= 8 and
                     _is_sitting_posture(person_kps, person_scores, img_shape)):
