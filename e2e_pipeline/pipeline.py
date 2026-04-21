@@ -627,6 +627,7 @@ class InferencePipeline:
         self.event_log = []
         # API 联调钩子：每帧处理完成后回调，payload 见 _emit_frame_callback
         self.on_frame_callback = on_frame_callback
+        self._profile_accum = []  # [PROFILE] 逐帧计时数据
 
         # R26 P37: 镜头遮挡/黑屏/失焦 scene-level 检测器
         # 触发即短路 _process_frame，跳过 YOLO/PoseC3D/规则，避免下游全部误判
@@ -647,6 +648,7 @@ class InferencePipeline:
         self.event_log.clear()
         self.on_frame_callback = None
         self.tamper_detector.reset()
+        self._profile_accum = []
 
     def run(self, source, show=False, output_video=None, output_json=None):
         """
@@ -735,6 +737,32 @@ class InferencePipeline:
         avg_fps = frame_idx / total_time if total_time > 0 else 0
         print(f'\nDone. {frame_idx} frames in {total_time:.1f}s ({avg_fps:.1f} fps)')
 
+        # [PROFILE] 汇总统计
+        if self._profile_accum:
+            n = len(self._profile_accum)
+            keys = ['yolo_pose', 'posec3d', 'small_obj', 'rule', 'other', 'total']
+            avg = {k: sum(p.get(k, 0) for p in self._profile_accum) / n for k in keys}
+            infer_frames = [p for p in self._profile_accum if p.get('posec3d', 0) > 0]
+            non_infer = [p for p in self._profile_accum if p.get('posec3d', 0) == 0]
+            print(f'\n{"="*70}')
+            print(f'[PROFILE SUMMARY] {n} frames')
+            print(f'  AVG per frame:  yolo_pose={avg["yolo_pose"]:.1f}ms  '
+                  f'posec3d={avg["posec3d"]:.1f}ms  small_obj={avg["small_obj"]:.1f}ms  '
+                  f'rule={avg["rule"]:.1f}ms  other={avg["other"]:.1f}ms  '
+                  f'total={avg["total"]:.1f}ms')
+            if non_infer:
+                ni_avg = sum(p.get('total', 0) for p in non_infer) / len(non_infer)
+                print(f'  Non-infer frames ({len(non_infer)}):  avg_total={ni_avg:.1f}ms')
+            if infer_frames:
+                inf_avg = {k: sum(p.get(k, 0) for p in infer_frames) / len(infer_frames) for k in keys}
+                print(f'  Infer frames ({len(infer_frames)}):  '
+                      f'yolo_pose={inf_avg["yolo_pose"]:.1f}ms  '
+                      f'posec3d={inf_avg["posec3d"]:.1f}ms  '
+                      f'small_obj={inf_avg["small_obj"]:.1f}ms  '
+                      f'rule={inf_avg["rule"]:.1f}ms  '
+                      f'total={inf_avg["total"]:.1f}ms')
+            print(f'{"="*70}\n')
+
         if output_json and self.event_log:
             with open(output_json, 'w', encoding='utf-8') as f:
                 json.dump(self.event_log, f, ensure_ascii=False, indent=2)
@@ -765,6 +793,8 @@ class InferencePipeline:
 
     def _process_frame(self, frame, frame_idx, img_shape):
         """处理单帧"""
+        _pf = {}  # per-frame profile timings
+        _t0 = time.time()
 
         # R26 P37: Step 0 — 镜头遮挡/黑屏/失焦 scene-level 检测（最高优先级）
         # 镜头被干扰时 YOLO/PoseC3D/ByteTrack 全部不可靠 → 短路下游推理
@@ -800,9 +830,13 @@ class InferencePipeline:
                     })
                 except Exception as cb_err:
                     logger.debug(f'[F{frame_idx}] tamper on_frame_callback 失败: {cb_err}')
+            _pf['total'] = (time.time() - _t0) * 1000
+            _pf['tamper'] = _pf['total']
+            self._profile_accum.append(_pf)
             return  # 短路：不跑 YOLO/PoseC3D/规则/coupling/清理
 
         # Step 1: YOLO Pose + ByteTrack
+        _t1 = time.time()
         results = self.yolo_pose.track(
             source=frame,
             persist=True,
@@ -811,6 +845,7 @@ class InferencePipeline:
             iou=0.5,
             verbose=False,
         )
+        _pf['yolo_pose'] = (time.time() - _t1) * 1000
 
         result = results[0]
         current_track_ids = set()
@@ -911,10 +946,13 @@ class InferencePipeline:
                     logger.debug(f'[F{frame_idx}] T{track_id} INFER: buf_total={buf_len}, '
                                  f'sampled={n_valid_frames}/64, pair=T{nearest_tid}(P1:{n_valid_p2}/64)')
 
+                    _t_pc = time.time()
                     pose_probs = self.posec3d.infer(keypoint, keypoint_score, img_shape)
+                    _pf['posec3d'] = _pf.get('posec3d', 0) + (time.time() - _t_pc) * 1000
 
                     # Step 3: 小物体检测（按需 + 帧级缓存）
                     if small_objs_cache is None:
+                        _t_so = time.time()
                         if self.multi_detector is not None:
                             small_objs_cache = self.multi_detector.detect(
                                 frame,
@@ -926,9 +964,11 @@ class InferencePipeline:
                             small_objs_cache = self.small_obj_detector.detect(frame)
                         else:
                             small_objs_cache = []
+                        _pf['small_obj'] = (time.time() - _t_so) * 1000
                     small_objs = small_objs_cache
 
                     # Step 4: 规则引擎
+                    _t_re = time.time()
                     all_kps_scores = [(kps, sc) for kps, sc in track_kps.values()]
                     head_hist, hip_hist = self.skeleton_buf.get_vel_histories(track_id)
                     judgment = self.rule_engine.judge(
@@ -946,6 +986,7 @@ class InferencePipeline:
                         head_vel_hist=head_hist,
                         hip_vel_hist=hip_hist,
                     )
+                    _pf['rule'] = _pf.get('rule', 0) + (time.time() - _t_re) * 1000
                     self.track_labels[track_id] = judgment
                     inferred_tids.append(track_id)
                 else:
@@ -1001,6 +1042,24 @@ class InferencePipeline:
                 self._emit_frame_callback(frame_idx, img_shape, current_track_ids, track_bboxes)
             except Exception as cb_err:
                 logger.debug(f'[F{frame_idx}] on_frame_callback 失败: {cb_err}')
+
+        # [PROFILE] 汇总本帧
+        _pf['total'] = (time.time() - _t0) * 1000
+        _pf.setdefault('posec3d', 0)
+        _pf.setdefault('small_obj', 0)
+        _pf.setdefault('rule', 0)
+        _pf['other'] = _pf['total'] - _pf.get('yolo_pose', 0) - _pf['posec3d'] - _pf['small_obj'] - _pf['rule']
+        self._profile_accum.append(_pf)
+        if frame_idx % 50 == 0 or _pf['total'] > 200:
+            logger.info(
+                f'[PROFILE] F{frame_idx} '
+                f'yolo_pose={_pf.get("yolo_pose",0):.1f}ms '
+                f'posec3d={_pf["posec3d"]:.1f}ms '
+                f'small_obj={_pf["small_obj"]:.1f}ms '
+                f'rule={_pf["rule"]:.1f}ms '
+                f'other={_pf["other"]:.1f}ms '
+                f'total={_pf["total"]:.1f}ms'
+            )
 
         # 清理消失的 track（带遮挡宽限期）
         self.skeleton_buf.remove_stale(current_track_ids)
