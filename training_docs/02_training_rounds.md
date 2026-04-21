@@ -151,6 +151,27 @@
 | Metric | Val | Test |
 |---|---|---|
 | Overall top1 | **80.7%** | **82.5%** |
+| Mean class acc | 77.4% | 74.0% |
+
+**Per-class (Round 10 Test):**
+
+| Class | Correct | Total | Accuracy |
+|---|---|---|---|
+| normal | 1174 | 1479 | 79.4% |
+| fighting | 961 | 1209 | 79.5% |
+| bullying | 20 | 51 | 39.2% |
+| falling | 774 | 805 | 96.1% |
+| climbing | 47 | 62 | 75.8% |
+
+**Test 混淆矩阵（行=真实, 列=预测）：**
+
+| | normal | fighting | bullying | falling | climbing |
+|---|---|---|---|---|---|
+| **normal** | **1174** | 248 | 6 | 44 | 7 |
+| **fighting** | 226 | **961** | 5 | 15 | 2 |
+| **bullying** | 7 | 22 | **20** | 2 | 0 |
+| **falling** | 7 | 21 | 0 | **774** | 3 |
+| **climbing** | 3 | 8 | 0 | 4 | **47** |
 
 **关键发现 — kp 与 limb 犯不同的错：**
 - kp 擅长 normal / falling
@@ -189,6 +210,18 @@
 | bullying | 45.1% | **78.4%** | **+33.3%** |
 | falling | 96.1% | 99.1% | +3.0% |
 | climbing | 77.4% | **98.4%** | **+21.0%** |
+
+**Test 混淆矩阵（行=真实, 列=预测）：**
+
+| | normal | fighting | bullying | falling | climbing |
+|---|---|---|---|---|---|
+| **normal** | **1380** | 81 | 0 | 18 | 0 |
+| **fighting** | 96 | **1085** | 5 | 23 | 0 |
+| **bullying** | 7 | 4 | **40** | 0 | 0 |
+| **falling** | 2 | 3 | 0 | **798** | 2 |
+| **climbing** | 0 | 0 | 0 | 1 | **61** |
+
+![confusion_r10_r11](confusion_r10_r11.png)
 
 **成功原因：**
 1. 清洗掉 4,755 个噪声样本（11.6%），消除了 fighting 视频中的 normal 片段标签噪声
