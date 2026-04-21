@@ -2732,6 +2732,71 @@ YOLO conf >= 0.6:
 
 ---
 
+### E2E Fix Round 35 — bullying 角色区分 perpetrator / victim（commit `7c88c49`）
+
+**背景**：bullying 判定本身基于姿态不对称（一方站立一方倒地），角色信息已隐含在判定过程中，但未显式化。需要在 BehaviorResult、事件日志、API 回调、可视化中区分施暴者和受害者。
+
+**设计原则**：bullying 的判定路径全部要求不对称（`rule_bullying` asymmetry / `rule_yolo_bullying` YOLO 躺地 / `pair_couple` falling→bullying），对称对打走 fighting —— 角色在每个判定点都是确定的。
+
+#### P55 — BehaviorResult 加 `role` 字段
+
+**文件**：`e2e_pipeline/rule_engine.py:49-61`
+
+```python
+@dataclass
+class BehaviorResult:
+    ...
+    role: str = None  # R35: 'perpetrator' / 'victim' / None（仅 bullying 有效）
+```
+
+`to_dict()` 用 `asdict(self)` 自动包含 role → event_log 无需改动。
+
+#### P56 — `check_bullying_asymmetry` 返回角色
+
+**文件**：`e2e_pipeline/rule_engine.py:508-516`
+
+返回值从 `(bool, float)` 改为 `(bool, float, str|None)`：
+- `my_height <= other_height` → `'victim'`（矮的一方 = 蜷缩/倒地）
+- `my_height > other_height` → `'perpetrator'`（高的一方 = 站立施暴）
+
+#### P57 — `_raw_judge` 各 bullying 路径设 `_pending_bully_role`
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+| 路径 | role 来源 |
+|---|---|
+| `rule_yolo_bullying` | `'victim'` 固定（YOLO 检到躺地） |
+| `rule_bullying` | `check_bullying_asymmetry` 返回的第 3 元素 |
+| `posec3d` step 6c | `_person_height` 比较 self vs 最高邻居 |
+
+`judge()` 读取 `_pending_bully_role`，smoothed_label == 'bullying' 时存入 BehaviorResult，随后清空。
+
+#### P58 — `couple_overlapping_pairs` / `demote_unsupported_attacks` 设置 role
+
+**文件**：`e2e_pipeline/rule_engine.py`
+
+- couple 升级到 bullying：`old_label == 'falling'` → `'victim'`；其他 → `'perpetrator'`
+- demote 降级：`j.role = None`
+
+#### P59 — pipeline 可视化 + 日志 + 回调
+
+**文件**：`e2e_pipeline/pipeline.py`
+
+- FINAL 日志：bullying 时追加 `, role=victim/perpetrator`
+- 可视化标签：`bullying(V)` / `bullying(P)`
+- `_emit_frame_callback`：track payload 加 `'role'` 字段
+
+#### R35 配置快照
+
+| 项 | R34 | R35 |
+|---|---|---|
+| BehaviorResult 字段 | label/confidence/source/smoothed/track_id/timestamp | **+ role** |
+| bullying 可视化 | `bullying 85%` | `bullying(V) 85%` / `bullying(P) 85%` |
+| API callback | label/confidence/source/bbox_xyxy | **+ role** |
+| event_log | to_dict() 自动 | **自动包含 role** |
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -3321,6 +3386,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+7c88c49 feat(e2e): R35 bullying 角色区分 perpetrator/victim                      (R35)
 8796036 fix(e2e): R34 P28 高conf豁免加 normal<0.9 门槛                           (R34)
 5342107 fix(e2e): R33 P7 兜底坐姿 veto 去掉 normal>=0.25 门槛                   (R33)
 16d7a99 fix(e2e): R32 暂时禁用 self_harm 判定逻辑 (误报过多)                     (R32)
