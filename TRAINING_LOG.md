@@ -3321,6 +3321,13 @@ track 被分配新 ID（重关联）
 - **修复**：`remove_stale` 循环内加 `self._last_positions.pop(tid, None)`（commit `b33917d`）
 - **状态**：已修复
 
+#### Problem 39: camera_tampering 单帧误报（defocus 为主）
+
+- **发现**：用户报告 defocus 频繁误触发
+- **详情**：R26 设计时已预判的"已知局限 #1" —— scene-level 检测无平滑，单帧 Laplacian 方差波动（运动模糊、人经过近处、自动对焦调节）即触发 `focus < ref * 0.5` → 短路整条推理管线
+- **修复**：`CameraTamperingDetector` 加 `confirm_frames=3` 连续帧确认。单帧检出只递增计数器，连续 3 帧（~120ms@25fps）都触发才算真 tamper；任一帧清零则重置（commit `ae80f7f`）
+- **状态**：已修复
+
 ---
 
 ## 11. 辅助组件
