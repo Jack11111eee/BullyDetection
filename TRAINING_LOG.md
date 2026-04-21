@@ -294,6 +294,8 @@ P(true_label) 呈**双峰分布**，threshold=0.3 正好卡在谷底。
 
 ![cleaning_impact](mil_cleaning/cleaning_impact.png)
 
+![kde_all_classes](mil_cleaning/kde_all_classes.png)
+
 ![noise_by_class](mil_cleaning/noise_by_class.png)
 
 ![confusion_scatter](mil_cleaning/confusion_scatter.png)
