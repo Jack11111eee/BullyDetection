@@ -964,8 +964,9 @@ class InferencePipeline:
             # 记录事件（用耦合后的标签）
             for track_id in inferred_tids:
                 judgment = self.track_labels[track_id]
+                role_str = f', role={judgment.role}' if judgment.role else ''
                 logger.debug(f'[F{frame_idx}] T{track_id} FINAL → {judgment.label} '
-                             f'(conf={judgment.confidence:.3f}, src={judgment.source}, smooth={judgment.smoothed})')
+                             f'(conf={judgment.confidence:.3f}, src={judgment.source}, smooth={judgment.smoothed}{role_str})')
                 if judgment.label != 'normal':
                     self.event_log.append({
                         'frame': frame_idx,
@@ -979,7 +980,10 @@ class InferencePipeline:
                     if track_id in self.track_labels:
                         info = self.track_labels[track_id]
                         color = LABEL_COLORS.get(info.label, (200, 200, 200))
-                        draw_label(frame, bbox, info.label, info.confidence, color)
+                        disp_label = info.label
+                        if info.label == 'bullying' and info.role:
+                            disp_label = f'bullying({"V" if info.role == "victim" else "P"})'
+                        draw_label(frame, bbox, disp_label, info.confidence, color)
                     else:
                         draw_label(frame, bbox, 'normal', 1.0, LABEL_COLORS['normal'])
 
@@ -1022,11 +1026,13 @@ class InferencePipeline:
                 label = info.label
                 conf = float(info.confidence)
                 source = info.source
+            role = info.role if info else None
             tracks.append({
                 'track_id': int(tid),
                 'label': label,
                 'confidence': conf,
                 'source': source,
+                'role': role,
                 'bbox_xyxy': [float(x) for x in bbox],
             })
         payload = {

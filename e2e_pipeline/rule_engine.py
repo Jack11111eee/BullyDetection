@@ -55,6 +55,7 @@ class BehaviorResult:
     smoothed: bool       # 是否经过时序平滑
     track_id: int = -1
     timestamp: float = 0.0
+    role: str = None     # R35: 'perpetrator' / 'victim' / None（仅 bullying 有效）
 
     def to_dict(self):
         return asdict(self)
@@ -507,11 +508,13 @@ def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, i
     if is_asymmetric:
         conf = max(1.0 - height_ratio, head_hip_normalized * 5)
         conf = min(conf, 1.0)
+        # R35: 矮的一方 = victim（蜷缩/倒地），高的一方 = perpetrator（站立施暴）
+        role = 'victim' if my_height <= other_height else 'perpetrator'
         logger.debug(f'  [RULE] bullying不对称检测: height_ratio={height_ratio:.2f}, '
-                     f'head_hip_norm={head_hip_normalized:.3f} → bullying')
-        return True, conf
+                     f'head_hip_norm={head_hip_normalized:.3f} → bullying({role})')
+        return True, conf, role
 
-    return False, 0.0
+    return False, 0.0, None
 
 
 def check_self_harm(head_vel_hist, hip_vel_hist,
@@ -638,6 +641,7 @@ class RuleEngine:
         self._last_pose_probs = {}  # R18: {track_id: 最近一次 PoseC3D 输出} 供 demote_unsupported_attacks (E) 用
         self._scene_count_history = []  # R12 P14: 最近 N 次推理的 scene_person_count（场景级）
         self._scene_count_window = 5    # vandalism 持续性窗口
+        self._pending_bully_role = None  # R35: _raw_judge → judge 传递 bullying 角色
 
     def reset(self):
         """R17 修 B：跨 task 状态清空。InferencePipeline.reset() 中调用。"""
@@ -685,6 +689,10 @@ class RuleEngine:
             pose_normal_prob=float(pose_probs[0]),
         )
 
+        # R35: 读取 _raw_judge 设置的 bullying 角色
+        role = self._pending_bully_role if smoothed_label == 'bullying' else None
+        self._pending_bully_role = None
+
         return BehaviorResult(
             label=smoothed_label,
             confidence=raw_conf,
@@ -692,6 +700,7 @@ class RuleEngine:
             smoothed=(smoothed_label != raw_label),
             track_id=track_id,
             timestamp=time.time(),
+            role=role,
         )
 
     def _raw_judge(self, track_id, pose_probs, person_kps, person_scores,
@@ -848,6 +857,7 @@ class RuleEngine:
                         # 双向传播（修复 C）：向邻居 raw history 注入一次 bullying，
                         # 帮助攻击者靠滞回维持攻击状态（不覆盖 smoothed，只加弱证据）
                         self._inject_raw_history(other_tid, 'bullying')
+                        self._pending_bully_role = 'victim'
                         return 'bullying', fallen_yolo_conf, 'rule_yolo_bullying'
             # PoseC3D 已检出 fighting/bullying 弱信号（>=0.3）时，跳过 YOLO falling，
             # 让 step 6 走攻击概率主导逻辑（proximity + asymmetry）。
@@ -970,7 +980,7 @@ class RuleEngine:
 
             if proximity_ok:
                 # 6b. 不对称检测：一方倒地/蜷缩 → bullying
-                is_bully, bully_conf = check_bullying_asymmetry(
+                is_bully, bully_conf, bully_role = check_bullying_asymmetry(
                     person_kps, person_scores, all_person_kps_scores, img_shape
                 )
                 if is_bully:
@@ -981,6 +991,7 @@ class RuleEngine:
                     self._inject_to_overlapping_neighbor(
                         track_id, 'bullying', track_bboxes_dict
                     )
+                    self._pending_bully_role = bully_role
                     return 'bullying', attack_prob * 0.9, 'rule_bullying'
 
                 # 6c. 对称攻击 → 按概率选 fighting 或 bullying
@@ -995,6 +1006,18 @@ class RuleEngine:
                     self._inject_to_overlapping_neighbor(
                         track_id, 'bullying', track_bboxes_dict
                     )
+                    # R35: step 6c 用高度比较决定角色
+                    my_h = _person_height(person_kps, person_scores)
+                    best_other_h = None
+                    for o_kps, o_sc in all_person_kps_scores:
+                        if np.array_equal(o_kps, person_kps):
+                            continue
+                        oh = _person_height(o_kps, o_sc)
+                        if oh is not None:
+                            if best_other_h is None or oh > best_other_h:
+                                best_other_h = oh
+                    if my_h is not None and best_other_h is not None:
+                        self._pending_bully_role = 'victim' if my_h <= best_other_h else 'perpetrator'
                     return 'bullying', bullying_prob, 'posec3d'
                 else:
                     logger.debug(f'  [RAW] T{track_id} → fighting (攻击概率: '
@@ -1438,6 +1461,12 @@ class RuleEngine:
             j.label = new_label
             j.source = f'pair_couple({best_atk_tid})'
             j.smoothed = True
+            # R35: couple 升级到 bullying 时根据升级前 label 决定角色
+            if new_label == 'bullying':
+                if old_label == 'falling':
+                    j.role = 'victim'
+                else:
+                    j.role = 'perpetrator'
             self._last_smoothed[tid] = new_label
             logger.info(f'  [COUPLE] T{tid} {old_label} → {new_label} '
                         f'(T{best_atk_tid} {best_atk_label}, overlap={best_overlap:.2f})')
@@ -1555,6 +1584,7 @@ class RuleEngine:
         for tid, (old_label, reason) in demote.items():
             j = judgments[tid]
             j.label = 'normal'
+            j.role = None
             j.source = f'demote_{reason.split("(")[0]}'
             j.smoothed = True
             self._last_smoothed[tid] = 'normal'
