@@ -3385,7 +3385,8 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
-0043565 fix(e2e): R31 P50 收窄白名单 — 删 rule_bullying                          (R31 hotfix)
+839d829 revert(e2e): R31 P50 恢复 rule_bullying 白名单 (删除后效果更差)           (R31 revert)
+0043565 fix(e2e): R31 P50 收窄白名单 — 删 rule_bullying                          (R31 hotfix, reverted)
 7c88c49 feat(e2e): R35 bullying 角色区分 perpetrator/victim                      (R35)
 8796036 fix(e2e): R34 P28 高conf豁免加 normal<0.9 门槛                           (R34)
 5342107 fix(e2e): R33 P7 兜底坐姿 veto 去掉 normal>=0.25 门槛                   (R33)
