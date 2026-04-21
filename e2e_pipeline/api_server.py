@@ -21,6 +21,7 @@ api_server.py — 校园安防模型 REST + SSE 服务
 
 import argparse
 import asyncio
+import json
 import logging
 import os
 import queue
@@ -227,7 +228,8 @@ class AnalyzeTask:
 
     def push_sse(self, event_name, data):
         """线程安全地入队一条 SSE 事件"""
-        self.event_queue.put({'event': event_name, 'data': data})
+        serialized = json.dumps(data, ensure_ascii=False) if isinstance(data, (dict, list)) else data
+        self.event_queue.put({'event': event_name, 'data': serialized})
 
     def mark_finished(self, status, error_msg=None):
         self.status = status
