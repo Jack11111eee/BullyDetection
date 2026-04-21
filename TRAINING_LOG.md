@@ -2604,6 +2604,64 @@ def check_self_harm(...):
 
 ---
 
+### E2E Fix Round 33 — P7 兜底坐姿 veto 去掉 normal>=0.25 门槛（pair inference 污染坐姿误判 falling）（commit `5342107`）
+
+**背景**：F452 T3 坐在椅子上，PoseC3D `fighting=0.997 normal=0.001`（pair=T7 污染），YOLO laying conf=0.525 → P7 兜底路径返回 falling：
+
+```
+[F452] T3 PoseC3D: argmax=fighting(0.997) | normal=0.001
+  [RAW] T3 YOLO躺地否决跳过 (fighting=0.997强主导但proximity失败)
+  [RAW] T3 暂存YOLO falling给step 6后兜底 (conf=0.525)
+  [RAW] T3 攻击信号但proximity失败 → 落到argmax路径
+  [RULE] 骨骼纵横比检测: h/w=1.38 > 1.1 → 非倒地(坐姿/站姿)
+  [RAW] T3 → falling (step 6未判攻击, YOLO falling兜底, conf=0.525)
+  [VOTE] ENTRY 2>=2 → falling ✗
+```
+
+**根因**：P20 坐姿 veto 三重门槛中 `normal_prob >= 0.25` 过不了（normal=0.001）。`_is_sitting_posture` 正确识别了坐姿（h/w=1.38），但 PoseC3D 概率被 pair inference 污染 → 交叉验证门槛反向失效。
+
+**结构性分析**：P7 兜底路径的**进入条件**要求 PoseC3D 有攻击信号（fighting/bullying ≥ 0.3）→ softmax 下 normal 必然被压低 → `normal >= 0.25` 在 P7 上**结构性偏向不触发**。而 YOLO falling 的核心场景（一动不动躺地，PoseC3D 静态盲区 Problem 11）→ PoseC3D 输出 normal ≈ 0.9+ → 无攻击信号 → **走 step 2 主路径不走 P7**。P7 路径上永远不会出现"真正需要 YOLO 补偿 PoseC3D 盲区"的场景。
+
+#### P53 — P20 去掉 `normal_prob >= 0.25`
+
+**文件**：`e2e_pipeline/rule_engine.py` P7 兜底块
+
+```python
+# R16 P20 原条件
+elif (valid_kp_count >= 8 and
+        _is_sitting_posture(...) and
+        normal_prob_here >= 0.25):
+
+# R33 P53 新条件
+elif (valid_kp_count >= 8 and
+        _is_sitting_posture(...)):
+```
+
+step 2 主路径（P18）的 `normal >= 0.25` 门槛**保留不动** — 那条路径上 PoseC3D 没有攻击信号约束，normal 可以正常反映模型判断。
+
+#### R33 配置快照
+
+| 项 | R32 | R33 |
+|---|---|---|
+| P20 (P7 兜底) 坐姿 veto | `valid_kp>=8 AND sitting AND normal>=0.25` | **`valid_kp>=8 AND sitting`**（去掉 PoseC3D 交叉验证） |
+| P18 (step 2 主路径) 坐姿 veto | `valid_kp>=8 AND sitting AND normal>=0.25` | 不变 |
+
+#### 行为矩阵
+
+| 场景 | 走哪条路 | _is_sitting_posture | R32 | R33 |
+|---|---|---|---|---|
+| **F452 T3 坐着 + pair 污染** | P7 | True (h/w=1.38) | falling ✗ | **veto → normal ✓** |
+| 一动不动躺地（YOLO 兜底核心场景） | step 2 主路径 | — | falling ✓ | **不受影响** |
+| 真躺地 + PoseC3D 攻击信号（受害者） | P7 | False (横展) | falling ✓ | falling ✓ |
+| 头朝相机躺 + PoseC3D 攻击信号 | P7 | P27 翻转 False | falling ✓ | falling ✓ |
+| 头朝相机躺 + P27 失败 + conf≥0.6 | P7 | — | P28 豁免 ✓ | P28 豁免 ✓ |
+
+**风险/回退**：
+- 风险：头朝远处躺地 + P27 失败（kp 不可信）+ conf < 0.6 + PoseC3D 攻击信号 → `_is_sitting_posture` 返回 True → 被 veto 漏检。极窄 edge case（5 个独立低概率条件同时满足），且当前代码在此 case 下 normal=低 也会 veto 失败（falling 保留），行为一致
+- 回退：`elif` 条件加回 `and normal_prob_here >= 0.25`
+
+---
+
 ## 9. E2E 规则引擎当前完整逻辑
 
 ```
@@ -3193,6 +3251,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+5342107 fix(e2e): R33 P7 兜底坐姿 veto 去掉 normal>=0.25 门槛                   (R33)
 16d7a99 fix(e2e): R32 暂时禁用 self_harm 判定逻辑 (误报过多)                     (R32)
 d84e572 fix(e2e): R31 P49+P50 demote 放宽 partner + pair-based source 白名单 (R31)
 e8b1f77 fix(e2e): R30 P48 self_harm raw normal 显著主导 veto (P42 灰度带扩展)  (R30)
