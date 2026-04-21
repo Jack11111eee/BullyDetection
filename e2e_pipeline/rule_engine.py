@@ -447,16 +447,16 @@ def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, i
     - fighting：双方都有大幅度动作（对称）
     - bullying：一方攻击，另一方被动/蜷缩（不对称）
 
-    Returns: (is_bullying, confidence)
+    Returns: (is_bullying, confidence, role)
     """
     if len(all_person_kps_scores) < 2:
-        return False, 0.0
+        return False, 0.0, None
 
     # 找当前人的高度和头-髋比
     my_height = _person_height(person_kps, person_scores)
     my_head_hip = _head_above_hip_ratio(person_kps, person_scores)
     if my_height is None or my_head_hip is None:
-        return False, 0.0
+        return False, 0.0, None
 
     # 找最近邻的高度
     my_center = None
@@ -464,7 +464,7 @@ def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, i
     if valid_kps.sum() > 0:
         my_center = person_kps[valid_kps].mean(axis=0)
     else:
-        return False, 0.0
+        return False, 0.0, None
 
     best_dist = float('inf')
     other_height = None
@@ -483,13 +483,13 @@ def check_bullying_asymmetry(person_kps, person_scores, all_person_kps_scores, i
             other_head_hip = _head_above_hip_ratio(other_kps, other_scores)
 
     if other_height is None or other_head_hip is None:
-        return False, 0.0
+        return False, 0.0, None
 
     # 近距离约束：两人必须在 2x 较高者身高范围内才算互动
     max_interact_dist = max(my_height, other_height) * 2.0
     if best_dist > max_interact_dist:
         logger.debug(f'  [RULE] bullying距离过远: dist={best_dist:.0f} > {max_interact_dist:.0f} → 不是bullying')
-        return False, 0.0
+        return False, 0.0, None
 
     # 不对称性判断
     # 1. 高度比：一方明显矮于另一方（蜷缩/倒地）
