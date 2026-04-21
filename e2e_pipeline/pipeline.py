@@ -836,6 +836,7 @@ class InferencePipeline:
             return  # 短路：不跑 YOLO/PoseC3D/规则/coupling/清理
 
         # Step 1: YOLO Pose + ByteTrack
+        torch.cuda.synchronize()
         _t1 = time.time()
         results = self.yolo_pose.track(
             source=frame,
@@ -845,6 +846,7 @@ class InferencePipeline:
             iou=0.5,
             verbose=False,
         )
+        torch.cuda.synchronize()
         _pf['yolo_pose'] = (time.time() - _t1) * 1000
 
         result = results[0]
@@ -946,12 +948,15 @@ class InferencePipeline:
                     logger.debug(f'[F{frame_idx}] T{track_id} INFER: buf_total={buf_len}, '
                                  f'sampled={n_valid_frames}/64, pair=T{nearest_tid}(P1:{n_valid_p2}/64)')
 
+                    torch.cuda.synchronize()
                     _t_pc = time.time()
                     pose_probs = self.posec3d.infer(keypoint, keypoint_score, img_shape)
+                    torch.cuda.synchronize()
                     _pf['posec3d'] = _pf.get('posec3d', 0) + (time.time() - _t_pc) * 1000
 
                     # Step 3: 小物体检测（按需 + 帧级缓存）
                     if small_objs_cache is None:
+                        torch.cuda.synchronize()
                         _t_so = time.time()
                         if self.multi_detector is not None:
                             small_objs_cache = self.multi_detector.detect(
@@ -964,6 +969,7 @@ class InferencePipeline:
                             small_objs_cache = self.small_obj_detector.detect(frame)
                         else:
                             small_objs_cache = []
+                        torch.cuda.synchronize()
                         _pf['small_obj'] = (time.time() - _t_so) * 1000
                     small_objs = small_objs_cache
 
