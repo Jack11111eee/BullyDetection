@@ -2479,17 +2479,16 @@ partner_candidate_tids = {
 在 partner/self_active 检查之前加白名单短路：
 
 ```python
-PAIR_BASED_SOURCES_PREFIX = ('rule_yolo_bullying', 'rule_bullying', 'pair_couple')
+PAIR_BASED_SOURCES_PREFIX = ('rule_yolo_bullying', 'pair_couple')
 if any(j.source.startswith(p) for p in PAIR_BASED_SOURCES_PREFIX):
     continue  # 跳过 demote，直接保留
 ```
 
-**语义**：三类 source 判定时本身已经使用了多人证据：
+**语义**：两类 source 判定时本身已经使用了多人证据：
 - `rule_yolo_bullying`: 躺地 + 邻居 smoothed=bullying / 近 3 帧含 bullying
-- `rule_bullying`: proximity_ok + asymmetry + `_inject_to_overlapping_neighbor`
 - `pair_couple(*)`: bbox overlap ≥ 10% 的 pair 直接升级
 
-再让 demote 审 partner 等于双重惩罚，源头和下游冲突时下游胜 → 吞掉合法判定。
+~~`rule_bullying`~~ **R31 后续修正（commit `0043565`）移除**：asymmetry 判据虽然用了两人高度比较，但不保证对方**当前也在攻击态** — 一人躺地 + 旁边站路人也满足 asymmetry 条件。P49 扩展的 partner 候选池（近 3 帧 raw 含攻击）已足够覆盖 F490 间歇期场景。
 
 保留 demote 对这些 source 的唯一场景是"R18 P23 描述的 P-1/P-2/P-3/P-4 污染路径"，但这些路径产生的判定 source 是 `posec3d`（P-1 pair inference）、各种攻击路径被 inject 污染后的 raw 标签 —— 不在白名单内。
 
@@ -3386,6 +3385,7 @@ track 被分配新 ID（重关联）
 ## 附录：Git 提交链（E2E 关键节点）
 
 ```
+0043565 fix(e2e): R31 P50 收窄白名单 — 删 rule_bullying                          (R31 hotfix)
 7c88c49 feat(e2e): R35 bullying 角色区分 perpetrator/victim                      (R35)
 8796036 fix(e2e): R34 P28 高conf豁免加 normal<0.9 门槛                           (R34)
 5342107 fix(e2e): R33 P7 兜底坐姿 veto 去掉 normal>=0.25 门槛                   (R33)
