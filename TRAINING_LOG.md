@@ -284,6 +284,8 @@ Fold i 模型（训练在 kfold_i train 上）→ 打分 kfold_i 的 val
 
 P(true_label) 呈**双峰分布**，threshold=0.3 正好卡在谷底。
 
+![threshold_bimodal](mil_cleaning/threshold_bimodal.png)
+
 ### 清洗策略
 
 使用 `--threshold 0.3 --classes fighting normal`：
