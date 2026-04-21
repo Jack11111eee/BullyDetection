@@ -1025,8 +1025,12 @@ class RuleEngine:
                     f'→ 高置信豁免坐姿否决'
                 )
             elif (valid_kp_count >= 8 and
-                    _is_sitting_posture(person_kps, person_scores, img_shape) and
-                    normal_prob_here >= 0.25):
+                    _is_sitting_posture(person_kps, person_scores, img_shape)):
+                # R33: P7 路径去掉 normal_prob >= 0.25 门槛。
+                # P7 进入条件要求 PoseC3D 有攻击信号(≥0.3) → normal 被压低 →
+                # normal >= 0.25 在 P7 上结构性失效。
+                # 真正一动不动躺地(YOLO 兜底核心场景)走 step 2 主路径,不走 P7。
+                # step 2 主路径(P18) normal >= 0.25 门槛保留不动。
                 logger.debug(
                     f'  [RAW] T{track_id} P7兜底YOLO falling 被坐姿否决 '
                     f'(conf={conf:.3f}, valid_kp={valid_kp_count}, '
