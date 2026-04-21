@@ -3307,6 +3307,13 @@ track 被分配新 ID（重关联）
 - **教训 2**：解 F1679/F1695 应该针对"边缘 bbox YOLO 误检"特征而非"PoseC3D 强 normal"全局判据。候选方向：YOLO bbox 触边检测、骨骼总分均值低 → 降 YOLO 可信度、跨帧连续性检查
 - **未处理**：F1679/F1695 仍是开问题，下一 Round 重新设计
 
+#### Problem 37: check_bullying_asymmetry 早退路径返回 2 值，调用方解包 3 值崩溃
+
+- **发现**：E2E 推理运行时 ValueError
+- **详情**：`check_bullying_asymmetry` docstring 写 `(is_bullying, confidence)` 但 R35 添加 role 后最终返回改为 3 值 `(bool, float, role)`，5 条早退路径漏改仍返回 `(False, 0.0)`，`_raw_judge` 解包 3 值直接 crash
+- **修复**：所有早退路径补齐第三返回值 `None`，docstring 同步（commit `6e2115f`）
+- **状态**：已修复
+
 ---
 
 ## 11. 辅助组件
