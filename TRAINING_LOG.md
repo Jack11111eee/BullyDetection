@@ -292,6 +292,8 @@ Fold i 模型（训练在 kfold_i train 上）→ 打分 kfold_i 的 val
 
 P(true_label) 呈**双峰分布**，threshold=0.3 正好卡在谷底。
 
+![cleaning_impact](mil_cleaning/cleaning_impact.png)
+
 ![noise_by_class](mil_cleaning/noise_by_class.png)
 
 ![confusion_scatter](mil_cleaning/confusion_scatter.png)
