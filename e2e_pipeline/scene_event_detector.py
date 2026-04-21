@@ -20,12 +20,11 @@ class CameraTamperingDetector:
     - 报警时不刷新（防止遮挡物被误采为基准）。
     """
 
+    DOWNSCALE_W = 480
+    DOWNSCALE_H = 270
+
     def __init__(self, edr_threshold=0.83, drop_ratio=0.5, refresh_interval=75,
                  confirm_frames=3):
-        # edr_threshold: 基准边缘被破坏的比例阈值（83% 算突发遮挡）
-        # drop_ratio: 亮度/清晰度骤降阈值（降到基准 50% 以下算异常）
-        # refresh_interval: 静默刷新基准的帧间隔（默认 75 ≈ 25fps × 3s）
-        # confirm_frames: 连续触发帧数才算真 tamper（防单帧闪断误报）
         self.edr_threshold = edr_threshold
         self.drop_ratio = drop_ratio
         self.refresh_interval = max(1, int(refresh_interval))
@@ -39,9 +38,11 @@ class CameraTamperingDetector:
         self.frame_count = 0
         self._consecutive_tamper = 0
 
-    @staticmethod
-    def _extract(frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    @classmethod
+    def _extract(cls, frame):
+        small = cv2.resize(frame, (cls.DOWNSCALE_W, cls.DOWNSCALE_H),
+                           interpolation=cv2.INTER_AREA)
+        gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
         brightness = float(np.mean(gray))
         focus = float(cv2.Laplacian(gray, cv2.CV_64F).var())
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
