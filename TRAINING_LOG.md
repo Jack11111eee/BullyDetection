@@ -3314,6 +3314,13 @@ track 被分配新 ID（重关联）
 - **修复**：所有早退路径补齐第三返回值 `None`，docstring 同步（commit `6e2115f`）
 - **状态**：已修复
 
+#### Problem 38: SkeletonBuffer.remove_stale 漏清 _last_positions（内存泄漏）
+
+- **发现**：代码审查
+- **详情**：`remove_stale()` 清理过期 track 时 pop 了 7 个 dict（`tracks`/`_smooth_kps`/`_smooth_scores`/`_vel_hist`/`_prev_head`/`_prev_hip`/`_last_bbox_h`），唯独漏了 `_last_positions`。长视频运行中 track 反复创建销毁，`_last_positions` 只增不减
+- **修复**：`remove_stale` 循环内加 `self._last_positions.pop(tid, None)`（commit `b33917d`）
+- **状态**：已修复
+
 ---
 
 ## 11. 辅助组件
