@@ -1505,7 +1505,7 @@ class RuleEngine:
             return judgments
 
         ATTACK_LABELS = ('fighting', 'bullying')
-        PAIR_BASED_SOURCES_PREFIX = ('rule_yolo_bullying', 'pair_couple')
+        PAIR_BASED_SOURCES_PREFIX = ('rule_yolo_bullying', 'rule_bullying', 'pair_couple')
         attack_tids = [tid for tid, j in judgments.items() if j.label in ATTACK_LABELS]
         if not attack_tids:
             return judgments
