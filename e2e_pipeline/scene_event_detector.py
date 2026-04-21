@@ -20,13 +20,16 @@ class CameraTamperingDetector:
     - 报警时不刷新（防止遮挡物被误采为基准）。
     """
 
-    def __init__(self, edr_threshold=0.83, drop_ratio=0.5, refresh_interval=75):
+    def __init__(self, edr_threshold=0.83, drop_ratio=0.5, refresh_interval=75,
+                 confirm_frames=3):
         # edr_threshold: 基准边缘被破坏的比例阈值（83% 算突发遮挡）
         # drop_ratio: 亮度/清晰度骤降阈值（降到基准 50% 以下算异常）
         # refresh_interval: 静默刷新基准的帧间隔（默认 75 ≈ 25fps × 3s）
+        # confirm_frames: 连续触发帧数才算真 tamper（防单帧闪断误报）
         self.edr_threshold = edr_threshold
         self.drop_ratio = drop_ratio
         self.refresh_interval = max(1, int(refresh_interval))
+        self.confirm_frames = max(1, int(confirm_frames))
         self.reset()
 
     def reset(self):
@@ -34,6 +37,7 @@ class CameraTamperingDetector:
         self.ref_brightness = None
         self.ref_focus = None
         self.frame_count = 0
+        self._consecutive_tamper = 0
 
     @staticmethod
     def _extract(frame):
@@ -80,13 +84,17 @@ class CameraTamperingDetector:
             if edr > self.edr_threshold:
                 alarms.append(f'occlusion(edr={edr:.2f})')
 
-        # 无报警时周期性刷新基准（适应光照）
-        if not alarms and self.frame_count % self.refresh_interval == 0:
-            self.ref_edges = edges
-            self.ref_brightness = brightness
-            self.ref_focus = focus
+        if alarms:
+            self._consecutive_tamper += 1
+        else:
+            self._consecutive_tamper = 0
+            if self.frame_count % self.refresh_interval == 0:
+                self.ref_edges = edges
+                self.ref_brightness = brightness
+                self.ref_focus = focus
 
-        return bool(alarms), alarms
+        confirmed = self._consecutive_tamper >= self.confirm_frames
+        return confirmed, alarms if confirmed else []
 
 
 def render_tamper_overlay(frame, alarms):
