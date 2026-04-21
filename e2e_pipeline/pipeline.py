@@ -799,7 +799,9 @@ class InferencePipeline:
         # R26 P37: Step 0 — 镜头遮挡/黑屏/失焦 scene-level 检测（最高优先级）
         # 镜头被干扰时 YOLO/PoseC3D/ByteTrack 全部不可靠 → 短路下游推理
         # track 状态由 SkeletonBuffer.grace_frames=90 自然保留；短暂遮挡（<3s）恢复后延续
+        _t_tamper = time.time()
         is_tamper, tamper_alarms = self.tamper_detector.update(frame)
+        _pf['tamper'] = (time.time() - _t_tamper) * 1000
         if is_tamper:
             render_tamper_overlay(frame, tamper_alarms)
             logger.info(f'[F{frame_idx}] SCENE camera_tampering: {tamper_alarms}')
@@ -856,6 +858,7 @@ class InferencePipeline:
         track_kps = {}        # {tid: (kps_xy, kps_sc)}
         track_bboxes = {}     # {tid: [x1, y1, x2, y2]}
 
+        _t_extract = time.time()
         if result.boxes is not None and result.keypoints is not None:
             # 第一遍: 收集所有 track 位置
             for i, box in enumerate(result.boxes):
@@ -906,6 +909,8 @@ class InferencePipeline:
             # smoking 模型的输入彻底掐断。per-track gating 在 YOLO 帧级调用下无法实现
             # (YOLO 一次检测整张画面),所以干脆全部跑。
             # 保留接口(need_falling/smoking/phone)用于未来可能的扩展,当前固定 True。
+            _pf['extract'] = (time.time() - _t_extract) * 1000
+
             gate_need_falling = True
             gate_need_smoking = True
             gate_need_phone = True
@@ -1001,15 +1006,13 @@ class InferencePipeline:
                         logger.debug(f'[F{frame_idx}] T{track_id} SKIP: buffer不足 {buf_len}/{min_frames}')
 
             # 第二遍B: Pair coupling —— bbox 重叠的 track 必须共享攻击态
-            # 对所有当前活跃 track（不只本帧推理的）跑耦合，
-            # 因为非推理帧的 track_labels 可能保留攻击态，需要传播给新出现的 normal 邻居
+            _t_couple = time.time()
             active_judgments = {tid: self.track_labels[tid]
                                 for tid in current_track_ids
                                 if tid in self.track_labels}
             self.rule_engine.couple_overlapping_pairs(active_judgments, track_bboxes)
-            # R18 P23 (Solution E): 攻击态需 partner + self_active 双重支持
-            # 覆盖 pair-inference 污染 / inject / couple / HOLD 四条污染路径
             self.rule_engine.demote_unsupported_attacks(active_judgments, track_bboxes)
+            _pf['couple'] = (time.time() - _t_couple) * 1000
 
             # 记录事件（用耦合后的标签）
             for track_id in inferred_tids:
@@ -1024,6 +1027,7 @@ class InferencePipeline:
                     })
 
             # 第二遍C: 可视化标签（用耦合后的标签，buffer 不足的 track 不画）
+            _t_draw = time.time()
             for track_id in track_kps.keys():
                 buf = self.skeleton_buf.tracks.get(track_id)
                 buf_len = len(buf['kps']) if buf else 0
@@ -1041,33 +1045,23 @@ class InferencePipeline:
                         draw_label(frame, bbox, disp_label, info.confidence, color)
                     else:
                         draw_label(frame, bbox, 'normal', 1.0, LABEL_COLORS['normal'])
+            _pf['draw'] = (time.time() - _t_draw) * 1000
+        else:
+            _pf.setdefault('extract', 0)
+            _pf.setdefault('couple', 0)
+            _pf.setdefault('draw', 0)
 
         # API 联调回调：推送本帧所有活跃 track 的标签
+        _t_cb = time.time()
         if self.on_frame_callback is not None:
             try:
                 self._emit_frame_callback(frame_idx, img_shape, current_track_ids, track_bboxes)
             except Exception as cb_err:
                 logger.debug(f'[F{frame_idx}] on_frame_callback 失败: {cb_err}')
-
-        # [PROFILE] 汇总本帧
-        _pf['total'] = (time.time() - _t0) * 1000
-        _pf.setdefault('posec3d', 0)
-        _pf.setdefault('small_obj', 0)
-        _pf.setdefault('rule', 0)
-        _pf['other'] = _pf['total'] - _pf.get('yolo_pose', 0) - _pf['posec3d'] - _pf['small_obj'] - _pf['rule']
-        self._profile_accum.append(_pf)
-        if frame_idx % 50 == 0 or _pf['total'] > 200:
-            logger.info(
-                f'[PROFILE] F{frame_idx} '
-                f'yolo_pose={_pf.get("yolo_pose",0):.1f}ms '
-                f'posec3d={_pf["posec3d"]:.1f}ms '
-                f'small_obj={_pf["small_obj"]:.1f}ms '
-                f'rule={_pf["rule"]:.1f}ms '
-                f'other={_pf["other"]:.1f}ms '
-                f'total={_pf["total"]:.1f}ms'
-            )
+        _pf['callback'] = (time.time() - _t_cb) * 1000
 
         # 清理消失的 track（带遮挡宽限期）
+        _t_clean = time.time()
         self.skeleton_buf.remove_stale(current_track_ids)
         self.rule_engine.clear_stale_tracks(current_track_ids)
         grace = self.skeleton_buf.grace_frames
@@ -1081,6 +1075,34 @@ class InferencePipeline:
             self.track_labels.pop(tid, None)
             self._known_track_ids.discard(tid)
             del self._label_missing_count[tid]
+        _pf['cleanup'] = (time.time() - _t_clean) * 1000
+
+        # [PROFILE] 汇总本帧
+        _pf['total'] = (time.time() - _t0) * 1000
+        _pf.setdefault('posec3d', 0)
+        _pf.setdefault('small_obj', 0)
+        _pf.setdefault('rule', 0)
+        _known = sum(_pf.get(k, 0) for k in
+                     ['yolo_pose', 'posec3d', 'small_obj', 'rule',
+                      'tamper', 'extract', 'couple', 'draw', 'callback', 'cleanup'])
+        _pf['other'] = _pf['total'] - _known
+        self._profile_accum.append(_pf)
+        if frame_idx % 50 == 0 or _pf['total'] > 200:
+            logger.info(
+                f'[PROFILE] F{frame_idx} '
+                f'yolo={_pf.get("yolo_pose",0):.1f} '
+                f'pc3d={_pf["posec3d"]:.1f} '
+                f'sobj={_pf["small_obj"]:.1f} '
+                f'rule={_pf["rule"]:.1f} '
+                f'| tamper={_pf.get("tamper",0):.1f} '
+                f'extract={_pf.get("extract",0):.1f} '
+                f'draw={_pf.get("draw",0):.1f} '
+                f'couple={_pf.get("couple",0):.1f} '
+                f'cb={_pf["callback"]:.1f} '
+                f'clean={_pf["cleanup"]:.1f} '
+                f'other={_pf["other"]:.1f} '
+                f'| total={_pf["total"]:.1f}ms'
+            )
 
     def _emit_frame_callback(self, frame_idx, img_shape, current_track_ids, track_bboxes):
         """构造 API 回调 payload。API 层可按需转换为 WEB frame 事件格式。"""
