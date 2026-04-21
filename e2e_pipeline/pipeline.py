@@ -331,6 +331,7 @@ class SkeletonBuffer:
             self._prev_head.pop(tid, None)
             self._prev_hip.pop(tid, None)
             self._last_bbox_h.pop(tid, None)
+            self._last_positions.pop(tid, None)
             del self._missing_count[tid]
 
 
