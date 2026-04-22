@@ -3480,6 +3480,7 @@ add2edc fix: trust YOLO falling (remove posture checks)                      (R7
 1a93399 fix: loitering threshold 60s→300s + lower priority                   (R7)
 c9dec2b feat: track re-association on ByteTrack ID switch                    (R7)
 ```
+8f3dbc5 fix(ui): 全屏时保留框/标签/置信度，fullscreen 重定向到 video-frame 容器 (Web)
 286b1b3 fix(ui): 开始分析提示 7帧→10帧遗漏修复 (Web)
 fc7395a feat: 7帧实时推理改为10帧实时推理，全链路参数同步 (Web)
 d53bde9 fix(ui): 四宫格叠加所有标签（含正常）框+中文标签+置信度 (Web)
