@@ -3480,6 +3480,7 @@ add2edc fix: trust YOLO falling (remove posture checks)                      (R7
 1a93399 fix: loitering threshold 60s→300s + lower priority                   (R7)
 c9dec2b feat: track re-association on ByteTrack ID switch                    (R7)
 ```
+d86df8a feat(ui): 预加载/实时模式四宫格叠加异常行为框+中文标签+置信度 (Web)
 0e80034 feat(ui): 事件片段移到事件时间轴下方，自适应 16:9 比例 (Web)
 a254c45 fix(clip): Java2D 透明 PNG 叠加层+ffmpeg overlay 合成，绕开 drawtext 依赖 (Web)
 84e5c31 fix(clip): 绝对像素坐标+drawbox-only 降级，三级 fallback 保证识别框渲染 (Web)
