@@ -113,24 +113,26 @@ def adapt_pipeline_to_web_event(payload, task):
         label = t['label']
         bbox_xywh = scale_bbox_xyxy_to_640x360_xywh(t['bbox_xyxy'], img_w, img_h)
 
+        role = t.get('role')
+
         if label == 'normal':
-            # normal track 也推 target，方便前端画绿框（不进 alerts）
             targets.append({
                 'trackId': t['track_id'],
                 'bbox': bbox_xywh,
                 'behavior': 'normal',
                 'confidence': t['confidence'],
+                'role': None,
             })
             continue
 
         mapping = LABEL_MAP.get(label)
         if mapping is None:
-            # 未知标签降级为 normal
             targets.append({
                 'trackId': t['track_id'],
                 'bbox': bbox_xywh,
                 'behavior': 'normal',
                 'confidence': t['confidence'],
+                'role': None,
             })
             continue
         upper, lower, cn = mapping
@@ -141,6 +143,7 @@ def adapt_pipeline_to_web_event(payload, task):
             'bbox': bbox_xywh,
             'behavior': lower,
             'confidence': t['confidence'],
+            'role': role,
         })
         alerts.append({
             'type': upper,
