@@ -155,18 +155,15 @@ JAR 包内置了默认配置，可通过启动参数覆盖：
 | `--spring.datasource.password` | `12138` | MySQL 密码 |
 | `--spring.datasource.username` | `root` | MySQL 用户名 |
 | `--spring.datasource.url` | `jdbc:mysql://localhost:3306/campus_guard?...` | MySQL 连接地址 |
-| `--app.live.analyze-url` | `http://10.61.190.21:8000` | Python 推理服务地址 |
+| `--app.live.analyze-url` | `http://localhost:8000` | Python 推理服务地址 |
 
-**重要**：`analyze-url` 默认指向开发服务器 IP，部署时**必须**覆盖为实际地址：
+默认配置假定推理服务和后端在同一台机器，直接启动即可：
 
 ```bash
-# 如果推理服务和后端在同一台机器
-java -jar campus-guard-backend-1.0.0.jar \
-  --app.live.analyze-url=http://localhost:8000
+java -jar campus-guard-backend-1.0.0.jar
 
-# 如果 MySQL 密码不同
+# 如果 MySQL 密码不是 12138
 java -jar campus-guard-backend-1.0.0.jar \
-  --app.live.analyze-url=http://localhost:8000 \
   --spring.datasource.password=你的密码
 ```
 
@@ -204,20 +201,16 @@ sudo systemctl status mysql
 ```bash
 conda activate campus
 
-# GPU 推理
+# GPU 推理（yolo-pose / host / port 等均有正确默认值，可省略）
 python e2e_pipeline/api_server.py \
   --posec3d-config pyskl/configs/posec3d/finetune_campus_mil.py \
-  --posec3d-ckpt models/epoch_50.pth \
-  --yolo-pose models/yolo11m-pose.pt \
-  --host 0.0.0.0 --port 8000
+  --posec3d-ckpt models/epoch_50.pth
 
-# CPU 推理（无 GPU 时）
+# CPU 推理（无 GPU 时加 --device cpu）
 python e2e_pipeline/api_server.py \
   --posec3d-config pyskl/configs/posec3d/finetune_campus_mil.py \
   --posec3d-ckpt models/epoch_50.pth \
-  --yolo-pose models/yolo11m-pose.pt \
-  --device cpu \
-  --host 0.0.0.0 --port 8000
+  --device cpu
 ```
 
 启动成功后会看到：
@@ -233,14 +226,12 @@ Uvicorn running on http://0.0.0.0:8000
 新开一个终端：
 
 ```bash
-java -jar campus-guard-backend-1.0.0.jar \
-  --app.live.analyze-url=http://localhost:8000
+java -jar campus-guard-backend-1.0.0.jar
 ```
 
-如果 MySQL 密码不是 `12138`，加上：
+如果 MySQL 密码不是 `12138`：
 ```bash
 java -jar campus-guard-backend-1.0.0.jar \
-  --app.live.analyze-url=http://localhost:8000 \
   --spring.datasource.password=你的密码
 ```
 
