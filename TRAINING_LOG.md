@@ -3480,6 +3480,7 @@ add2edc fix: trust YOLO falling (remove posture checks)                      (R7
 1a93399 fix: loitering threshold 60s→300s + lower priority                   (R7)
 c9dec2b feat: track re-association on ByteTrack ID switch                    (R7)
 ```
+1399855 fix: 推理服务默认地址改为 localhost:8000，适配评委本机部署 (Web)
 3541338 feat: 前后端一体化打包，SPA fallback + build-all.sh (Web)
 cf00b84 feat: 事件记录删除/批量删除功能 (Web)
 abbf929 fix(ui): 全屏改用双击 video-frame 容器，controlslist=nofullscreen 禁原生按钮 (Web)
