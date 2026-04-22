@@ -20,7 +20,10 @@ campus-guard-demo/
 ├── models/                          # 模型权重
 │   ├── yolo11m-pose.pt              #   YOLO11m 姿态检测（40MB）
 │   ├── epoch_50.pth                 #   PoseC3D 行为识别 checkpoint（15MB）
-│   └── joint.pth                    #   PoseC3D 预训练 backbone（8MB）
+│   ├── joint.pth                    #   PoseC3D 预训练 backbone（8MB）
+│   ├── best-falling.pt              #   YOLO 躺地/摔倒检测（39MB）
+│   ├── best-smoke.pt                #   YOLO 吸烟��测（39MB）
+│   └── best-phone.pt                #   YOLO 手机使用检测（39MB）
 └── sample_videos/                   # 演示视频（自行放入）
 ```
 
@@ -175,13 +178,13 @@ java -jar campus-guard-backend-1.0.0.jar \
 |------|--------|------|
 | `--posec3d-config` | 无（必填） | PoseC3D 模型配置文件路径 |
 | `--posec3d-ckpt` | 无（必填） | PoseC3D 模型权重路径 |
-| `--yolo-pose` | `yolo11m-pose.pt` | YOLO 姿态模型路径 |
+| `--yolo-pose` | `models/yolo11m-pose.pt` | YOLO 姿态模型路径 |
 | `--device` | `cuda:0` | 推理设备，无 GPU 需改为 `cpu` |
 | `--host` | `0.0.0.0` | 绑定地址 |
 | `--port` | `8000` | 服务端口 |
-| `--falling-model` | 无（可选） | 躺地检测 YOLO 模型 |
-| `--smoking-model` | 无（可选） | 吸烟检测 YOLO 模型 |
-| `--phone-model` | 无（可选） | 手机检测 YOLO 模型 |
+| `--falling-model` | `models/best-falling.pt` | 躺地检测 YOLO 模型 |
+| `--smoking-model` | `models/best-smoke.pt` | 吸烟检测 YOLO 模型 |
+| `--phone-model` | `models/best-phone.pt` | 手机检测 YOLO 模型 |
 
 ---
 
@@ -265,9 +268,9 @@ java -jar campus-guard-backend-1.0.0.jar \
 | 霸凌 (bullying) | PoseC3D 骨架识别 |
 | 摔倒 (falling) | PoseC3D 骨架识别 |
 | 翻越 (climbing) | PoseC3D 骨架识别 |
-| 躺地 (laying) | 单类 YOLO 模型（可选） |
-| 吸烟 (smoking) | 单类 YOLO 模型（可选） |
-| 使用手机 (phone) | 单类 YOLO 模型（可选） |
+| 躺地 (laying) | 单类 YOLO 模型（best-falling.pt） |
+| 吸烟 (smoking) | 单类 YOLO 模型（best-smoke.pt） |
+| 使用手机 (phone) | 单类 YOLO 模型（best-phone.pt） |
 | 镜头遮挡 (camera_blocked) | Canny 边缘密度检测 |
 
 ---
@@ -309,16 +312,14 @@ lsof -i :8080
 2. 确认后端的 `analyze-url` 指向了正确的推理服务地址
 3. 查看推理服务终端的日志输出
 
-### Q: 可选的躺地/吸烟/手机检测不生效
+### Q: 躺地/吸烟/手机检测不生效
 
-这三项需要额外的单类 YOLO 模型，demo 默认未包含。如需启用：
+确认 `models/` 目录下存在 `best-falling.pt`、`best-smoke.pt`、`best-phone.pt` 三个文件。启动时默认自动加载，如需禁用某项可设为 `none`：
 ```bash
 python e2e_pipeline/api_server.py \
   --posec3d-config pyskl/configs/posec3d/finetune_campus_mil.py \
   --posec3d-ckpt models/epoch_50.pth \
-  --falling-model /path/to/falling_best.pt \
-  --smoking-model /path/to/smoking_best.pt \
-  --phone-model /path/to/phone_best.pt
+  --smoking-model none
 ```
 
 ---

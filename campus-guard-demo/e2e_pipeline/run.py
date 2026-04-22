@@ -74,13 +74,13 @@ def parse_args():
                         help='[Legacy] 统一 3 类 YOLO 模型（unified_3class）。若指定则覆盖 3 路单类模型。'
                              '设为 none 则显式禁用')
     parser.add_argument('--falling-model',
-                        default=None,
+                        default='models/best-falling.pt',
                         help='单类 YOLO 躺地检测模型（输出语义类 falling）。设为 none 禁用')
     parser.add_argument('--smoking-model',
-                        default=None,
+                        default='models/best-smoke.pt',
                         help='单类 YOLO 吸烟检测模型（输出语义类 smoking）。设为 none 禁用')
     parser.add_argument('--phone-model',
-                        default=None,
+                        default='models/best-phone.pt',
                         help='单类 YOLO 手机检测模型（输出语义类 phone）。设为 none 禁用')
     parser.add_argument('--device', default='cuda:0',
                         help='推理设备 (default: cuda:0)')
