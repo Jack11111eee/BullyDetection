@@ -3494,3 +3494,15 @@ f7e45b5 feat(clip): 事件片段改为 ffmpeg 裁剪前5秒后10秒短片，带 
 f2dd150 fix(api): 对齐 DUAL-MODE-API-PROTOCOL SSE 事件及 status 响应字段 (联调)
 88dae4b fix(api): push_sse 序列化 dict→JSON，修复 Spring Boot 解析失败导致 SSE 断流 (联调)
 0bbd273 feat(api): target 添加 role 字段，透传 bullying victim/perpetrator 细分 (联调)
+```
+```text
+# === 2026-04-22 Demo 打包 ===
+- feat: 创建 campus-guard-demo/ 打包目录，含推理服务 + pyskl + 模型权重 + 一体 JAR
+- fix: 消除全部 /home/hzcu/BullyDetection 硬编码路径（pipeline.py / api_server.py / run.py / pyskl configs）
+  - pipeline.py sys.path → 基于 __file__ 的相对路径
+  - api_server.py / run.py falling/smoking/phone 模型默认值 → None（可选模型）
+  - yolo-pose 默认值 → models/yolo11m-pose.pt
+  - finetune_campus_mil.py load_from/ann_file/work_dir → _PROJECT_ROOT 拼接
+  - 其余训练 config (fold0-4, v3-v5, finetune_campus) → ./ 相对路径
+  - evaluate_results.py PYSKL_ROOT → os.path.dirname(__file__)
+- docs: 编写 README.md 完整部署指南（环境安装 / 路径配置 / 启动步骤 / FAQ）
