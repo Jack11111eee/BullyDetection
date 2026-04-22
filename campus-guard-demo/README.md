@@ -324,7 +324,142 @@ python e2e_pipeline/api_server.py \
 
 ---
 
-## 八、端口一览
+## 八、测试接口
+
+### 8.1 推理服务 REST API（端口 8000）
+
+详细接口文档见 `e2e_pipeline/API_README.md`，核心端点：
+
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| `GET` | `/health` | 健康检查，确认模型已加载 |
+| `POST` | `/api/v1/analyze/start` | 上传视频 + metadata，启动分析任务 |
+| `GET` | `/api/v1/analyze/{taskId}/stream` | SSE 推送 frame / alert / done 事件 |
+| `POST` | `/api/v1/analyze/{taskId}/stop` | 主动停止任务 |
+| `GET` | `/api/v1/analyze/{taskId}/status` | 查询任务进度 |
+
+快速测试：
+
+```bash
+# 1. 健康检查
+curl http://localhost:8000/health
+
+# 2. 提交视频分析
+curl -F "file=@sample_videos/test.mp4" \
+     -F "sourceId=test-01" \
+     http://localhost:8000/api/v1/analyze/start
+# 返回: {"taskId":"xxx", "status":"started", ...}
+
+# 3. 订阅 SSE 结果流
+curl -N http://localhost:8000/api/v1/analyze/{taskId}/stream
+# 输出: event: connected → event: frame (持续) → event: done
+```
+
+### 8.2 Web 后端 REST API（端口 8080）
+
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| `POST` | `/api/sources` | 创建视频源 |
+| `POST` | `/api/sources/{id}/upload` | 上传视频文件 |
+| `GET` | `/api/monitor/stream?sourceIds=...` | SSE 实时监控流（前端四宫格） |
+| `POST` | `/api/monitor/start` | 启动分析（前端触发） |
+| `GET` | `/api/events` | 查询告警事件列表 |
+| `GET` | `/api/events/export?format=csv` | 导出告警记录 |
+| `GET` | `/actuator/health` | Spring Boot 健康检查 |
+
+---
+
+## 九、模型训练接口
+
+### 9.1 PoseC3D 行为识别模型训练
+
+训练框架：pyskl（基于 MMAction2），训练脚本位于 `pyskl/tools/train.py`。
+
+```bash
+cd campus-guard-demo
+
+# 单卡训练
+python pyskl/tools/train.py \
+  pyskl/configs/posec3d/finetune_campus_mil.py \
+  --work-dir pyskl/work_dirs/posec3d_campus_mil \
+  --seed 0 --deterministic
+
+# 多卡训练（示例：2 卡）
+bash pyskl/tools/dist_train.sh \
+  pyskl/configs/posec3d/finetune_campus_mil.py 2
+```
+
+训练配置文件 `pyskl/configs/posec3d/finetune_campus_mil.py` 中的关键参数：
+
+| 参数 | 当前值 | 说明 |
+|------|--------|------|
+| `num_classes` | 5 | 正常/打架/霸凌/摔倒/翻越 |
+| `clip_len` | 64 | 输入片段帧数 |
+| `total_epochs` | 50 | 训练轮数 |
+| `lr` | 0.005 | 学习率（SGD） |
+| `videos_per_gpu` | 16 | 单卡 batch size |
+| `load_from` | `models/joint.pth` | 预训练 backbone（SlowOnly-R50 on NTU-120） |
+| `ann_file` | `data/campus/campus_mil_kfold_0.pkl` | 标注数据（PKL 骨架格式） |
+
+### 9.2 模型评估
+
+```bash
+# 单卡测试
+python pyskl/tools/test.py \
+  pyskl/configs/posec3d/finetune_campus_mil.py \
+  models/epoch_50.pth \
+  --eval top_k_accuracy mean_class_accuracy
+
+# 多卡测试
+bash pyskl/tools/dist_test.sh \
+  pyskl/configs/posec3d/finetune_campus_mil.py \
+  models/epoch_50.pth 2 \
+  --eval top_k_accuracy mean_class_accuracy
+```
+
+### 9.3 YOLO 单类检测模型训练
+
+躺地/吸烟/手机三个检测模型使用 Ultralytics YOLOv11 训练：
+
+```python
+from ultralytics import YOLO
+
+model = YOLO('yolo11m.pt')  # 预训练 base
+
+model.train(
+    data='path/to/dataset.yaml',  # YOLO 格式数据集配置
+    epochs=100,
+    imgsz=640,
+    batch=16,
+    name='falling_yolo11m',
+)
+```
+
+数据集格式为标准 YOLO 检测格式（images/ + labels/，每行 `class x_center y_center width height`）。
+
+### 9.4 训练数据说明
+
+| 数据 | 格式 | 说明 |
+|------|------|------|
+| PoseC3D 骨架数据 | PKL (pyskl格式) | 每条包含 keypoint 坐标序列 + 标签，由 YOLO-Pose 提取 |
+| YOLO 检测数据 | YOLO txt | 标准目标检测标注 |
+
+骨架数据提取流程：原始视频 → YOLO11m-Pose 逐帧检测 → 17 关键点坐标序列 → 打包为 PKL。
+
+### 9.5 涉及的训练及预训练模型
+
+| 模型文件 | 类型 | 来源 | 说明 |
+|----------|------|------|------|
+| `joint.pth` | 预训练 | NTU-RGB+D 120 上训练的 SlowOnly-R50 | PoseC3D 的 backbone 初始化权重 |
+| `epoch_50.pth` | 训练产出 | 校园数据集 MIL 清洗后 50 epoch | 最终行为识别模型 (val 89.9%, test 93.3%) |
+| `yolo11m-pose.pt` | 预训练 | Ultralytics 官方 COCO-Pose | 17 关键点姿态检测 |
+| `best-falling.pt` | 训练产出 | 校园场景躺地数据 | YOLO11m 单类躺地检测 |
+| `best-smoke.pt` | 训练产出 | 校园场景吸烟数据 | YOLO11m 单类吸烟检测 |
+| `best-phone.pt` | 训练产出 | 校园场景手机数据 | YOLO11m 单类手机检测 |
+
+---
+
+## 十、端口一览
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
