@@ -30,14 +30,14 @@ campus-guard-demo/
 ## 系统架构
 
 ```
-浏览器 ──→ Spring Boot (8080) ──→ Python 推理服务 (8000)
+浏览器 ──→ Spring Boot (8915) ──→ Python 推理服务 (8000)
               │                       │
               │ JPA                    │ YOLO + PoseC3D
               ▼                       ▼
            MySQL              模型推理 + SSE 推送
 ```
 
-- **前端**：Vue 3 + Element Plus，已打包进 JAR，访问 `http://localhost:8080` 即可
+- **前端**：Vue 3 + Element Plus，已打包进 JAR，访问 `http://localhost:8915` 即可
 - **后端**：Spring Boot 3.3，负责视频管理、告警记录、转发推理请求
 - **推理**：FastAPI 服务，加载 YOLO11m-Pose + PoseC3D 模型，通过 SSE 推送实时结果
 
@@ -221,7 +221,7 @@ python e2e_pipeline/api_server.py \
 Uvicorn running on http://0.0.0.0:8000
 ```
 
-### 步骤 3：启动 Spring Boot 后端 + 前端（端口 8080）
+### 步骤 3：启动 Spring Boot 后端 + 前端（端口 8915）
 
 新开一个终端：
 
@@ -237,7 +237,7 @@ java -jar campus-guard-backend-1.0.0.jar \
 
 ### 步骤 4：打开浏览器
 
-访问 **http://localhost:8080**
+访问 **http://localhost:8915**
 
 ---
 
@@ -273,7 +273,7 @@ java -jar campus-guard-backend-1.0.0.jar \
 curl http://localhost:8000/health
 
 # 检查后端服务
-curl http://localhost:8080/actuator/health
+curl http://localhost:8915/actuator/health
 ```
 
 ---
@@ -292,9 +292,9 @@ curl http://localhost:8080/actuator/health
 
 ### Q: 前端页面打不开
 
-确认 JAR 正常启动且 8080 端口未被占用：
+确认 JAR 正常启动且 8915 端口未被占用：
 ```bash
-lsof -i :8080
+lsof -i :8915
 ```
 
 ### Q: 上传视频后没有分析结果
@@ -346,7 +346,7 @@ curl -N http://localhost:8000/api/v1/analyze/{taskId}/stream
 # 输出: event: connected → event: frame (持续) → event: done
 ```
 
-### 8.2 Web 后端 REST API（端口 8080）
+### 8.2 Web 后端 REST API（端口 8915）
 
 | 方法 | 路径 | 用途 |
 |------|------|------|
@@ -455,5 +455,5 @@ model.train(
 | 服务 | 端口 | 说明 |
 |------|------|------|
 | Python 推理服务 | 8000 | FastAPI + SSE |
-| Spring Boot 后端 + 前端 | 8080 | 浏览器访问此端口 |
+| Spring Boot 后端 + 前端 | 8915 | 浏览器访问此端口 |
 | MySQL | 3306 | 数据库 |
