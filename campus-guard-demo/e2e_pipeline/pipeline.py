@@ -528,7 +528,7 @@ def draw_skeleton(frame, kps, scores, color=(0, 255, 0), threshold=0.3):
         cv2.line(frame, pt1, pt2, color, 2)
 
 
-def draw_label(frame, bbox, label, confidence, color):
+def draw_label(frame, bbox, label, confidence, color, track_id=None):
     """自适应标签位置：
     - 默认贴 bbox 上方左对齐（原行为）
     - 上方超出 → 翻到 bbox 内部顶端（朝下）
@@ -539,7 +539,10 @@ def draw_label(frame, bbox, label, confidence, color):
     fh, fw = frame.shape[:2]
     x1, y1, x2, y2 = [int(v) for v in bbox]
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-    text = f'{label} {confidence:.0%}'
+    if track_id is not None:
+        text = f'T{track_id} {label} {confidence:.0%}'
+    else:
+        text = f'{label} {confidence:.0%}'
     (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
     pad_x, pad_y = 2, 4
     box_w = tw + pad_x * 2
@@ -625,6 +628,7 @@ class InferencePipeline:
         self.track_labels = {}
         self._label_missing_count = {}  # 遮挡宽限：标签保留
         self._known_track_ids = set()   # 已见过的 track ID，用于检测新 track
+        self._id_alias = {}            # new_tid → old_tid，位置匹配后保持旧ID
         self.event_log = []
         # API 联调钩子：每帧处理完成后回调，payload 见 _emit_frame_callback
         self.on_frame_callback = on_frame_callback
@@ -645,6 +649,7 @@ class InferencePipeline:
         self.track_labels.clear()
         self._label_missing_count.clear()
         self._known_track_ids.clear()
+        self._id_alias.clear()
         self.event_log.clear()
         self.on_frame_callback = None
         self.tamper_detector.reset()
@@ -821,47 +826,58 @@ class InferencePipeline:
         track_bboxes = {}     # {tid: [x1, y1, x2, y2]}
 
         if result.boxes is not None and result.keypoints is not None:
-            # 第一遍: 收集所有 track 位置
+            # Step 0: 检测新 track 并建立 ID 别名（位置匹配 → 保持旧ID）
+            raw_track_ids = set()
+            new_track_centers = {}  # 新 track 的人物中心（用于位置匹配）
+            for i, box in enumerate(result.boxes):
+                if box.id is None:
+                    continue
+                tid = int(box.id.item())
+                raw_track_ids.add(tid)
+                if tid not in self._known_track_ids:
+                    kps_data = result.keypoints.data[i].cpu().numpy()
+                    kps_xy = kps_data[:, :2]
+                    kps_sc = kps_data[:, 2]
+                    valid = kps_sc > 0.3
+                    if valid.sum() > 0:
+                        new_track_centers[tid] = kps_xy[valid].mean(axis=0)
+
+            for tid in raw_track_ids:
+                if tid not in self._known_track_ids:
+                    self._known_track_ids.add(tid)
+                    pos = new_track_centers.get(tid)
+                    old_tid = self.skeleton_buf.try_reassociate(tid, pos, img_h=img_shape[0])
+                    if old_tid is not None and old_tid not in raw_track_ids:
+                        self._id_alias[tid] = old_tid
+                        logger.info(f'[F{frame_idx}] REASSOC: T{tid} → T{old_tid} '
+                                    f'(位置匹配，保持ID=T{old_tid})')
+
+            # 第一遍: 收集所有 track 位置（ID 别名映射后使用旧 ID）
             for i, box in enumerate(result.boxes):
                 if box.id is None:
                     continue
                 track_id = int(box.id.item())
-                current_track_ids.add(track_id)
+                canonical_id = self._id_alias.get(track_id, track_id)
+                current_track_ids.add(canonical_id)
 
                 kps_data = result.keypoints.data[i].cpu().numpy()
                 kps_xy = kps_data[:, :2]
                 kps_sc = kps_data[:, 2]
 
-                track_bboxes[track_id] = box.xyxy[0].tolist()
+                track_bboxes[canonical_id] = box.xyxy[0].tolist()
 
                 # 平滑关键点（减少抖动）+ R25 更新 head/hip 归一化速度滑窗
                 smooth_kps, smooth_sc = self.skeleton_buf.update(
-                    track_id, kps_xy, kps_sc, bbox_xyxy=track_bboxes[track_id])
+                    canonical_id, kps_xy, kps_sc, bbox_xyxy=track_bboxes[canonical_id])
 
                 frame_persons_kps.append(smooth_kps)
-                track_kps[track_id] = (smooth_kps, smooth_sc)
+                track_kps[canonical_id] = (smooth_kps, smooth_sc)
 
                 center = self._person_center(smooth_kps, smooth_sc)
                 if center is not None:
-                    track_positions[track_id] = center
+                    track_positions[canonical_id] = center
 
-                self.rule_engine.update_track_position(track_id, smooth_kps, smooth_sc)
-
-            # 重关联：新 track 出现时匹配宽限期内的消失 track，迁移状态
-            for track_id in current_track_ids:
-                if track_id not in self._known_track_ids:
-                    self._known_track_ids.add(track_id)
-                    pos = track_positions.get(track_id)
-                    old_tid = self.skeleton_buf.try_reassociate(
-                        track_id, pos, img_h=img_shape[0])
-                    if old_tid is not None:
-                        logger.info(f'[F{frame_idx}] REASSOC: T{old_tid} → T{track_id} '
-                                    f'(位置匹配，迁移状态)')
-                        self.skeleton_buf.migrate(old_tid, track_id)
-                        self.rule_engine.migrate_track(old_tid, track_id)
-                        if old_tid in self.track_labels:
-                            self.track_labels[track_id] = self.track_labels.pop(old_tid)
-                        self._label_missing_count.pop(old_tid, None)
+                self.rule_engine.update_track_position(canonical_id, smooth_kps, smooth_sc)
 
             # R13 (P15)：撤销 R11 的场景级 gating —— gating 原本想用"物理互斥"
             # 省算力(一个人在 fighting/falling 时不会同时吸烟),但实现是场景级的：
@@ -988,9 +1004,9 @@ class InferencePipeline:
                         disp_label = info.label
                         if info.label == 'bullying' and info.role:
                             disp_label = f'bullying({"V" if info.role == "victim" else "P"})'
-                        draw_label(frame, bbox, disp_label, info.confidence, color)
+                        draw_label(frame, bbox, disp_label, info.confidence, color, track_id)
                     else:
-                        draw_label(frame, bbox, 'normal', 1.0, LABEL_COLORS['normal'])
+                        draw_label(frame, bbox, 'normal', 1.0, LABEL_COLORS['normal'], track_id)
         # API 联调回调：推送本帧所有活跃 track 的标签
         if self.on_frame_callback is not None:
             try:
