@@ -19,6 +19,3 @@
 - `campus-security-demo/renders/`：最终视频与备用视觉母版
 - `video-spec.md`：视频规格说明
 
-## 已删除文件说明
-
-按最终交付要求，真人原声版和旧版 3 分 20 秒视频已经从本交付包的 `renders/` 目录删除。
