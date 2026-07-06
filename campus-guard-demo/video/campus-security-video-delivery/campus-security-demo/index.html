@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #070B12; }
+      body { color: #E8F5F7; font-family: sans-serif; }
+      #root { width: 1920px; height: 1080px; overflow: hidden; background: #070B12; }
+      .ambient { position: absolute; inset: 0; overflow: hidden; background: #070B12; }
+      .glow { position: absolute; width: 760px; height: 760px; border-radius: 50%; filter: blur(110px); opacity: .18; }
+      .glow-a { left: -260px; top: -290px; background: #06B6D4; }
+      .glow-b { right: -320px; bottom: -340px; background: #7C3AED; }
+      .grid { position: absolute; inset: 0; opacity: .12; background-image: linear-gradient(rgba(6,182,212,.2) 1px, rgba(6,182,212,0) 1px), linear-gradient(90deg, rgba(6,182,212,.2) 1px, rgba(6,182,212,0) 1px); background-size: 72px 72px; }
+      .frame { position: absolute; inset: 42px 52px; border: 1px solid rgba(6,182,212,.38); pointer-events: none; z-index: 20; }
+      .frame::before, .frame::after { content: ""; position: absolute; width: 86px; height: 3px; background: #06B6D4; top: -2px; }
+      .frame::before { left: 78px; } .frame::after { right: 78px; }
+      .brand { position: absolute; top: 66px; left: 84px; z-index: 30; color: #A8C0C8; font: 20px "Cascadia Mono", monospace; letter-spacing: .08em; }
+      .status { position: absolute; top: 66px; right: 84px; z-index: 30; display: flex; gap: 10px; align-items: center; color: #A8C0C8; font: 18px "Cascadia Mono", monospace; }
+      .status-dot { width: 11px; height: 11px; border-radius: 50%; background: #06B6D4; box-shadow: 0 0 20px #06B6D4; }
+      .progress { position: absolute; left: 84px; right: 84px; bottom: 62px; z-index: 30; height: 3px; background: rgba(168,192,200,.22); overflow: hidden; }
+      .progress-fill { width: 100%; height: 100%; transform-origin: left center; background: #06B6D4; }
+      .scene { position: absolute; inset: 0; overflow: hidden; }
+      .title-scene { display: flex; flex-direction: column; justify-content: center; padding: 140px 170px; background: rgba(7,11,18,.88); }
+      .kicker { color: #06B6D4; font: 28px "Cascadia Mono", monospace; letter-spacing: .16em; margin-bottom: 22px; }
+      h1 { margin: 0; max-width: 1450px; font: 700 112px/1.08 "Bahnschrift", sans-serif; letter-spacing: -.03em; color: #E8F5F7; }
+      .subtitle { margin-top: 24px; max-width: 1300px; color: #A8C0C8; font-size: 34px; line-height: 1.45; }
+      .footage { width: 100%; height: 100%; object-fit: contain; background: #070B12; }
+      .video-overlay { display: flex; flex-direction: column; justify-content: flex-end; padding: 0 110px 110px; pointer-events: none; z-index: 12; }
+      .chapter { color: #06B6D4; font: 22px "Cascadia Mono", monospace; letter-spacing: .13em; text-shadow: 0 0 20px rgba(6,182,212,.5); }
+      .caption { margin-top: 14px; max-width: 1320px; color: #E8F5F7; font: 700 52px/1.25 "Bahnschrift", sans-serif; text-shadow: 0 2px 18px rgba(0,0,0,.95); }
+      .chips { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+      .chip { padding: 9px 16px; border: 1px solid rgba(6,182,212,.66); background: rgba(7,11,18,.78); color: #CFEFF3; font: 20px "Cascadia Mono", monospace; }
+      .flow { display: flex; align-items: center; gap: 18px; margin-top: 36px; }
+      .flow-node { padding: 20px 30px; border: 1px solid rgba(6,182,212,.64); background: rgba(13,20,32,.82); color: #E8F5F7; font-size: 30px; }
+      .flow-arrow { color: #06B6D4; font: 32px "Cascadia Mono", monospace; }
+      .veil { position: absolute; inset: 0; z-index: 40; background: rgba(6,182,212,.15); backdrop-filter: blur(14px); opacity: 0; pointer-events: none; }
+      .outro { background: rgba(7,11,18,.72); }
+      .outro h1 { font-size: 104px; }
+      .project-name { margin-top: 34px; color: #A8C0C8; font-size: 28px; max-width: 1250px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="342.525" data-width="1920" data-height="1080">
+      <div id="ambient" class="clip ambient" data-start="0" data-duration="342.525" data-track-index="0">
+        <div class="grid"></div><div class="glow glow-a"></div><div class="glow glow-b"></div>
+      </div>
+      <div id="frame" class="clip frame" data-start="0" data-duration="342.525" data-track-index="20"></div>
+      <div id="brand" class="clip brand" data-start="0" data-duration="342.525" data-track-index="21">CAMPUS SECURITY · WEB DEMO</div>
+      <div id="status" class="clip status" data-start="0" data-duration="342.525" data-track-index="22"><span class="status-dot"></span><span>LIVE SYSTEM</span></div>
+      <div id="progress" class="clip progress" data-start="0" data-duration="342.525" data-track-index="23"><div class="progress-fill"></div></div>
+
+      <section id="s01" class="clip scene title-scene" data-start="0" data-duration="4" data-track-index="1">
+        <div class="kicker">SMART CAMPUS SECURITY</div><h1>被动查看录像？</h1><div class="subtitle">让监控真正参与风险发现，而不是只留下事后记录。</div>
+      </section>
+      <video id="v01" class="scene footage" data-start="4" data-duration="27.2" data-track-index="1" data-media-start="0" src="assets/video/1.mov" muted playsinline></video>
+      <div id="o01" class="clip scene video-overlay" data-start="4" data-duration="27.2" data-track-index="2"><div class="chapter">PLATFORM OVERVIEW</div><div class="caption">从被动记录走向主动预警</div><div class="chips"><span class="chip">视频接入</span><span class="chip">智能识别</span><span class="chip">风险告警</span></div></div>
+      <video id="v02" class="scene footage" data-start="31.201" data-duration="10.883333" data-track-index="1" data-media-start="0" src="assets/video/2.mov" muted playsinline></video>
+      <div id="o02" class="clip scene video-overlay" data-start="31.201" data-duration="10.883333" data-track-index="2"><div class="chapter">MULTI-CAMERA VIEW</div><div class="caption">多路视频统一查看</div><div class="chips"><span class="chip">开始分析</span><span class="chip">暂停</span><span class="chip">系统日志</span></div></div>
+      <video id="v03" class="scene footage" data-start="42.085" data-duration="17.183333" data-track-index="1" data-media-start="0" src="assets/video/3.mov" muted playsinline></video>
+      <div id="o03" class="clip scene video-overlay" data-start="42.085" data-duration="17.183333" data-track-index="2"><div class="chapter">BEHAVIOR PERCEPTION</div><div class="caption">人物 ID 与行为标签持续跟踪</div><div class="chips"><span class="chip">人物 ID</span><span class="chip">行为标签</span><span class="chip">识别置信度</span></div></div>
+      <video id="v04" class="scene footage" data-start="59.269" data-duration="53.3" data-track-index="1" data-media-start="0" src="assets/video/4.mov" muted playsinline></video>
+      <div id="o04" class="clip scene video-overlay" data-start="59.269" data-duration="53.3" data-track-index="2"><div class="chapter">PRIORITY ALERTS</div><div class="caption">高风险告警优先呈现</div><div class="chips"><span class="chip">风险等级</span><span class="chip">地点</span><span class="chip">时间轴</span></div></div>
+      <video id="v05" class="scene footage" data-start="112.57" data-duration="43.55" data-track-index="1" data-media-start="0" src="assets/video/5.mov" muted playsinline></video>
+      <div id="o05" class="clip scene video-overlay" data-start="112.57" data-duration="43.55" data-track-index="2"><div class="chapter">CAMPUS OVERVIEW</div><div class="caption">异常区域定位与风险分布分析</div><div class="chips"><span class="chip">今日告警</span><span class="chip">高风险告警</span><span class="chip">在线监控占比</span></div></div>
+      <video id="v06" class="scene footage" data-start="156.121" data-duration="58.483333" data-track-index="1" data-media-start="0" src="assets/video/6.mov" muted playsinline></video>
+      <div id="o06" class="clip scene video-overlay" data-start="156.121" data-duration="58.483333" data-track-index="2"><div class="chapter">HUMAN-IN-THE-LOOP</div><div class="caption">筛选、复核、确认、留痕</div><div class="chips"><span class="chip">Track ID</span><span class="chip">人工确认</span><span class="chip">处理记录</span></div></div>
+      <video id="v07" class="scene footage" data-start="214.605" data-duration="44.85" data-track-index="1" data-media-start="0" src="assets/video/7.mov" muted playsinline></video>
+      <div id="o07" class="clip scene video-overlay" data-start="214.605" data-duration="44.85" data-track-index="2"><div class="chapter">RESOURCE REUSE</div><div class="caption">复用已有监控资源，降低初期部署成本</div><div class="chips"><span class="chip">视频源接入</span><span class="chip">校园点位</span><span class="chip">位置绑定</span></div></div>
+      <video id="v08" class="scene footage" data-start="259.456" data-duration="45.166667" data-track-index="1" data-media-start="0" src="assets/video/8.mov" muted playsinline></video>
+      <div id="o08" class="clip scene video-overlay" data-start="259.456" data-duration="45.166667" data-track-index="2"><div class="chapter">ENGINEERING STATUS</div><div class="caption">模型服务与后端调度协同运行</div><div class="chips"><span class="chip">Spring Boot</span><span class="chip">SSE</span><span class="chip">MySQL</span><span class="chip">PoseC3D</span></div></div>
+      <video id="v09" class="scene footage" data-start="304.624" data-duration="29.9" data-track-index="1" data-media-start="0" src="assets/video/9.mov" muted playsinline></video>
+      <div id="o09" class="clip scene video-overlay" data-start="304.624" data-duration="29.9" data-track-index="2"><div class="chapter">FULL LOOP</div><div class="caption">接入 → 识别 → 告警 → 复核 → 追溯</div></div>
+      <section id="s06" class="clip scene title-scene outro" data-start="334.525" data-duration="8" data-track-index="2"><div class="kicker">SMART CAMPUS SECURITY</div><h1>从被动查看<br />走向主动预警</h1><div class="project-name">面向校园安防的视频行为感知与异常事件智能预警系统</div></section>
+
+      <div id="veil01" class="clip veil" data-start="3.7" data-duration=".6" data-track-index="40"></div>
+      <div id="veil02" class="clip veil" data-start="30.901" data-duration=".6" data-track-index="40"></div>
+      <div id="veil03" class="clip veil" data-start="41.785" data-duration=".6" data-track-index="40"></div>
+      <div id="veil04" class="clip veil" data-start="58.969" data-duration=".6" data-track-index="40"></div>
+      <div id="veil05" class="clip veil" data-start="112.27" data-duration=".6" data-track-index="40"></div>
+      <div id="veil06" class="clip veil" data-start="155.821" data-duration=".6" data-track-index="40"></div>
+      <div id="veil07" class="clip veil" data-start="214.305" data-duration=".6" data-track-index="40"></div>
+      <div id="veil08" class="clip veil" data-start="259.156" data-duration=".6" data-track-index="40"></div>
+      <div id="veil09" class="clip veil" data-start="304.324" data-duration=".6" data-track-index="40"></div>
+      <div id="veil10" class="clip veil" data-start="334.225" data-duration=".6" data-track-index="40"></div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.from(".glow-a", { scale: .82, opacity: .08, duration: 3, ease: "sine.inOut" }, .1);
+      tl.from(".glow-b", { scale: .86, opacity: .08, duration: 3.4, ease: "sine.inOut" }, .2);
+      tl.from(".frame", { opacity: 0, scale: .985, duration: .8, ease: "power2.out" }, .15);
+      tl.from(".brand", { opacity: 0, x: -24, duration: .55, ease: "power3.out" }, .25);
+      tl.from(".status", { opacity: 0, x: 24, duration: .55, ease: "power2.out" }, .3);
+      tl.from(".progress", { opacity: 0, duration: .5, ease: "sine.out" }, .35);
+      tl.fromTo(".progress-fill", { scaleX: 0 }, { scaleX: 1, duration: 342.525, ease: "none" }, 0);
+      document.querySelectorAll(".title-scene").forEach((scene) => {
+        const start = Number(scene.dataset.start);
+        tl.from(scene, { opacity: 0, filter: "blur(16px)", duration: .5, ease: "sine.out" }, start + .08);
+        scene.querySelectorAll(".kicker,h1,.subtitle,.project-name,.flow").forEach((el, i) => {
+          tl.from(el, { opacity: 0, y: 28 + i * 8, duration: .55, ease: i % 2 ? "power3.out" : "power2.out" }, start + .18 + i * .12);
+        });
+      });
+      document.querySelectorAll("video").forEach((video) => {
+        const start = Number(video.dataset.start);
+        tl.from(video, { opacity: 0, scale: 1.025, filter: "blur(8px)", duration: .5, ease: "sine.out" }, start + .03);
+      });
+      document.querySelectorAll(".video-overlay").forEach((overlay) => {
+        const start = Number(overlay.dataset.start);
+        tl.from(overlay.querySelector(".chapter"), { opacity: 0, y: 22, duration: .45, ease: "power2.out" }, start + .3);
+        tl.from(overlay.querySelector(".caption"), { opacity: 0, y: 30, duration: .58, ease: "power3.out" }, start + .42);
+        overlay.querySelectorAll(".chip").forEach((chip, i) => tl.from(chip, { opacity: 0, y: 16, scale: .96, duration: .4, ease: "sine.out" }, start + .62 + i * .11));
+      });
+      document.querySelectorAll(".veil").forEach((veil) => {
+        const start = Number(veil.dataset.start);
+        tl.fromTo(veil, { opacity: 0 }, { opacity: 1, duration: .3, ease: "sine.inOut", overwrite: "auto" }, start);
+        tl.to(veil, { opacity: 0, duration: .3, ease: "sine.inOut", overwrite: "auto" }, start + .3);
+      });
+      tl.to("#s06", { opacity: 0, duration: 1, ease: "sine.inOut" }, 341.525);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
