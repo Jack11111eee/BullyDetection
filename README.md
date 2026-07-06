@@ -2,8 +2,6 @@
 
 本项目面向校园监控场景，构建了一套从视频接入、人体检测、人物跟踪、行为识别、异常告警到人工处置与历史追溯的智能预警系统。系统目标不是替代安保人员作最终判断，而是把海量监控画面中的风险线索结构化、可视化、可追溯，帮助学校从“被动查看录像”转向“主动接收预警”。
 
-项目已上传至 GitHub：<https://github.com/Yolene-Star/BullyDetection>
-
 ## 比赛背景与成果
 
 本项目是第十七届中国大学生服务外包创新创业大赛企业命题类（A 类）参赛成果，选题为【A28】“面向校园安防的视频行为感知与异常事件智能预警【西安电子科技大学】”。该赛题属于“智能计算”方向、“计算类”题目，强调以真实校园监控为应用场景，围绕视频流在线处理、人员目标感知、行为识别、多人交互理解、实时预警和系统集成形成完整解决方案。
@@ -21,13 +19,13 @@
 | `campus-guard-demo/docs/` | 项目详细方案文档、答辩 PPT 等材料 |
 | `campus-guard-demo/video/` | 项目最终演示视频、视频制作交付包、字幕脚本等材料 |
 
-主要材料获取链接：
+缺失材料获取链接：
 
-| 材料 | 获取链接 |
-| --- | --- |
-| `答辩ppt_new.pptx` | [夸克网盘](https://pan.quark.cn/s/9085a6913fc8) |
-| `video_final.mp4` | [夸克网盘](https://pan.quark.cn/s/ca63b24e05f1) |
-| `5.mov` | [夸克网盘](https://pan.quark.cn/s/a91b4ab29d39) |
+| 材料 | 原应放置位置 | 获取链接 |
+| --- | --- | --- |
+| `答辩ppt_new.pptx` | `campus-guard-demo/docs/答辩ppt_new.pptx` | [夸克网盘](https://pan.quark.cn/s/9085a6913fc8) |
+| `video_final.mp4` | `campus-guard-demo/video/video_final.mp4` | [夸克网盘](https://pan.quark.cn/s/ca63b24e05f1) |
+| `5.mov` | `campus-guard-demo/video/campus-security-video-delivery/campus-security-demo/assets/video/5.mov` | [夸克网盘](https://pan.quark.cn/s/a91b4ab29d39) |
 
 ## 项目背景
 
