@@ -2,7 +2,7 @@
 
 本目录集中存放本次 Web 展示视频生成相关文件。
 
-## 最终成片
+## 生成作品
 
 - `campus-security-demo/renders/campus-security-full-ai-voice.mp4`：AI 配音完整版
 - `campus-security-demo/renders/campus-security-full-silent-subtitles.mp4`：无声单行字幕版，保留背景音乐
