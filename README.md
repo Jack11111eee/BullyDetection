@@ -14,14 +14,20 @@
 
 ## 成果材料目录
 
-`campus-guard-demo` 下补充了比赛成果材料目录，用于集中放置答辩、方案和演示视频等交付物：
+`campus-guard-demo` 下包含比赛成果材料：
 
 | 目录 | 内容说明 |
 | --- | --- |
-| `campus-guard-demo/docs/` | 项目详细方案、答辩 PPT、比赛材料等文档类交付物 |
-| `campus-guard-demo/video/` | 项目演示视频、视频制作交付包、字幕脚本等视频类交付物 |
+| `campus-guard-demo/docs/` | 项目详细方案文档、答辩 PPT 等材料 |
+| `campus-guard-demo/video/` | 项目最终演示视频、视频制作交付包、字幕脚本等材料 |
 
-其中，`docs` 目录适合存放 `.docx`、`.pptx`、`.pdf` 等说明材料；`video` 目录适合存放最终演示视频和视频工程交付文件。若上传大体积视频或模型文件，建议结合 GitHub Release、网盘或 Git LFS 管理，避免普通 Git 仓库体积过大。
+主要材料获取链接：
+
+| 材料 | 获取链接 |
+| --- | --- |
+| `答辩ppt_new.pptx` | [夸克网盘](https://pan.quark.cn/s/9085a6913fc8) |
+| `video_final.mp4` | [夸克网盘](https://pan.quark.cn/s/ca63b24e05f1) |
+| `5.mov` | [夸克网盘](https://pan.quark.cn/s/a91b4ab29d39) |
 
 ## 项目背景
 
