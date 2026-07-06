@@ -12,6 +12,17 @@
 
 服创大赛强调产业导向、技术导向和应用导向。围绕这一要求，本项目没有停留在单一算法实验，而是将姿态感知、骨骼时序识别、小目标检测、规则引擎、后端调度、数据库告警和 Web 可视化整合为可运行、可演示、可扩展的校园安防原型系统。
 
+## 成果材料目录
+
+`campus-guard-demo` 下补充了比赛成果材料目录，用于集中放置答辩、方案和演示视频等交付物：
+
+| 目录 | 内容说明 |
+| --- | --- |
+| `campus-guard-demo/docs/` | 项目详细方案、答辩 PPT、比赛材料等文档类交付物 |
+| `campus-guard-demo/video/` | 项目演示视频、视频制作交付包、字幕脚本等视频类交付物 |
+
+其中，`docs` 目录适合存放 `.docx`、`.pptx`、`.pdf` 等说明材料；`video` 目录适合存放最终演示视频和视频工程交付文件。若上传大体积视频或模型文件，建议结合 GitHub Release、网盘或 Git LFS 管理，避免普通 Git 仓库体积过大。
+
 ## 项目背景
 
 教学楼、宿舍区、实验室、图书馆、操场和公共通道等校园区域人员密集、活动复杂。传统监控系统通常以画面留存和事后回放为主，值班人员需要长时间关注多路视频，容易在遮挡、光照变化、人员重叠、画面模糊或事件持续时间较短时发生漏看和误判。
@@ -142,6 +153,7 @@ Vue Web 前端实时监控、事件处置、历史追溯
 BullyDetection/
 ├── campus-guard-demo/              # 可部署演示包
 │   ├── campus-guard-backend-1.0.0.jar
+│   ├── docs/                       # 项目方案、答辩 PPT 等比赛文档材料
 │   ├── e2e_pipeline/               # Python 推理服务
 │   │   ├── api_server.py           # FastAPI + SSE 服务入口
 │   │   ├── pipeline.py             # YOLO -> PoseC3D -> RuleEngine 推理流水线
@@ -149,6 +161,7 @@ BullyDetection/
 │   │   ├── scene_event_detector.py # 镜头遮挡、黑屏、失焦等场景异常检测
 │   │   ├── input_source.py         # 视频/摄像头/帧序列输入抽象
 │   │   └── API_README.md           # 推理服务接口说明
+│   ├── video/                      # 项目演示视频与视频制作交付文件
 │   └── README.md                   # 部署指南
 ├── e2e_pipeline/                   # 端到端推理相关代码与调试版本
 ├── mil_cleaning/                   # 数据清洗与 MIL 相关脚本
