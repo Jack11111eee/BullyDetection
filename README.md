@@ -19,14 +19,6 @@
 | `campus-guard-demo/docs/` | 项目详细方案文档、答辩 PPT 等材料 |
 | `campus-guard-demo/video/` | 项目最终演示视频、视频制作交付包、字幕脚本等材料 |
 
-缺失材料获取链接：
-
-| 材料 | 原应放置位置 | 获取链接 |
-| --- | --- | --- |
-| `答辩ppt_new.pptx` | `campus-guard-demo/docs/答辩ppt_new.pptx` | [夸克网盘](https://pan.quark.cn/s/9085a6913fc8) |
-| `video_final.mp4` | `campus-guard-demo/video/video_final.mp4` | [夸克网盘](https://pan.quark.cn/s/ca63b24e05f1) |
-| `5.mov` | `campus-guard-demo/video/campus-security-video-delivery/campus-security-demo/assets/video/5.mov` | [夸克网盘](https://pan.quark.cn/s/a91b4ab29d39) |
-
 ## 项目背景
 
 教学楼、宿舍区、实验室、图书馆、操场和公共通道等校园区域人员密集、活动复杂。传统监控系统通常以画面留存和事后回放为主，值班人员需要长时间关注多路视频，容易在遮挡、光照变化、人员重叠、画面模糊或事件持续时间较短时发生漏看和误判。
@@ -377,6 +369,14 @@ SSE `frame` 事件会包含当前帧目标框、人物 ID、行为标签、置�
 - 完善权限控制、日志审计和隐私保护策略。
 - 支持更多摄像头协议和现有校园安防平台对接。
 
+## 缺失材料获取链接：
+
+| 材料 | 原应放置位置 | 获取链接 |
+| --- | --- | --- |
+| `答辩ppt_new.pptx` | `campus-guard-demo/docs/答辩ppt_new.pptx` | [夸克网盘](https://pan.quark.cn/s/9085a6913fc8) |
+| `video_final.mp4` | `campus-guard-demo/video/video_final.mp4` | [夸克网盘](https://pan.quark.cn/s/ca63b24e05f1) |
+| `5.mov` | `campus-guard-demo/video/campus-security-video-delivery/campus-security-demo/assets/video/5.mov` | [夸克网盘](https://pan.quark.cn/s/a91b4ab29d39) |
+
 ## 参考文档
 
 - [部署指南](campus-guard-demo/README.md)
@@ -385,3 +385,4 @@ SSE `frame` 事件会包含当前帧目标框、人物 ID、行为标签、置�
 - [Web 交接说明](WEB-HANDOFF.md)
 - [项目进展记录](PROJECT_PROGRESS.md)
 - [YOLO 模型交接说明](YOLO_HANDOFF.md)
+
