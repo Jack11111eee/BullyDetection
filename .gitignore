@@ -11,3 +11,15 @@ video_annotator/
 *.pth
 *event*.json
 *.log
+
+# Local AI assistant state and credentials
+.claude/
+.codex/
+.cursor/
+.gemini/
+.agents/
+.aider*
+.continue/
+.windsurf/
+CLAUDE.local.md
+AGENTS.local.md
